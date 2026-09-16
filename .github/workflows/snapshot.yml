@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: snapshot
@@ -32,7 +33,9 @@ jobs:
       - name: ESPN 팀 일정·뉴스 수집
         run: node scripts/snapshot.mjs web/public/data --only=fast
 
-      - name: 변경분 커밋
+      - name: 변경분 커밋 + Pages 재배포 트리거
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name  "stats-bot"
           git config user.email "stats-bot@users.noreply.github.com"
@@ -43,4 +46,5 @@ jobs:
             git pull --rebase --autostash
             git commit -m "chore(data): 팀 일정·뉴스 $(date -u +'%Y-%m-%dT%H:%MZ')"
             git push
+            gh workflow run deploy-pages.yml --ref main
           fi
