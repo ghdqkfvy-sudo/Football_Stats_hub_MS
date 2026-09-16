@@ -1,0 +1,46 @@
+name: 데이터 스냅샷 (팀 일정·뉴스)
+
+# 우리 세 팀의 일정만 뜬다. 6요청이라 자주 돌려도 부담이 없다.
+# 리그 전체(20팀 × 2요청)는 snapshot-leagues.yml 에서 1시간 주기로 돈다.
+#
+# 분(minute)을 정각(0,10,20...)에서 살짝 비켜 뒀다 — GitHub Actions의 schedule
+# 트리거는 "최선 노력(best-effort)"이라 매 시 0분처럼 몰리는 시각엔 실행이
+# 5~30분씩 밀릴 수 있다(공식 문서에 명시된 동작). 완전히 안 도는 게 아니라
+# 그 순간의 혼잡을 피해 지연을 줄이려는 것.
+on:
+  schedule:
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: ESPN 팀 일정·뉴스 수집
+        run: node scripts/snapshot.mjs web/public/data --only=fast
+
+      - name: 변경분 커밋
+        run: |
+          git config user.name  "stats-bot"
+          git config user.email "stats-bot@users.noreply.github.com"
+          git add web/public/data
+          if git diff --staged --quiet; then
+            echo "변경 없음"
+          else
+            git pull --rebase --autostash
+            git commit -m "chore(data): 팀 일정·뉴스 $(date -u +'%Y-%m-%dT%H:%MZ')"
+            git push
+          fi

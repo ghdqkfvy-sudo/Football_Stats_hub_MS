@@ -1,0 +1,62 @@
+name: GitHub Pages 배포
+
+# main 에 올라가는 모든 커밋에서 다시 빌드한다 — 코드 변경뿐 아니라
+# snapshot.yml / snapshot-leagues.yml 이 10분·1시간 주기로 올리는
+# web/public/data/*.json 커밋도 여기 포함되므로, 정적 피드 데이터가
+# 항상 배포된 사이트에 그대로 반영된다 (재빌드 없이는 새 JSON이 서빙되지 않음).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: 의존성 설치
+        working-directory: web
+        run: npm ci
+
+      - name: 빌드
+        working-directory: web
+        env:
+          # 프로젝트 페이지(https://<user>.github.io/<repo>/)용 서브패스.
+          BASE_PATH: /${{ github.event.repository.name }}/
+          # Cloudflare Worker 를 배포했다면 저장소 Settings → Secrets and
+          # variables → Actions → Variables 에 VITE_API_BASE 를 등록해 두면
+          # 실시간 프록시 티어가 켜진다. 비워 두면 정적 피드 티어만으로 동작한다.
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

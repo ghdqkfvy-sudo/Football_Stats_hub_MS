@@ -1,0 +1,19 @@
+# deps
+node_modules/
+worker/node_modules/
+
+# build output
+web/dist/
+web/dist-single/
+artifact-preview.html
+
+# web/public/data/*.json is intentionally tracked — the snapshot workflows
+# commit fresh ESPN data there every 10min/1hr and Pages redeploys from it.
+
+# local env
+.env
+.env.*
+*.local
+
+# editor/OS
+.DS_Store

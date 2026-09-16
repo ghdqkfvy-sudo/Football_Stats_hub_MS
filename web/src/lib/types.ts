@@ -1,0 +1,80 @@
+/** 정규화된 도메인 타입 — ESPN 원본 스키마를 앱 전체에서 격리한다. */
+
+export type CompetitionKey =
+  | 'esp.1' | 'eng.1'
+  | 'uefa.champions' | 'uefa.europa' | 'uefa.europa.conf'
+  | 'esp.copa_del_rey' | 'esp.super_cup'
+  | 'eng.fa' | 'eng.league_cup'
+  | 'fifa.friendly' | 'club.friendly'
+  | 'fifa.world' | 'fifa.worldq.afc' | 'afc.asian.cup'
+  | 'uefa.super_cup' | 'fifa.cwc'
+  | (string & {});
+
+export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed';
+
+export interface TeamRef {
+  id: string;
+  name: string;        // 표시용 (한국어 우선)
+  shortName: string;
+  abbr: string;
+  logo: string;
+  rank?: number;       // 해당 대회 순위 (있을 때)
+  record?: string;     // "3승 1무 0패"
+}
+
+export interface GoalEvent {
+  minute: number;
+  clock: string;       // "45+2'"
+  teamId: string;
+  scorer: string;
+  assist?: string;
+  ownGoal: boolean;
+  penalty: boolean;
+}
+
+export interface Match {
+  id: string;
+  /** ESPN이 주는 UTC ISO 문자열. 표시 직전에만 KST로 변환한다. */
+  kickoffUtc: string;
+  competition: CompetitionKey;
+  competitionName: string;
+  round?: string;      // "MATCHDAY 4", "League Phase 2"
+  venue?: string;
+  status: MatchStatus;
+  statusDetail?: string;
+  home: TeamRef;
+  away: TeamRef;
+  homeScore?: number;
+  awayScore?: number;
+  homePens?: number;
+  awayPens?: number;
+  goals: GoalEvent[];
+  /** 득점 이벤트를 아직 못 불러온 상태 (지연 로딩용) */
+  goalsLoaded: boolean;
+}
+
+export interface StandingRow {
+  rank: number;
+  team: TeamRef;
+  played: number;
+  win: number;
+  draw: number;
+  loss: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  points: number;
+  form: ('W' | 'D' | 'L')[];
+}
+
+export interface StandingTable {
+  competition: CompetitionKey;
+  competitionName: string;
+  groupName?: string;
+  rows: StandingRow[];
+  /** ESPN 원본이 불완전해 경기 결과로 재계산했는지 여부 */
+  derived: boolean;
+  updatedAt: string;
+}
+
+export type ResultOf = 'W' | 'D' | 'L';

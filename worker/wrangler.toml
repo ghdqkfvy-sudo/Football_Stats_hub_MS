@@ -1,0 +1,11 @@
+name = "k-stats-hub-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# 무료 플랜: 100,000 요청/일. 엣지 캐시를 쓰므로 실제 ESPN 호출은 그 일부다.
+workers_dev = true
+
+# 커스텀 도메인을 붙이면 웹앱과 같은 오리진에서 /api/* 를 서빙할 수 있다.
+# [[routes]]
+# pattern = "stats.example.com/api/*"
+# zone_name = "example.com"

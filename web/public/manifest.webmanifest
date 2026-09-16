@@ -1,0 +1,15 @@
+{
+  "name": "K Stats Hub",
+  "short_name": "K Stats",
+  "description": "레알 마드리드 · 첼시 · 대한민국 축구 통계 허브 (한국시간 기준)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05070D",
+  "theme_color": "#05070D",
+  "lang": "ko",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
