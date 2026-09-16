@@ -190,6 +190,105 @@ async function scoreboardGoals(leagueSlug, yyyymmdd) {
   return map;
 }
 
+
+/* ── 경기별 선수 기록 (요약 rosters — 득점·도움) ────────────
+   대회 순위표의 "도움" 을 채우려면 골마다 누가 도왔는지가 필요한데,
+   스코어보드 details 는 득점자만 준다. 대신 **요약 응답의 rosters 에는
+   양 팀 선수별 totalGoals / goalAssists 가 그대로 들어 있다**
+   (2026-09-12 Hull-Chelsea 로 확인: rosters 2개, 팀 363/306).
+   순위표는 "누가 몇 골·몇 도움" 만 있으면 되므로 이걸 모으면 된다.
+   경기당 요청 1회이고, 끝난 경기는 기록이 안 바뀌므로 이어받는다. */
+const STATS_SOURCE = 'summary-roster-v1';
+
+function playerStatsFrom(sum) {
+  const out = [];
+  for (const r of sum?.rosters ?? []) {
+    const teamId = String(r?.team?.id ?? '');
+    if (!teamId) continue;
+    for (const e of r?.roster ?? []) {
+      const name = String(e?.athlete?.displayName ?? '').trim();
+      if (!name) continue;
+      const val = (n) => {
+        const hit = (e?.stats ?? []).find((x) => x?.name === n);
+        const v = Number(hit?.value ?? hit?.displayValue);
+        return Number.isFinite(v) ? v : 0;
+      };
+      const g = val('totalGoals');
+      const a = val('goalAssists');
+      if (g > 0 || a > 0) out.push({ teamId, name, g, a });
+    }
+  }
+  return out;
+}
+
+/** 이전 스냅샷에서 경기별 선수 기록을 이어받는다 */
+async function prevStatsMap(fileName) {
+  const map = new Map();
+  try {
+    const json = JSON.parse(await readFile(join(OUT, fileName), 'utf8'));
+    if (json?.statsSource !== STATS_SOURCE) return map;
+    for (const ev of json?.events ?? []) {
+      const st = ev?.competitions?.[0]?.__stats;
+      if (Array.isArray(st)) map.set(String(ev.id), st);
+    }
+  } catch { /* 첫 실행 */ }
+  return map;
+}
+
+/** 종료된 경기에 선수별 득점·도움을 채운다 */
+async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120) {
+  let fetched = 0;
+  for (const ev of events) {
+    const c = ev?.competitions?.[0];
+    if (!c || c?.status?.type?.completed !== true) continue;
+    const id = String(ev.id);
+    const cached = prevMap.get(id);
+    if (cached) { c.__stats = cached; continue; }
+    if (fetched >= budget) continue;   // 한 번에 다 받지 않고 회차를 나눠 채운다
+
+    const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
+    const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${id}`);
+    if (sum?.rosters) {
+      c.__stats = playerStatsFrom(sum);
+      fetched++;
+    }
+    await sleep(150);
+  }
+  if (fetched) console.log(`    선수 기록 신규 ${fetched}경기`);
+}
+
+/* ── 자리 약어 보강 (core 경기 로스터) ──────────────────────
+   요약 로스터에 position.abbreviation 이 아예 없는 대회가 있다(첼시가
+   그랬다). 그때는 core 경기 로스터가 position 을 $ref 로 주는데, 그 id 를
+   따라가면 'CD-L' 같은 상세 약어가 나온다(positions/4=CD-L, 8=LB, 14=AM,
+   32=AM-L, 33=AM-R, 19=F 로 실측 확인). 위치 표는 대회당 수십 개뿐이라
+   한 번 받아 캐시하면 된다. */
+const posAbbrCache = new Map();
+async function positionAbbr(leagueSlug, posId) {
+  const key = `${leagueSlug}|${posId}`;
+  if (posAbbrCache.has(key)) return posAbbrCache.get(key);
+  const j = await get(`${CORE}/v2/sports/soccer/leagues/${leagueSlug}/positions/${posId}`);
+  const abbr = j?.abbreviation ? String(j.abbreviation) : undefined;
+  posAbbrCache.set(key, abbr);
+  await sleep(100);
+  return abbr;
+}
+
+async function coreLineupPositions(leagueSlug, eventId, teamId) {
+  const j = await get(
+    `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/events/${eventId}/competitions/${eventId}/competitors/${teamId}/roster`,
+  );
+  const out = new Map();
+  for (const e of j?.entries ?? []) {
+    const id = String(e?.playerId ?? '');
+    const posId = String(e?.position?.$ref ?? '').match(/positions\/(\d+)/)?.[1];
+    if (!id || !posId) continue;
+    const abbr = await positionAbbr(leagueSlug, posId);
+    if (abbr) out.set(id, abbr);
+  }
+  return out;
+}
+
 /* ── 선수 헤드샷 ──────────────────────────────────────────
    ESPN 은 축구 선수 사진을 **일부 선수에게만** 준다. 그리고 그걸 알려 주는
    응답은 팀 로스터(`/teams/{id}/roster`)의 `headshot.href` 하나뿐이다 —
@@ -564,8 +663,11 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
       await enrichGoals(events, t.league, prevMap);
+      await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40);
       await save(`schedule-${t.slug}.json`, {
-        events, team: t.id, goalsSource: GOALS_SOURCE, fetchedAt: new Date().toISOString(),
+        events, team: t.id,
+        goalsSource: GOALS_SOURCE, statsSource: STATS_SOURCE,
+        fetchedAt: new Date().toISOString(),
       });
     } else {
       console.error(`  ! ${t.slug}: 이벤트 0건 — 기존 파일 유지`);
@@ -616,12 +718,14 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`league-${lg}.json`);
       await enrichGoals(events, lg, prevMap);
+      await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120);
       await save(`league-${lg}.json`, {
         league: lg,
         events,
         standings,
         teams: ids.length,
         goalsSource: GOALS_SOURCE,
+        statsSource: STATS_SOURCE,
         fetchedAt: new Date().toISOString(),
       });
       const done = events.filter((e) => e?.competitions?.[0]?.status?.type?.completed).length;
@@ -714,6 +818,21 @@ async function main() {
         }
       }
       if (entries.length) {
+        /* 요약이 자리 약어를 하나도 안 준 경기는 core 경기 로스터로 메운다.
+           (첼시가 이 경우였다 — 그래서 배치가 통째로 틀어졌다) */
+        if (!entries.some((x) => x[7])) {
+          const posMap = await coreLineupPositions(lg, ev.id, t.id);
+          if (posMap.size) {
+            for (const x of entries) {
+              const abbr = posMap.get(x[0]);
+              if (abbr) {
+                x[7] = abbr;
+                if (athletes[x[0]]) athletes[x[0]].pos = posFromAbbr(abbr);
+              }
+            }
+            console.log(`    ${t.slug} ${ev.id}: core 로스터에서 자리 ${posMap.size}건 보강`);
+          }
+        }
         lineups[String(ev.id)] = {
           teamId: t.id,
           formation: String(mine?.formation ?? ''),

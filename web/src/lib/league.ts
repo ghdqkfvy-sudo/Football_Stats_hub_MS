@@ -178,9 +178,26 @@ export function deriveLeaders(matches: Match[]): LeaderRow[] {
   const byName = new Map<string, LeaderRow>();
   const teamById = new Map<string, TeamRef>();
 
+  const bump = (name: string, teamId: string, g: number, a: number) => {
+    const key = `${name}|${teamId}`;
+    const row = byName.get(key) ?? { name, teamId, goals: 0, assists: 0, points: 0 };
+    row.goals += g;
+    row.assists += a;
+    byName.set(key, row);
+  };
+
   for (const m of matches) {
     teamById.set(m.home.id, m.home);
     teamById.set(m.away.id, m.away);
+
+    /* 1순위는 경기별 선수 기록(ESPN 요약 rosters). 득점뿐 아니라 **도움**도
+       들어 있는 유일한 경로다. 스코어보드 득점 이벤트는 득점자만 주므로
+       이게 없을 때의 폴백이다. */
+    if (m.playerStats?.length) {
+      for (const s of m.playerStats) bump(s.name, s.teamId, s.g || 0, s.a || 0);
+      continue;
+    }
+
     for (const g of m.goals) {
       if (!g.ownGoal && g.scorer && g.scorer !== '—') {
         const key = `${g.scorer}|${g.teamId}`;

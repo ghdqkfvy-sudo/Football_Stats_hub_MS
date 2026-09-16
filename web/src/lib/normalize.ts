@@ -151,6 +151,7 @@ export function matchFrom(ev: any): Match | null {
     goals,
     goalsLoaded: goals.length > 0,
     timeTBD: c.timeValid === false,
+    playerStats: Array.isArray((c as any).__stats) ? (c as any).__stats : undefined,
   };
 }
 

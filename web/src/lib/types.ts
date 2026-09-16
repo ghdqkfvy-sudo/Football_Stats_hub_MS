@@ -57,6 +57,11 @@ export interface Match {
    * 표시하면 "전부 오후 5시" 처럼 보인다. 이런 경기는 TBD 로 적는다.
    */
   timeTBD?: boolean;
+  /**
+   * 경기별 선수 기록(양 팀) — ESPN 요약 응답의 rosters 에서 모은 값이다.
+   * 스코어보드 details 는 득점자만 주므로, **도움**은 이 경로에서만 온다.
+   */
+  playerStats?: { teamId: string; name: string; g: number; a: number }[];
 }
 
 export interface StandingRow {

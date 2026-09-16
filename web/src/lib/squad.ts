@@ -32,8 +32,10 @@ export interface PlayerSeason {
   /** formationPlace → 선발 횟수 */
   slots: Record<number, number>;
   modalSlot: number;
-  /** ESPN 포지션 약어 → 선발 횟수 ('CD-L', 'AM-R', 'LB' …) */
+  /** ESPN 포지션 약어 → 선발 횟수 (최다 채택 포메이션 경기만) */
   posPlaces: Record<string, number>;
+  /** 같은 집계지만 포메이션을 가리지 않은 것 — posPlaces 가 빌 때의 폴백 */
+  posAny: Record<string, number>;
   /** 가장 많이 선 자리의 ESPN 약어 — 베스트 11 배치의 근거 */
   modalPos: string;
   /** 대회별 기록 — 호버 카드에서 "리그 3골 · 챔스 1골" 로 보여준다 */
@@ -73,10 +75,25 @@ export function buildSquad(
   teamId: string,
 ): { players: PlayerSeason[]; formation: string | null; covered: number } {
   const byId = new Map<string, PlayerSeason>();
-  const formationCount: Record<string, number> = {};
   let covered = 0;
 
   const sorted = [...matches].sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc));
+
+  /*
+   * 포메이션을 **먼저** 정한다 — 그 팀이 누적으로 가장 많이 채택한 것.
+   * 그래야 자리 집계를 그 포메이션 경기들로만 한정할 수 있다. 4-2-3-1 을
+   * 주로 쓰는 팀이 가끔 3-4-2-1 을 쓰면, 그 경기의 자리(예: 스리백)가
+   * 섞여 들어가 배치가 통째로 흔들린다.
+   */
+  const formationCount: Record<string, number> = {};
+  for (const m of sorted) {
+    if (m.competition === 'club.friendly') continue;
+    const lu = lineups[m.id];
+    if (!lu || lu.teamId !== teamId) continue;
+    formationCount[lu.formation] = (formationCount[lu.formation] ?? 0) + 1;
+  }
+  const formation =
+    Object.entries(formationCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
   for (const m of sorted) {
     // 클럽 친선경기는 팀 컨디션 점검용이라 공식 기록에서 뺀다.
@@ -85,7 +102,6 @@ export function buildSquad(
     const lu = lineups[m.id];
     if (!lu || lu.teamId !== teamId) continue;
     covered++;
-    formationCount[lu.formation] = (formationCount[lu.formation] ?? 0) + 1;
 
     const isHome = m.home.id === teamId;
     const opp = isHome ? m.away : m.home;
@@ -105,7 +121,7 @@ export function buildSquad(
         p = {
           id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
-          slots: {}, modalSlot: 0, posPlaces: {}, modalPos: '',
+          slots: {}, modalSlot: 0, posPlaces: {}, posAny: {}, modalPos: '',
           byComp: [], recent: [], score: 0,
         };
         byId.set(id, p);
@@ -135,8 +151,14 @@ export function buildSquad(
       p.goals += g;
       p.assists += a;
       if (place > 0) p.slots[place] = (p.slots[place] ?? 0) + 1;
-      // 선발로 선 자리만 센다 — 교체 투입은 자리 의미가 흐리다
-      if (starter && abbr) p.posPlaces[abbr] = (p.posPlaces[abbr] ?? 0) + 1;
+      /* 선발로 선 자리만 센다(교체 투입은 자리 의미가 흐리다).
+         그리고 최다 채택 포메이션 경기만 센다 — 다른 포메이션의 자리가
+         섞이면 배치가 흔들린다. 그 포메이션 기록이 없는 선수를 위해
+         전체 집계(posAny)도 같이 남겨 둔다. */
+      if (starter && abbr) {
+        p.posAny[abbr] = (p.posAny[abbr] ?? 0) + 1;
+        if (lu.formation === formation) p.posPlaces[abbr] = (p.posPlaces[abbr] ?? 0) + 1;
+      }
       p.recent.push({
         matchId: m.id,
         kickoffUtc: m.kickoffUtc,
@@ -161,10 +183,10 @@ export function buildSquad(
     /* 자리 약어는 경기 요약에 있을 때만 쌓인다 — 같은 팀이라도 대회에 따라
        아예 안 주는 응답이 있다(첼시가 그랬다). 그럴 땐 팀 로스터가 주는
        시즌 포지션(G/D/M/F)이라도 쓴다. 줄은 맞고 좌우만 모르는 상태다. */
-    const posEntries = Object.entries(p.posPlaces);
-    p.modalPos = posEntries.length
-      ? posEntries.sort((x, y) => y[1] - x[1])[0][0]
-      : (athletes[p.id]?.posAbbr ?? '');
+    const pickModal = (rec: Record<string, number>) =>
+      Object.entries(rec).sort((x, y) => y[1] - x[1])[0]?.[0];
+    p.modalPos =
+      pickModal(p.posPlaces) ?? pickModal(p.posAny) ?? athletes[p.id]?.posAbbr ?? '';
 
     /* 화면에 쓰는 큰 분류는 약어에서 다시 뽑는다 — 스냅샷이 예전 규칙으로
        잘못 저장해 둔 값(CM·CAM·CF 를 수비수로 본)을 여기서 바로잡는다. */
@@ -188,9 +210,6 @@ export function buildSquad(
   });
 
   players.sort((a, b) => b.score - a.score);
-
-  const formation =
-    Object.entries(formationCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
   return { players, formation, covered };
 }
