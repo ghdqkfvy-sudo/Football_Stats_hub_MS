@@ -35,6 +35,12 @@ export interface TargetTheme {
   secondary: string;
   /** accent 위에 올릴 글자색 */
   onAccent: string;
+  /**
+   * 상대 팀 득점자를 칠할 색.
+   * 기본은 흰색이다 — 팀 컬러(=우리 팀)와 가장 잘 갈린다. 다만 팀 컬러
+   * 자체가 흰색에 가까운 팀(뉴캐슬)은 둘이 구분되지 않아 따로 준다.
+   */
+  opponent?: string;
   /** 헤더 글로우 그라디언트 */
   glow: string;
 }
@@ -226,6 +232,8 @@ export const TARGETS: Target[] = [
       accent: '#E6EAF2',      // 검정은 어두운 배경에서 안 보인다 — 흑백의 흰쪽을 쓴다
       secondary: '#41B6E6',   // 엠블럼의 하늘색
       onAccent: '#0B0B0C',
+      // 팀 컬러가 흰색이라 상대 팀도 흰색이면 구분이 안 된다 — 하늘색으로
+      opponent: '#63C9F0',
       glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(230,234,242,.16), transparent 60%)',
     },
     league: 'eng.1',

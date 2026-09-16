@@ -18,6 +18,26 @@ const visibleStats = (p: KoreanPlayer) =>
 const sum = (rows: KoreanStat[], k: 'goals' | 'assists' | 'apps' | 'minutes') =>
   rows.reduce((a, r) => a + r[k], 0);
 
+/**
+ * 대회 앰블럼 — 스냅샷이 core 리그 객체에서 받아 둔 주소를 쓴다.
+ * 주소가 없거나(오래된 피드) 이미지가 막힌 환경이면 대회 색 점으로 떨어진다.
+ */
+function LeagueMark({ src, color }: { src?: string; color: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <i className="krcc__dot" style={{ background: color }} aria-hidden="true" />;
+  return (
+    <img
+      className="krcc__logo"
+      src={src}
+      alt=""
+      width={15}
+      height={15}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export function KoreansTab() {
   /* 명단과 정렬 규칙만 코드에 있고, 기록은 전부 네트워크에서 온다 */
   const [KOREANS, setKoreans] = useState<KoreanPlayer[] | null>(null);
@@ -206,7 +226,12 @@ function KoreanCard({
             />
             {p.club} · {p.age}세
           </span>
-          <span className="krc__lg">{p.leagueName}</span>
+          <span className="krc__lg">
+            {/* 리그 앰블럼도 API 가 준 주소다 — 리그 로고 id 를 코드에 적어
+                두면 선수가 새 리그로 옮길 때마다 빈칸이 된다. */}
+            <LeagueMark src={p.leagueLogo} color={palette.color(p.league)} />
+            {p.leagueName}
+          </span>
         </div>
       </div>
 
@@ -218,7 +243,7 @@ function KoreanCard({
           <div className="krc__comps">
             {shown.map((s) => (
               <div className="krcc" key={s.competition} style={{ ['--c' as string]: palette.color(s.competition) }}>
-                <i />
+                <LeagueMark src={s.logo} color={palette.color(s.competition)} />
                 <span className="krcc__n">{s.label}</span>
                 <span className="krcc__bar">
                   <b style={{ width: `${((s.goals + s.assists) / max) * 100}%` }} />

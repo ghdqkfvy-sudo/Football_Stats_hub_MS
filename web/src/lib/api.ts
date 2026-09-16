@@ -41,6 +41,46 @@ export async function loadSchedule(teamId: string): Promise<Loaded<Match[]>> {
   });
 }
 
+/* ── 일정 부가 정보 (컵 라운드 · 다음 경기 미리보기) ──────
+   경기 목록과 같은 파일에 들어 있지만 쓰는 화면이 달라 따로 꺼낸다.
+   프록시(실시간) 응답에는 없으므로 정적 피드에서만 읽는다. */
+
+export interface CupRound { label: string; start: string; end: string }
+
+export interface LastFiveGame {
+  date: string; score: string; result: string; atVs: string;
+  opponent: string; opponentId: string; opponentName: string; opponentLogo: string;
+  competition: string;
+}
+
+export interface H2HGame {
+  id: string; date: string; competition: string;
+  homeId: string; awayId: string; homeAbbr: string; awayAbbr: string;
+  homeScore?: number; awayScore?: number;
+}
+
+export interface ScheduleExtras {
+  rounds: Record<string, CupRound[]>;
+  preview?: {
+    eventId: string;
+    opponentId: string;
+    lastFive: Record<string, LastFiveGame[]>;
+    h2h: H2HGame[];
+  };
+}
+
+export async function loadScheduleExtras(teamId: string): Promise<ScheduleExtras> {
+  const slug = TEAM_SLUG[teamId];
+  if (!slug) return { rounds: {} };
+  const r = await load<ScheduleExtras>({
+    feedFile: `schedule-${slug}.json`,
+    pick: (json) => ({ rounds: json?.rounds ?? {}, preview: json?.preview }),
+    empty: (v) => !v || (Object.keys(v.rounds).length === 0 && !v.preview),
+    fallback: { rounds: {} },
+  });
+  return r.data;
+}
+
 /**
  * 종료 경기의 득점자/어시스트.
  *

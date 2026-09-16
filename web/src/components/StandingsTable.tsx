@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Match, StandingTable } from '../lib/types';
+import type { Match, StandingTable, StandingZone } from '../lib/types';
 import { kstShortDate } from '../lib/kst';
 import { resultOf, teamResults } from '../lib/league';
 import { Crest } from './Crest';
@@ -49,10 +49,16 @@ const zoneLabel = (text: string) => ZONE_KO[text.toLowerCase()] ?? text;
  * 모르는 구분은 ESPN 색을 그대로 쓴다.
  */
 const ZONE_COLOR: { match: RegExp; color: string }[] = [
-  { match: /champions league|round of 16|knockout/i, color: '#4CC9F0' }, // 하늘색
-  { match: /europa/i, color: '#FF9F2E' },                                // 주황
-  { match: /conference/i, color: '#2ED573' },                            // 초록
-  { match: /relegation|eliminated/i, color: '#FF5C6C' },                 // 빨강
+  // 챔스 조별리그 표 — 위에서 아래로 갈수록 어두워지는 한 계열로 단계를 보여 준다
+  { match: /round of 16/i, color: '#4CC9F0' },        // 16강 직행 — 밝은 하늘
+  { match: /seeded/i, color: '#5B8DEF' },             // 플레이오프 시드 — 파랑
+  { match: /knockout|play-?off/i, color: '#8B7BFF' }, // 플레이오프 비시드 — 보라
+  { match: /eliminated/i, color: '#FF5C6C' },
+  // 리그 표
+  { match: /champions league/i, color: '#4CC9F0' },
+  { match: /europa/i, color: '#FF9F2E' },
+  { match: /conference/i, color: '#2ED573' },
+  { match: /relegation/i, color: '#FF5C6C' },
   { match: /promotion/i, color: '#C084FC' },
 ];
 const zoneColor = (z: { color: string; text: string }) =>
@@ -75,21 +81,43 @@ function rankRange(ranks: number[]): string {
 export function StandingsTable({ table, matches, focusTeamId }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
-  const zoneOf = (rank: number) => table.zones?.[rank];
-
-  /* 범례는 표에 실제로 들어 있는 구분만 모아 만든다 —
-     같은 설명끼리 묶고, 가장 높은 순위가 앞에 오게 세운다. */
-  const legend = (() => {
+  /*
+   * 같은 설명이 붙은 순위를 모으고, **가장 높은 순위에서 이어지는 구간만**
+   * 남긴다.
+   *
+   * 왜 거르나: 라리가 응답에 10위가 "Europa League" 로 하나 더 들어 있었다.
+   * 6위에 이미 제대로 된 유로파 자리가 있는데도 그렇고, 결정적으로 그 항목만
+   * 색이 `##c6d1e0` (샵이 두 개) 로 깨져 있다 — ESPN 쪽에서 손으로 넣다 남은
+   * 줄로 보인다. 그대로 두면 범례가 "6위 · 10위 유로파" 가 되어, 규정을
+   * 아는 사람일수록 더 헷갈린다. 떨어져 있는 순위가 **유일한** 경우
+   * (컵 우승팀 자리처럼 진짜로 하나만 있는 경우)는 그대로 남긴다.
+   */
+  const { zones, legend } = (() => {
     const by = new Map<string, { color: string; ranks: number[] }>();
     for (const [rank, z] of Object.entries(table.zones ?? {})) {
       const hit = by.get(z.text) ?? { color: z.color, ranks: [] };
       hit.ranks.push(Number(rank));
       by.set(z.text, hit);
     }
-    return [...by.entries()]
-      .map(([text, v]) => ({ text, color: v.color, ranks: v.ranks }))
-      .sort((a, b) => Math.min(...a.ranks) - Math.min(...b.ranks));
+
+    const keptZones: Record<number, StandingZone> = {};
+    const rows: { text: string; color: string; ranks: number[] }[] = [];
+    for (const [text, v] of by) {
+      const sorted = [...v.ranks].sort((a, b) => a - b);
+      const run = [sorted[0]];
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] !== run[run.length - 1] + 1) break;
+        run.push(sorted[i]);
+      }
+      const keep = sorted.length === 1 ? sorted : run;
+      for (const r of keep) keptZones[r] = { color: v.color, text };
+      rows.push({ text, color: v.color, ranks: keep });
+    }
+    rows.sort((a, b) => Math.min(...a.ranks) - Math.min(...b.ranks));
+    return { zones: keptZones, legend: rows };
   })();
+
+  const zoneOf = (rank: number) => zones[rank];
 
   return (
     <div className="tbl">

@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Match, StandingTable } from '../lib/types';
 import type { Target } from '../config/targets';
 import { dayKey, monthKey } from '../lib/kst';
-import { loadGoals, loadLeague } from '../lib/api';
+import { loadGoals, loadLeague, loadScheduleExtras, type ScheduleExtras } from '../lib/api';
 import { buildTable } from '../lib/league';
 import { usePalette } from '../lib/palette';
 import { NextMatchHero, type TeamStanding } from '../components/NextMatchHero';
 import { Calendar } from '../components/Calendar';
 import { MonthList } from '../components/MonthList';
 import { MatchSheet } from '../components/Sheet';
+import { MatchPreview } from '../components/MatchPreview';
 
 interface Props {
   target: Target;
@@ -57,6 +58,16 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
   const palette = usePalette();
   const leagueKey = target.league ?? target.competitions[0];
   const matchKey = heroMatch && heroMatch.competition !== leagueKey ? heroMatch.competition : null;
+  /* 컵 라운드 목록과 다음 경기 미리보기 — 경기 목록과 같은 파일에 있지만
+     쓰는 화면이 달라 따로 읽는다(같은 파일이라 요청은 한 번 더 나가지 않는다). */
+  const [extras, setExtras] = useState<ScheduleExtras | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setExtras(null);
+    loadScheduleExtras(target.espnTeamId).then((e) => { if (alive) setExtras(e); });
+    return () => { alive = false; };
+  }, [target.espnTeamId]);
+
   const [tables, setTables] = useState<Record<string, StandingTable | null>>({});
 
   useEffect(() => {
@@ -165,6 +176,14 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
   return (
     <div className="page">
       {heroMatch && <NextMatchHero match={heroMatch} focusTeamId={target.espnTeamId} standingOf={standingOf} />}
+      {heroMatch && extras?.preview?.eventId === heroMatch.id && (
+        <MatchPreview
+          match={heroMatch}
+          focusTeamId={target.espnTeamId}
+          lastFive={extras.preview.lastFive}
+          h2h={extras.preview.h2h}
+        />
+      )}
 
       <section>
         <div className="sec__head">

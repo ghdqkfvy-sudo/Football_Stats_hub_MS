@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './styles/global.css';
 import { TARGETS, getTarget, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
@@ -84,6 +84,23 @@ export default function App() {
     setMatches((prev) => prev.map((m) => (m.id === id ? { ...m, goals, goalsLoaded: true } : m)));
   }, []);
 
+  /* 클럽 스위처가 오른쪽 끝까지 스크롤됐는지 — 흐림(마스크)을 끄는 기준 */
+  const switchRef = useRef<HTMLDivElement>(null);
+  const [switchEnd, setSwitchEnd] = useState(true);
+  const syncSwitchEnd = useCallback(() => {
+    const el = switchRef.current;
+    if (!el) return;
+    setSwitchEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+  }, []);
+  useLayoutEffect(() => {
+    syncSwitchEnd();
+    const el = switchRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(syncSwitchEnd);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [syncSwitchEnd, targetId]);
+
   const themeVars = useMemo(
     () =>
       ({
@@ -91,6 +108,7 @@ export default function App() {
         ['--accent']: target.theme.accent,
         ['--secondary']: target.theme.secondary,
         ['--on-accent']: target.theme.onAccent,
+        ['--opp']: target.theme.opponent ?? '#FFFFFF',
         ['--glow']: target.theme.glow,
       }) as React.CSSProperties,
     [target],
@@ -126,7 +144,16 @@ export default function App() {
           </div>
 
           <div className="hdr__row">
-            <div className="switch" data-scroll>
+            <div
+              className="switch"
+              data-scroll
+              /* 오른쪽 끝을 흐리게 해 "더 있다" 를 알리는데, 끝까지 스크롤한
+                 뒤에도 흐림이 남으면 마지막 칩(뉴캐슬)이 잘려 보인다.
+                 끝에 닿으면 data-end 로 흐림을 걷는다. */
+              data-end={switchEnd || undefined}
+              ref={switchRef}
+              onScroll={syncSwitchEnd}
+            >
               <span className="switch__label">CLUB</span>
               {TARGETS.filter((t) => t.kind === 'club').map((t) => (
                 <button
@@ -211,7 +238,7 @@ export default function App() {
             onGoalsLoaded={onGoalsLoaded}
           />
         )}
-        {tab === 'standings' && <StandingsTab key={target.id} target={target} />}
+        {tab === 'standings' && <StandingsTab key={target.id} target={target} teamMatches={matches} />}
         {tab === 'players' && <PlayersTab key={target.id} target={target} matches={matches} />}
         {tab === 'koreans' && <KoreansTab />}
         {tab === 'news' && <NewsTab key={target.id} target={target} />}

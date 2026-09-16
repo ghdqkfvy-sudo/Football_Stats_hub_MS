@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { Headshot } from './Headshot';
+import { Crest } from './Crest';
+import { CompCrest } from './CompCrest';
 import { kstShortDate } from '../lib/kst';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -142,6 +144,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
         ] as const).map(([k, label]) => (
           <SortHead key={k} k={k} label={label} sort={sort} onClick={clickSort} />
         ))}
+        <span className="num">카드</span>
       </div>
 
       <div className="pt__list" ref={listRef}>
@@ -175,6 +178,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
             <span className="num pt__g" data-on={p.goals > 0}>{p.goals}</span>
             <span className="num pt__a" data-on={p.assists > 0}>{p.assists}</span>
             <span className="num pt__p" data-on={p.points > 0}>{p.points}</span>
+            <span className="pt__cards"><Cards yellow={p.yellow} red={p.red} /></span>
           </div>
         ))}
         {rows.length === 0 && <p className="nogoal" style={{ padding: 16 }}>해당 포지션 기록이 없습니다.</p>}
@@ -182,6 +186,27 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
 
       {card && <PlayerCard p={card.p} top={card.top} left={card.left} />}
     </div>
+  );
+}
+
+/** 경고·퇴장 — 없으면 줄표 하나로 조용히 둔다 */
+function Cards({ yellow, red, zero = false }: { yellow: number; red: number; zero?: boolean }) {
+  if (!yellow && !red && !zero) return <i className="cards__none">–</i>;
+  return (
+    <span className="cards">
+      {(yellow > 0 || zero) && (
+        <b className="num" data-c="y">
+          <i />
+          {yellow}
+        </b>
+      )}
+      {(red > 0 || zero) && (
+        <b className="num" data-c="r">
+          <i />
+          {red}
+        </b>
+      )}
+    </span>
   );
 }
 
@@ -210,105 +235,148 @@ function SortHead({
   );
 }
 
-/** 호버 카드 — 시즌 스탯 + 최근 3경기. 리스트 스크롤 밖에 fixed 로 뜬다. */
+/**
+ * 호버 카드 — 기본 스탯(왼쪽)과 최근 3경기(오른쪽)를 나란히 놓는다.
+ * 한 장에 세로로 쌓으면 카드가 화면 높이를 넘겨 최근 경기가 잘렸다.
+ * 리스트 스크롤 밖에 fixed 로 뜬다.
+ */
 function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: number }) {
   const palette = usePalette();
   const recent = p.recent.slice(0, 3);
   const ref = useRef<HTMLDivElement>(null);
-  const [y, setY] = useState(top);
+  const [pos, setPos] = useState({ x: left, y: top });
 
+  /* 카드는 목록 왼쪽에 붙인다. 최근 경기 패널이 붙어 폭이 두 배가 되면서
+     그대로 두면 화면 왼쪽 밖으로 나가 버린다 — 재서 화면 안으로 끌어온다. */
   useLayoutEffect(() => {
-    const h = ref.current?.offsetHeight ?? 0;
-    const half = h / 2;
-    setY(Math.max(12 + half, Math.min(window.innerHeight - 12 - half, top)));
-  }, [top, p.id]);
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const half = el.offsetHeight / 2;
+    setPos({
+      x: Math.max(12, Math.min(window.innerWidth - 12 - w, left - w)),
+      y: Math.max(12 + half, Math.min(window.innerHeight - 12 - half, top)),
+    });
+  }, [top, left, p.id]);
 
   return (
     <div
       className="pcard"
       role="tooltip"
       ref={ref}
-      style={{ top: y, left, transform: 'translate(-100%, -50%)' }}
+      style={{ top: pos.y, left: pos.x, transform: 'translateY(-50%)' }}
     >
-      <div className="pcard__top">
-        <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={40} className="pcard__hs" />
-        <div>
-          <b>{p.name}</b>
-          <span>
-            <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
-            {' · '}시즌 {p.apps}경기 (선발 {p.starts})
-          </span>
-        </div>
-      </div>
-
-      <div className="pcard__stats">
-        {([
-          ['출전', p.apps, false],
-          ['선발', p.starts, false],
-          ['득점', p.goals, true],
-          ['도움', p.assists, true],
-        ] as const).map(([k, v, glow]) => (
-          <div key={k} data-glow={glow && v > 0}>
-            <b className="num">{v}</b>
-            <span>{k}</span>
+      <div className="pcard__main">
+        <div className="pcard__top">
+          <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={46} className="pcard__hs" />
+          <div>
+            <b>{p.name}</b>
+            <span>
+              <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
+              {` #${p.jersey}`}
+              {p.age ? ` · ${p.age}세` : ''}
+            </span>
           </div>
-        ))}
+        </div>
+
+        {/* 숫자 네 칸은 있는 그대로 — 강조 상자는 공격 포인트 하나만 쓴다 */}
+        <div className="pcard__stats">
+          {([
+            ['출전', p.apps],
+            ['선발', p.starts],
+            ['골', p.goals],
+            ['도움', p.assists],
+          ] as const).map(([k, v]) => (
+            <div key={k}>
+              <b className="num">{v}</b>
+              <span>{k}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="pcard__hero">
+          <div className="pcard__mins num">
+            <b>{p.minutes}<i>분</i></b>
+            {/* 경기별 실제 교체 기록이 있으면 모든 대회 합계지만, 없으면
+                시즌 통계(리그 전용)를 쓴 값이라 라벨을 구분해 준다. */}
+            <span>{p.realMinutes ? '출전 시간' : '리그 출전 시간'}</span>
+          </div>
+          <div className="pcard__ap num" data-on={p.points > 0}>
+            <b>{p.points}</b>
+            <span>공격 포인트</span>
+          </div>
+        </div>
+
+        <div className="pcard__cards">
+          <span>카드</span>
+          <Cards yellow={p.yellow} red={p.red} zero />
+        </div>
+
+        {p.byComp.length > 0 && (
+          <div className="pcard__comps">
+            <span className="eyebrow">대회별</span>
+            {p.byComp.map((c) => (
+              <div className="pcard__comp" key={c.competition}>
+                <CompCrest k={c.competition} size={14} />
+                <span className="pcard__cn">{palette.name(c.competition)}</span>
+                <span className="pcard__ca num">{c.apps}경기<i>선발 {c.starts}</i></span>
+                <span className="pcard__cg num">
+                  <b>{c.goals}</b>G <b>{c.assists}</b>A
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="pcard__hero">
-        <div className="pcard__mins num">
-          <b>{p.minutes}</b>
-          {/* 경기별 실제 교체 기록이 있으면 모든 대회 합계지만, 없으면
-              시즌 통계(리그 전용)를 쓴 값이라 라벨을 구분해 준다. */}
-          <span>{p.realMinutes ? '출전 시간(분)' : '리그 출전 시간(분)'}</span>
-        </div>
-        <div className="pcard__ap num" data-on={p.points > 0}>
-          <b>{p.points}</b>
-          <span>공격 포인트</span>
-        </div>
-      </div>
+      {recent.length > 0 && (
+        <div className="pcard__side">
+          <div className="pcard__sideh">
+            <b>최근 {recent.length}경기</b>
+            <span>{p.name.split(' ').slice(-1)[0]}</span>
+          </div>
+          {recent.map((g) => (
+            <div className="pcard__g" key={g.matchId}>
+              <i className="fchip" data-r={g.result}>{g.result}</i>
+              <span className="pcard__gc">
+                <CompCrest k={g.competition} size={13} />
+                {palette.name(g.competition)}
+              </span>
+              <span className="pcard__when num">{kstShortDate(g.kickoffUtc)}</span>
 
-      {p.byComp.length > 0 && (
-        <div className="pcard__comps">
-          <span className="eyebrow">대회별</span>
-          {p.byComp.map((c) => (
-            <div className="pcard__comp" key={c.competition}>
-              <i style={{ background: palette.color(c.competition) }} />
-              <span className="pcard__cn">{palette.name(c.competition)}</span>
-              <span className="pcard__ca num">{c.apps}경기<i>선발 {c.starts}</i></span>
-              <span className="pcard__cg num">
-                <b>{c.goals}</b>G <b>{c.assists}</b>A
+              <span className="pcard__opp">
+                <Crest
+                  team={{
+                    id: g.opponentId,
+                    name: g.opponentName,
+                    shortName: g.opponentName,
+                    abbr: g.opponent,
+                    logo: g.opponentLogo ?? '',
+                  }}
+                  size={16}
+                />
+                {g.homeAway === '홈' ? 'vs' : '@'} {g.opponentName}
+              </span>
+              <span className="pcard__sc num">{g.scoreline}</span>
+
+              <span className="pcard__ga num">
+                {/* 선발이면 "선발 90'", 교체면 "교체 60'(30)" —
+                    몇 분에 들어가 몇 분을 뛰었는지가 한눈에 보인다. */}
+                {g.started
+                  ? `선발 · ${g.minutes}'`
+                  : g.subIn !== undefined
+                    ? `교체 ${g.subIn}'(${g.minutes})`
+                    : `교체 · ${g.minutes}'`}
+              </span>
+              <span className="pcard__gb">
+                {g.goals > 0 && <em className="pcard__gg">{g.goals}G</em>}
+                {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
+                <Cards yellow={g.yellow} red={g.red} />
               </span>
             </div>
           ))}
         </div>
       )}
-
-      <div className="pcard__recent">
-        <span className="eyebrow">최근 {recent.length}경기</span>
-        {recent.map((g) => (
-          <div className="pcard__g" key={g.matchId}>
-            <i className="fchip" data-r={g.result}>{g.result}</i>
-            <span className="pcard__opp">
-              {g.homeAway === '홈' ? 'vs' : '@'} {g.opponent}
-            </span>
-            <span className="pcard__sc num">{g.scoreline}</span>
-            <span className="pcard__when num">{kstShortDate(g.kickoffUtc)}</span>
-            <span className="pcard__ga num">
-              {/* 선발이면 "선발 90'", 교체면 "교체 60'(30)" —
-                  몇 분에 들어가 몇 분을 뛰었는지가 한눈에 보인다. */}
-              {g.started
-                ? `선발 ${g.minutes}'${g.subOut !== undefined ? ' 교체아웃' : ''}`
-                : g.subIn !== undefined
-                  ? `교체 ${g.subIn}'(${g.minutes})`
-                  : `교체 ${g.minutes}'`}
-              {g.goals > 0 && <em className="pcard__gg">{g.goals}G</em>}
-              {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
-            </span>
-            <i className="pcard__c" style={{ background: palette.color(g.competition) }} />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

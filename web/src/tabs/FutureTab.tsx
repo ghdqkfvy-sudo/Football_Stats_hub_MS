@@ -41,8 +41,8 @@ export function FutureTab({ target }: { target: Target }) {
         <div className="empty">
           <h3>{target.nameEn} 의 조항 선수가 등록되어 있지 않습니다</h3>
           <p>
-            이적 조항(바이백·셀온·임대 조건)은 무료 API 에 존재하지 않아
-            <code> web/src/data/future.ts </code> 에서 직접 관리합니다.
+            이적 조항(바이백·셀온·임대)은 무료 API 에 존재하지 않아
+            <code> web/src/data/future.ts </code> 에 선수와 조항 종류만 적어 둡니다.
             선수를 추가하면 현 소속팀과 기록은 ESPN 에서 자동으로 붙습니다.
           </p>
         </div>
@@ -59,7 +59,7 @@ export function FutureTab({ target }: { target: Target }) {
         <div className="sec__head">
           <h2 className="sec__title">Future Resources</h2>
           <span className="sec__note">
-            조항 정보는 수동 큐레이션 · 소속팀과 기록은 ESPN 실시간
+            조항 종류만 표기 · 소속팀과 기록은 ESPN 실시간
           </span>
         </div>
 
@@ -88,10 +88,12 @@ export function FutureTab({ target }: { target: Target }) {
         </div>
 
         <p className="fnote">
-          이적 조항은 ESPN 을 포함한 어떤 무료 API 에도 없습니다. 그래서 조항 문구만
-          <code> future.ts </code> 에 적어 두고, 현 소속팀·출전·득점·최근 경기는
+          이적 조항은 ESPN 을 포함한 어떤 무료 API 에도 없습니다. 그래서 여기서는
+          <b> 조항의 종류(바이백·셀온·임대)만 </b> 표시합니다 — 금액·비율·기한처럼
+          출처를 댈 수 없는 값은 적지 않습니다. 선수 명단만
+          <code> future.ts </code> 에 두고, 현 소속팀·출전·득점·최근 경기는
           athleteId 로 ESPN 에서 받아 붙입니다. 선수가 팀을 옮겨도 ID 만 맞으면
-          화면은 따라갑니다. 확인되지 않은 금액·비율은 적지 않았습니다.
+          화면은 따라갑니다.
         </p>
       </section>
     </div>
@@ -151,8 +153,6 @@ function FutureCard({ p, stat }: { p: FuturePlayer; stat?: FutureStat | null }) 
         </div>
       )}
 
-      <p className="fcard__note">{p.note}</p>
-      <span className="fcard__chk num">확인 {p.checked}</span>
     </article>
   );
 }

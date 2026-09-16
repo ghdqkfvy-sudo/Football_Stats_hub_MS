@@ -17,6 +17,8 @@ export type LineupEntry = [
   number?,                // 골
   number?,                // 도움
   string?,                // 포지션 약어
+  number?,                // 경고
+  number?,                // 퇴장
 ];
 
 export interface AthleteInfo {
@@ -41,6 +43,8 @@ export interface AthleteInfo {
    * 줄 배치라도 맞추기 위한 대비책이다.
    */
   posAbbr?: string;
+  /** 팀 로스터가 주는 나이 */
+  age?: number;
 }
 
 export interface Lineup {
@@ -75,6 +79,8 @@ export interface Article {
 export interface KoreanStat {
   competition: string;
   label: string;
+  /** 대회 앰블럼 (API 가 준 주소) */
+  logo?: string;
   apps: number; starts: number; minutes: number;
   goals: number; assists: number; yellow: number; red: number;
 }
@@ -112,6 +118,8 @@ export interface KoreanPlayer {
   leagueName: string;
   /** 소속팀 로스터가 알려 준 실제 헤드샷 주소 (없는 선수도 많다) */
   photo?: string;
+  /** 소속 리그 앰블럼 — core 리그 객체의 logos(dark) 에서 받아 온다 */
+  leagueLogo?: string;
   stats: KoreanStat[];
   recent: KoreanGame[];
 }

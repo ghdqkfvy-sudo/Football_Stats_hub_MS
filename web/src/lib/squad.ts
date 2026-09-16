@@ -31,6 +31,11 @@ export interface PlayerSeason {
   goals: number;
   assists: number;
   points: number;
+  /** 경고·퇴장 (경기 요약 로스터의 yellowCards / redCards 합계) */
+  yellow: number;
+  red: number;
+  /** 팀 로스터가 알려 준 나이 */
+  age?: number;
   /** formationPlace → 선발 횟수 */
   slots: Record<number, number>;
   modalSlot: number;
@@ -53,7 +58,12 @@ export interface RecentGame {
   matchId: string;
   kickoffUtc: string;
   competition: string;
+  /** 상대 팀 약어 (좁은 자리용) */
   opponent: string;
+  /** 상대 팀 전체 이름 · 엠블럼 — 카드에서는 이쪽을 쓴다 */
+  opponentName: string;
+  opponentId: string;
+  opponentLogo?: string;
   homeAway: '홈' | '원정';
   scoreline: string;
   result: 'W' | 'D' | 'L';
@@ -65,6 +75,8 @@ export interface RecentGame {
   subOut?: number;
   goals: number;
   assists: number;
+  yellow: number;
+  red: number;
 }
 
 const FULL_TIME = 90;
@@ -181,7 +193,7 @@ export function buildSquad(
     const result: 'W' | 'D' | 'L' =
       (mine ?? 0) > (theirs ?? 0) ? 'W' : (mine ?? 0) < (theirs ?? 0) ? 'L' : 'D';
 
-    for (const [id, place, starter, inMin, outMin, eg, ea, abbr] of lu.entries) {
+    for (const [id, place, starter, inMin, outMin, eg, ea, abbr, ey, er] of lu.entries) {
       const info = athletes[id];
       if (!info) continue;                       // 이름을 모르는 선수는 지어내지 않는다
       const mins = minutesOf(starter, inMin, outMin);
@@ -190,7 +202,9 @@ export function buildSquad(
       if (!p) {
         p = {
           id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
+          age: info.age,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
+          yellow: 0, red: 0,
           slots: {}, modalSlot: 0, posPlaces: {}, posAny: {}, modalPos: '',
           byComp: [], recent: [], score: 0, realMinutes: false,
         };
@@ -228,6 +242,8 @@ export function buildSquad(
       if (lu.hasMinutes) p.realMinutes = true;
       p.goals += g;
       p.assists += a;
+      p.yellow += ey ?? 0;
+      p.red += er ?? 0;
       if (place > 0) p.slots[place] = (p.slots[place] ?? 0) + 1;
       /* 선발로 선 자리만 센다(교체 투입은 자리 의미가 흐리다).
          그리고 최다 채택 포메이션 경기만 센다 — 다른 포메이션의 자리가
@@ -242,6 +258,9 @@ export function buildSquad(
         kickoffUtc: m.kickoffUtc,
         competition: m.competition,
         opponent: opp.abbr,
+        opponentName: opp.name,
+        opponentId: opp.id,
+        opponentLogo: opp.logo,
         homeAway: isHome ? '홈' : '원정',
         scoreline: `${m.homeScore ?? '-'} : ${m.awayScore ?? '-'}`,
         result,
@@ -251,6 +270,8 @@ export function buildSquad(
         subOut: outMin != null ? outMin : undefined,
         goals: g,
         assists: a,
+        yellow: ey ?? 0,
+        red: er ?? 0,
       });
     }
   }

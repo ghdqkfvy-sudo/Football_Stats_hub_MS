@@ -46,7 +46,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-12';
+const CODE_VERSION = 'snap-13';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -226,6 +226,14 @@ const shiftDay = (yyyymmdd, delta) => {
 /* 캐시에 **결과가 아니라 약속(Promise)** 을 담는다 — 동시에 같은 날짜를
    물어봐도 요청은 한 번만 나간다. */
 const sbCache = new Map();
+
+/* 대회별 라운드 달력 — 스코어보드 응답이 덤으로 준다.
+   `leagues[0].calendar[0].entries` 가 [{label:'Third Round', startDate, endDate}, …]
+   형태로 그 대회의 **모든 라운드**를 순서대로 알려 준다(eng.league_cup 실측:
+   Preliminary → First → Second → Third → Fourth → Quarterfinals → Semifinals → Final).
+   컵 대진표를 우리가 지어내지 않고 이 목록 그대로 그린다. */
+const roundCal = new Map();
+
 function scoreboardGoals(leagueSlug, yyyymmdd) {
   const key = `${leagueSlug}|${yyyymmdd}`;
   let hit = sbCache.get(key);
@@ -233,6 +241,19 @@ function scoreboardGoals(leagueSlug, yyyymmdd) {
 
   hit = (async () => {
     const j = await get(`${SITE}/apis/site/v2/sports/soccer/${leagueSlug}/scoreboard?dates=${yyyymmdd}`);
+    const entries = j?.leagues?.[0]?.calendar?.[0]?.entries;
+    if (Array.isArray(entries) && entries.length && !roundCal.has(leagueSlug)) {
+      roundCal.set(
+        leagueSlug,
+        entries
+          .map((e) => ({
+            label: String(e?.label ?? '').trim(),
+            start: String(e?.startDate ?? ''),
+            end: String(e?.endDate ?? ''),
+          }))
+          .filter((e) => e.label && e.start && e.end),
+      );
+    }
     const map = new Map();
     for (const ev of j?.events ?? []) {
       map.set(String(ev?.id ?? ''), goalsFromDetailsRaw(ev?.competitions?.[0]?.details));
@@ -241,6 +262,13 @@ function scoreboardGoals(leagueSlug, yyyymmdd) {
   })();
   sbCache.set(key, hit);
   return hit;
+}
+
+/** 이 대회의 라운드 달력을 확보한다 (이미 있으면 요청하지 않는다) */
+async function ensureRounds(leagueSlug, anyIsoDate) {
+  if (roundCal.has(leagueSlug)) return;
+  const d = ymd(anyIsoDate);
+  if (d) await scoreboardGoals(leagueSlug, d);
 }
 
 
@@ -420,6 +448,7 @@ async function teamPhotos(leagueSlug, teamId) {
       photo: a?.headshot?.href ? String(a.headshot.href) : undefined,
       // 시즌 포지션(G/D/M/F) — 경기 요약이 자리 약어를 안 줄 때의 대비책이다
       posAbbr: a?.position?.abbreviation ? String(a.position.abbreviation) : undefined,
+      age: Number(a?.age) || undefined,
     });
   }
   rosterPhotoCache.set(key, map);
@@ -444,6 +473,35 @@ const wikiCache = new Map();
 const normName = (s) => String(s ?? '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/* ── ESPN 헤드샷 ─────────────────────────────────────────
+ * ESPN 은 축구 선수 사진을 **일부에게만** 준다. 2026-09-16 에 다시 확인했다:
+ *  · 팀 로스터(/teams/{id}/roster) 의 headshot.href — 있는 선수만 나온다
+ *  · core 선수 객체 / 선수 프로필(common/v3) / 검색(search/v2) — 사진 필드 없음
+ *  · ESPN 웹의 선수 페이지(음바페) 자체에도 사진이 없음
+ * 즉 "더 뒤지면 나온다" 가 아니라 원본에 없다.
+ *
+ * 다만 있는 선수의 주소는 예외 없이 이 관용 형식이었다
+ * (213248 뒴프리스 · 304871 에메하 · 353951 하토).
+ * 로스터가 안 알려 준 선수도 실제로는 파일이 있을 수 있으므로,
+ * **HEAD 로 한 번 찔러 보고 있으면** 위키백과보다 먼저 쓴다.
+ */
+const ESPN_HS = (id) => `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`;
+const hsCache = new Map();
+function espnHeadshot(id) {
+  const key = String(id);
+  if (hsCache.has(key)) return hsCache.get(key);
+  const p = (async () => {
+    try {
+      const res = await fetch(ESPN_HS(key), { method: 'HEAD' });
+      return res.ok ? ESPN_HS(key) : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  hsCache.set(key, p);
+  return p;
+}
 
 async function wikipediaPhoto(name) {
   const want = normName(name);
@@ -724,6 +782,94 @@ async function enrichAssists(events, defaultLeague, budget = 12) {
   if (fetched) console.log(`    도움 매칭 신규 ${fetched}경기 (매칭 0건 ${none})`);
 }
 
+/* ── 다음 경기 미리보기 (폼 + 상대전적) ─────────────────
+ * "다음 경기" 화면에서 정작 궁금한 건 두 가지다 —
+ * 두 팀이 요즘 어떤가(최근 5경기), 그리고 서로 만나면 어땠나(상대전적).
+ *
+ * 최근 5경기는 만들 필요가 없다. 경기 요약이 `lastFiveGames` 로
+ * **양 팀 것을 한 번에** 준다(아직 안 치른 경기의 요약에도 들어 있다).
+ * 상대전적은 우리 팀의 이번 시즌 일정 + 지난 시즌 일정에서 추린다.
+ */
+function compactGame(ev, teamId) {
+  const c = ev?.competitions?.[0];
+  const cs = c?.competitors ?? [];
+  const h = cs.find((x) => x?.homeAway === 'home');
+  const a = cs.find((x) => x?.homeAway === 'away');
+  if (!h || !a) return null;
+  const num = (v) => {
+    const n = Number(v?.score?.displayValue ?? v?.score);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  return {
+    id: String(ev.id),
+    date: String(ev.date ?? ''),
+    competition: String(ev?.league?.slug ?? ev?.season?.slug ?? ''),
+    homeId: String(h?.team?.id ?? ''),
+    awayId: String(a?.team?.id ?? ''),
+    homeAbbr: String(h?.team?.abbreviation ?? ''),
+    awayAbbr: String(a?.team?.abbreviation ?? ''),
+    homeScore: num(h),
+    awayScore: num(a),
+    done: c?.status?.type?.completed === true,
+    teamId,
+  };
+}
+
+/** 지난 시즌 일정 — 상대전적을 두 시즌 합산으로 보여 주기 위해서만 쓴다 */
+async function prevSeasonGames(teamId) {
+  const j = await get(
+    `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${teamId}/schedule?season=${SEASON - 1}`,
+  );
+  return (j?.events ?? [])
+    .map((ev) => compactGame(ev, teamId))
+    .filter((g) => g && g.done);
+}
+
+async function nextMatchPreview(events, teamId) {
+  const upcoming = events
+    .filter((e) => e?.competitions?.[0]?.status?.type?.completed !== true)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))[0];
+  if (!upcoming) return undefined;
+
+  const c = upcoming.competitions[0];
+  const opp = (c?.competitors ?? []).find((x) => String(x?.team?.id ?? '') !== teamId);
+  const oppId = String(opp?.team?.id ?? '');
+  const lg = upcoming?.league?.slug ?? upcoming?.season?.slug ?? '';
+
+  const [sum, older] = await Promise.all([
+    lg ? get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${upcoming.id}`) : null,
+    prevSeasonGames(teamId),
+  ]);
+
+  /* lastFiveGames 는 [{team:{id}, events:[…]}, …] 형태다 — 팀별로 나눠 담는다 */
+  const lastFive = {};
+  for (const blk of sum?.lastFiveGames ?? []) {
+    const tid = String(blk?.team?.id ?? '');
+    if (!tid) continue;
+    lastFive[tid] = (blk?.events ?? []).map((g) => ({
+      date: String(g?.gameDate ?? ''),
+      score: String(g?.score ?? ''),
+      result: String(g?.gameResult ?? '').toUpperCase().slice(0, 1),   // W / L / D
+      atVs: String(g?.atVs ?? ''),
+      opponent: String(g?.opponent?.abbreviation ?? g?.opponent?.displayName ?? ''),
+      opponentId: String(g?.opponent?.id ?? ''),
+      opponentName: String(g?.opponent?.displayName ?? ''),
+      opponentLogo: String(g?.opponentLogo ?? g?.opponent?.logo ?? ''),
+      competition: String(g?.competitionName ?? ''),
+    }));
+  }
+
+  // 상대전적: 이번 시즌(이미 손에 있는 일정) + 지난 시즌
+  const thisSeason = events
+    .map((ev) => compactGame(ev, teamId))
+    .filter((g) => g && g.done);
+  const h2h = [...older, ...thisSeason]
+    .filter((g) => g.homeId === oppId || g.awayId === oppId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  return { eventId: String(upcoming.id), opponentId: oppId, lastFive, h2h };
+}
+
 /* ── 한국어 뉴스 ──────────────────────────────────────
    무료·무키로 한국어 축구 기사를 얻는 길은 사실상 구글 뉴스 RSS 뿐이다.
    XML 은 여기서 JSON 으로 바꿔 둔다 — 브라우저가 파싱할 일이 없게. */
@@ -778,6 +924,22 @@ async function googleNewsKo(q) {
 /* ── 코리안리거 한 명 ─────────────────────────────────
    core 는 athlete 를 $ref 로만 주므로 프로필 → 소속팀 → 대회별 기록 순으로
    따라가야 한다. 리그와 유럽대항전을 합쳐 주는 엔드포인트는 없다. */
+/** 대회 슬러그 → 어두운 배경용 리그 앰블럼 주소 (core 리그 객체가 준다) */
+const leagueLogoCache = new Map();
+function leagueLogoOf(slug) {
+  if (!slug) return Promise.resolve(undefined);
+  if (leagueLogoCache.has(slug)) return leagueLogoCache.get(slug);
+  const p = (async () => {
+    const j = await get(`${CORE}/v2/sports/soccer/leagues/${slug}`);
+    const logos = Array.isArray(j?.logos) ? j.logos : [];
+    const dark = logos.find((l) => (l?.rel ?? []).includes('dark'));
+    const href = dark?.href ?? logos[0]?.href;
+    return href ? String(href) : undefined;
+  })();
+  leagueLogoCache.set(slug, p);
+  return p;
+}
+
 async function koreanPlayer(id, nameKo, carriedPhoto) {
   const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
   if (!prof) return null;
@@ -896,20 +1058,26 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     }
   }
 
-  /* 사진: ESPN 은 소속팀 로스터에만 갖고 있고 그마저 대부분 비어 있다.
-     없으면 위키백과로 보충한다(carried 는 호출하는 쪽에서 넘겨준다). */
+  /* 사진: 소속팀 로스터 → ESPN 관용 주소(HEAD 로 확인) → 이어받기 → 위키백과 */
   let photo;
   if (league && clubId !== '0') {
     photo = (await teamPhotos(league, clubId)).get(String(id))?.photo;
   }
+  if (!photo) photo = await espnHeadshot(id);
   if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(String(prof?.displayName ?? nameKo));
+
+  /* 대회 앰블럼도 API 에서 가져온다 — 리그 로고 id 를 코드에 적어 두면
+     새 리그(그리스·덴마크·벨기에…)로 이적할 때마다 표가 비어 버린다.
+     core 리그 객체가 logos[] 를 주고, rel:['full','dark'] 가 어두운 배경용이다. */
+  const leagueLogo = await leagueLogoOf(league);
+  for (const st of stats) st.logo = await leagueLogoOf(st.competition);
 
   return {
     id, nameKo,
     name: String(prof?.displayName ?? nameKo),
     pos,
     age: Number(prof?.age ?? 0) || 0,
-    clubId, club, league, leagueName,
+    clubId, club, league, leagueName, leagueLogo,
     photo,
     stats, recent,
   };
@@ -940,8 +1108,24 @@ async function main() {
          경기당 페이지가 커서 회차를 나눠 채운다 — 끝난 경기는 한 번이면 끝. */
       await enrichAssists(events, t.league, 10);
       await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40, true);
+
+      /* 이 팀이 나가는 대회의 라운드 목록을 확보한다.
+         컵은 순위표가 없어서 표를 만들 수가 없고, 대신 "몇 라운드부터 나와서
+         어디까지 갔는지" 를 그리려면 그 대회의 라운드 순서가 필요하다.
+         ESPN 스코어보드가 calendar 로 그대로 준다. */
+      const comps = new Map();
+      for (const ev of events) {
+        const lg = ev?.league?.slug ?? ev?.season?.slug;
+        if (lg && !comps.has(lg)) comps.set(lg, ev?.date);
+      }
+      await pool([...comps.entries()], 4, ([lg, d]) => ensureRounds(lg, d));
+      const rounds = {};
+      for (const lg of comps.keys()) if (roundCal.has(lg)) rounds[lg] = roundCal.get(lg);
+
+      const preview = await nextMatchPreview(events, t.id);
+
       await save(`schedule-${t.slug}.json`, {
-        events, team: t.id,
+        events, team: t.id, rounds, preview,
         goalsSource: GOALS_SOURCE, statsSource: STATS_SOURCE, assistsSource: ASSISTS_SOURCE,
         fetchedAt: new Date().toISOString(),
       });
@@ -1101,6 +1285,9 @@ async function main() {
           stat(e, 'goalAssists'),
           // 'CD-L' · 'AM-R' 처럼 좌우까지 들어 있는 ESPN 자리 약어
           String(e?.position?.abbreviation ?? '') || undefined,
+          // 경고·퇴장 (요약 로스터가 선수별로 준다)
+          stat(e, 'yellowCards'),
+          stat(e, 'redCards'),
         ]);
         const name = String(e?.athlete?.displayName ?? '').trim();
         if (name) {
@@ -1156,16 +1343,18 @@ async function main() {
         const meta = photos.get(id);
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
-        const [wiki, mins] = await Promise.all([
-          meta?.photo ? null : (carried.get(id) ?? wikipediaPhoto(athletes[id].name)),
+        if (meta?.age) athletes[id].age = meta.age;
+        const [direct, mins] = await Promise.all([
+          meta?.photo ? meta.photo : espnHeadshot(id),
           athleteSeasonMinutes(t.league, id),
         ]);
-        if (meta?.photo) {
-          athletes[id].photo = meta.photo;
+        if (direct) {
+          athletes[id].photo = direct;
           fromEspn++;
-        } else if (wiki) {
-          athletes[id].photo = wiki;
-          fromWiki++;
+        } else {
+          // ESPN 에 없는 선수만 위키백과로 내려간다
+          const wiki = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);
+          if (wiki) { athletes[id].photo = wiki; fromWiki++; }
         }
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
       });
