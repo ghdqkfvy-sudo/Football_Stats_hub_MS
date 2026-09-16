@@ -121,7 +121,6 @@ function Column({
     <section className="lbc" data-rev={col.reverse}>
       <header className="lbc__h">
         <h3>{col.label}</h3>
-        <span className="lbc__n num">{shown.length}</span>
       </header>
 
       {shown.length === 0 ? (

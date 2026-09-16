@@ -53,9 +53,14 @@ const SITE_WEB = 'https://site.web.api.espn.com';
 
 const CORE = 'https://sports.core.api.espn.com';
 
+/* 앱의 web/src/config/targets.ts 와 같은 목록이어야 한다 —
+   슬러그가 데이터 파일 이름이 된다(schedule-{slug}.json). */
 const TEAMS = [
   { id: '86', slug: 'real-madrid', league: 'esp.1', koQuery: '레알 마드리드' },
   { id: '363', slug: 'chelsea', league: 'eng.1', koQuery: '첼시 FC' },
+  { id: '360', slug: 'man-united', league: 'eng.1', koQuery: '맨체스터 유나이티드' },
+  { id: '367', slug: 'tottenham', league: 'eng.1', koQuery: '토트넘 홋스퍼' },
+  { id: '361', slug: 'newcastle', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
   { id: '451', slug: 'korea', league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
 ];
 const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
@@ -63,11 +68,12 @@ const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
 /** 코리안리거 명단 — 앱의 src/config/koreans.ts 와 같은 목록을 쓴다 */
 const KOREANS = [
   ['149945', '손흥민'], ['274197', '이강인'], ['157688', '김민재'],
-  ['297985', '이재성'], ['310166', '정우영'], ['346613', '홍현석'],
-  ['302132', '황인범'], ['235297', '황희찬'], ['311486', '오현규'],
-  ['256598', '백승호'], ['362208', '배준호'], ['303016', '조규성'],
-  ['321923', '이한범'], ['347512', '이현주'], ['393410', '양민혁'],
-  ['354283', '양현준'], ['403147', '김민수'], ['298402', '김지수'],
+  ['237224', '황희찬'], ['134103', '이재성'], ['276323', '정우영'],
+  ['271701', '홍현석'], ['303464', '조규성'], ['280061', '황인범'],
+  ['302434', '오현규'], ['256598', '백승호'], ['362208', '배준호'],
+  ['302793', '설영우'], ['304793', '옌스 카스트로프'], ['297791', '엄지성'],
+  ['297788', '이한범'], ['346774', '이현주'], ['371578', '양민혁'],
+  ['350711', '양현준'], ['388617', '김민수'], ['362203', '김지수'],
 ];
 
 /** 유럽대항전 — 리그 기록과 따로 조회해야 한다 */
@@ -78,6 +84,36 @@ const EURO = [
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * 독립적인 요청을 동시에 n 개까지 굴린다.
+ *
+ * 예전에는 전부 한 줄로 세워 놓고 사이사이 sleep 을 넣었다. ESPN 은
+ * 그만큼 조심할 필요가 없는데도, 리그 워크플로우가 7분 넘게 걸리는 이유의
+ * 대부분이 이 "기다림" 이었다(요청 자체보다 줄 서 있는 시간이 길었다).
+ * 순서가 중요한 곳은 없으므로 결과 배열의 자리만 지켜 주면 된다.
+ */
+async function pool(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      try {
+        out[i] = await fn(items[i], i);
+      } catch (e) {
+        /* 한 건이 터졌다고 나머지를 버리지 않는다 — 스냅샷은 "받은 만큼
+           갱신하고 나머지는 다음 회차" 가 원칙이다. */
+        console.error(`  ✗ 처리 실패 [${i}] — ${e?.message ?? e}`);
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker),
+  );
+  return out;
+}
 
 async function get(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
@@ -187,20 +223,24 @@ const shiftDay = (yyyymmdd, delta) => {
 };
 
 /** (대회, 날짜) 스코어보드 한 번 = 그 날 그 대회 모든 경기의 득점 상세 */
+/* 캐시에 **결과가 아니라 약속(Promise)** 을 담는다 — 동시에 같은 날짜를
+   물어봐도 요청은 한 번만 나간다. */
 const sbCache = new Map();
-async function scoreboardGoals(leagueSlug, yyyymmdd) {
+function scoreboardGoals(leagueSlug, yyyymmdd) {
   const key = `${leagueSlug}|${yyyymmdd}`;
-  const hit = sbCache.get(key);
+  let hit = sbCache.get(key);
   if (hit) return hit;
 
-  const j = await get(`${SITE}/apis/site/v2/sports/soccer/${leagueSlug}/scoreboard?dates=${yyyymmdd}`);
-  const map = new Map();
-  for (const ev of j?.events ?? []) {
-    map.set(String(ev?.id ?? ''), goalsFromDetailsRaw(ev?.competitions?.[0]?.details));
-  }
-  sbCache.set(key, map);
-  await sleep(150);
-  return map;
+  hit = (async () => {
+    const j = await get(`${SITE}/apis/site/v2/sports/soccer/${leagueSlug}/scoreboard?dates=${yyyymmdd}`);
+    const map = new Map();
+    for (const ev of j?.events ?? []) {
+      map.set(String(ev?.id ?? ''), goalsFromDetailsRaw(ev?.competitions?.[0]?.details));
+    }
+    return map;
+  })();
+  sbCache.set(key, hit);
+  return hit;
 }
 
 
@@ -251,40 +291,49 @@ async function prevStatsMap(fileName) {
 
 /** 종료된 경기에 선수별 득점·도움을 채운다 */
 async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120, withWindows = false) {
-  let fetched = 0;
+  // 1) 이어받을 건 바로 붙이고, 실제로 받아야 할 경기만 추린다
+  const todo = [];
   for (const ev of events) {
     const c = ev?.competitions?.[0];
     if (!c || c?.status?.type?.completed !== true) continue;
-    const id = String(ev.id);
-    const cached = prevMap.get(id);
+    const cached = prevMap.get(String(ev.id));
     if (cached) { c.__stats = cached; continue; }
-    if (fetched >= budget) continue;   // 한 번에 다 받지 않고 회차를 나눠 채운다
+    if (todo.length >= budget) break;   // 한 번에 다 받지 않고 회차를 나눠 채운다
+    todo.push(ev);
+  }
+  if (!todo.length) return;
 
+  // 2) 서로 관계없는 요청이라 줄 세울 이유가 없다 — 동시에 굴린다
+  let fetched = 0;
+  await pool(todo, 5, async (ev) => {
+    const c = ev.competitions[0];
+    const id = String(ev.id);
     const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
     const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${id}`);
-    if (sum?.rosters) {
-      const stats = playerStatsFrom(sum);
-      /* 도움을 골에 배정하려면 "그 선수가 몇 분부터 몇 분까지 뛰었는지" 가
-         필요하다. 그 정보는 core 경기 로스터에만 있다(요약은 불리언뿐).
-         이달의 경기에만 필요하므로 팀 일정에서만 받는다. */
-      if (withWindows && stats.some((x) => x.a > 0)) {
-        for (const tid of [...new Set(stats.map((x) => x.teamId))]) {
-          const info = await coreLineupInfo(lg, id, tid);
-          if (!info.size) continue;
-          for (const x of stats) {
-            if (x.teamId !== tid) continue;
-            const it = info.get(x.id);
-            if (!it) continue;
-            x.in = it.starter ? 0 : (it.inMin ?? null);
-            x.out = it.outMin ?? null;
-          }
+    if (!sum?.rosters) return;
+    const stats = playerStatsFrom(sum);
+    /* 출전 구간(몇 분부터 몇 분까지)은 도움을 **추론**할 때만 쓴다.
+       지금은 골↔도움을 core /plays 가 직접 알려 주므로(enrichAssists),
+       팀 일정에서만, 그것도 추론 대비책으로만 받는다. 리그 전체 파일에는
+       필요 없다 — 경기마다 요청이 2건 넘게 늘어나 가장 비싼 구간이었다. */
+    if (withWindows && stats.some((x) => x.a > 0)) {
+      const teams = [...new Set(stats.map((x) => x.teamId))];
+      const infos = await Promise.all(teams.map((tid) => coreLineupInfo(lg, id, tid)));
+      teams.forEach((tid, k) => {
+        const info = infos[k];
+        if (!info?.size) return;
+        for (const x of stats) {
+          if (x.teamId !== tid) continue;
+          const it = info.get(x.id);
+          if (!it) continue;
+          x.in = it.starter ? 0 : (it.inMin ?? null);
+          x.out = it.outMin ?? null;
         }
-      }
-      c.__stats = stats;
-      fetched++;
+      });
     }
-    await sleep(150);
-  }
+    c.__stats = stats;
+    fetched++;
+  });
   if (fetched) console.log(`    선수 기록 신규 ${fetched}경기`);
 }
 
@@ -295,14 +344,15 @@ async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120, w
    32=AM-L, 33=AM-R, 19=F 로 실측 확인). 위치 표는 대회당 수십 개뿐이라
    한 번 받아 캐시하면 된다. */
 const posAbbrCache = new Map();
-async function positionAbbr(leagueSlug, posId) {
+function positionAbbr(leagueSlug, posId) {
   const key = `${leagueSlug}|${posId}`;
   if (posAbbrCache.has(key)) return posAbbrCache.get(key);
-  const j = await get(`${CORE}/v2/sports/soccer/leagues/${leagueSlug}/positions/${posId}`);
-  const abbr = j?.abbreviation ? String(j.abbreviation) : undefined;
-  posAbbrCache.set(key, abbr);
-  await sleep(100);
-  return abbr;
+  const p = (async () => {
+    const j = await get(`${CORE}/v2/sports/soccer/leagues/${leagueSlug}/positions/${posId}`);
+    return j?.abbreviation ? String(j.abbreviation) : undefined;
+  })();
+  posAbbrCache.set(key, p);
+  return p;
 }
 
 /* core 경기 로스터 한 번이면 자리 약어와 **교체 시각**을 같이 얻는다.
@@ -506,6 +556,20 @@ async function prevGoalsMap(fileName) {
 
 /** 종료된 경기들에 득점 상세를 채운다(이어받거나, 없으면 스코어보드에서). */
 async function enrichGoals(events, defaultLeague, prevMap) {
+  /* 스코어보드는 (대회, 날짜) 단위라 여러 경기가 같은 응답을 나눠 쓴다.
+     아래 루프가 순서대로 물어보면 날짜 수만큼 왕복을 기다리게 되므로,
+     필요한 날짜를 먼저 모아 동시에 받아 캐시를 채워 둔다. */
+  const warm = new Map();
+  for (const ev of events) {
+    const c = ev?.competitions?.[0];
+    if (!c || c?.status?.type?.completed !== true) continue;
+    if (prevMap.get(String(ev.id))) continue;
+    const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
+    const d = ymd(ev?.date);
+    if (lg && d) warm.set(`${lg}|${d}`, [lg, d]);
+  }
+  if (warm.size) await pool([...warm.values()], 6, ([lg, d]) => scoreboardGoals(lg, d));
+
   let fetched = 0;
   let missed = 0;
   for (const ev of events) {
@@ -613,8 +677,7 @@ async function corePlayAssists(leagueSlug, eventId) {
 
 /** 종료 경기의 __goals 에 도움을 붙인다 */
 async function enrichAssists(events, defaultLeague, budget = 12) {
-  let fetched = 0;
-  let none = 0;
+  const todo = [];
   for (const ev of events) {
     const c = ev?.competitions?.[0];
     if (!c || c?.status?.type?.completed !== true) continue;
@@ -624,15 +687,24 @@ async function enrichAssists(events, defaultLeague, budget = 12) {
     // PK·자책골에는 도움이 없다 — 그것만 남았으면 받을 이유가 없다
     const need = goals.some((g) => !g.ownGoal && !g.penalty && !g.assist);
     if (!need) { c.__assists = true; continue; }
-    if (fetched >= budget) continue;
+    if (todo.length >= budget) break;
+    todo.push(ev);
+  }
+  if (!todo.length) return;
 
+  let fetched = 0;
+  let none = 0;
+  // 응답이 커서(경기당 1,400~1,600 play) 동시 3개까지만
+  await pool(todo, 3, async (ev) => {
+    const c = ev.competitions[0];
+    const goals = Array.isArray(c.__goals) ? c.__goals : [];
     const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
-    if (!lg) continue;
+    if (!lg) return;
 
     const list = await corePlayAssists(lg, String(ev.id));
     fetched++;
     // 응답 자체를 못 받았으면 표시하지 않는다 — 다음 회차에 다시 시도한다
-    if (list === null) continue;
+    if (list === null) return;
     let hits = 0;
     for (const a of list) {
       /* 시계 초값이 있으면 그것으로, 없으면 분+득점자 id 로 같은 골을 찾는다 */
@@ -648,7 +720,7 @@ async function enrichAssists(events, defaultLeague, budget = 12) {
     }
     c.__assists = true;
     if (!hits) none++;
-  }
+  });
   if (fetched) console.log(`    도움 매칭 신규 ${fetched}경기 (매칭 0건 ${none})`);
 }
 
@@ -866,7 +938,7 @@ async function main() {
       await enrichGoals(events, t.league, prevMap);
       /* 골↔도움은 core /plays 가 실제로 알려 준다(participants type=assister).
          경기당 페이지가 커서 회차를 나눠 채운다 — 끝난 경기는 한 번이면 끝. */
-      await enrichAssists(events, t.league, 12);
+      await enrichAssists(events, t.league, 10);
       await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40, true);
       await save(`schedule-${t.slug}.json`, {
         events, team: t.id,
@@ -904,25 +976,33 @@ async function main() {
       continue;
     }
 
+    /* 20팀 × 2요청. 한 팀씩 줄 세우면 팀 수만큼 왕복을 기다린다 —
+       리그 워크플로우가 길어지던 가장 큰 이유였다. 서로 무관한 요청이라
+       동시에 굴리고, 합치는 순서만 팀 목록 순서로 고정한다. */
+    const perTeam = await pool(ids, 6, async (id) => {
+      const base = `${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/teams/${id}/schedule`;
+      return Promise.all([get(base), get(`${base}?fixture=true`)]);
+    });
+
     const seen = new Set();
     const events = [];
-    for (const id of ids) {
-      const base = `${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/teams/${id}/schedule`;
-      const [past, future] = await Promise.all([get(base), get(`${base}?fixture=true`)]);
-      for (const src of [past, future]) {
+    for (const pair of perTeam) {
+      for (const src of pair ?? []) {
         for (const ev of src?.events ?? []) {
           const eid = String(ev?.id ?? '');
           if (eid && !seen.has(eid)) { seen.add(eid); events.push(ev); }
         }
       }
-      await sleep(180);
     }
     events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
     if (events.length) {
       const prevMap = await prevGoalsMap(`league-${lg}.json`);
       await enrichGoals(events, lg, prevMap);
-      await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120, true);
+      /* 리그 파일은 순위표·대회별 공격포인트에 쓰인다 — 선수별 골·도움
+         합계만 있으면 되고, 출전 구간(withWindows)은 필요 없다.
+         true 로 두면 도움이 있는 경기마다 요청이 2건 넘게 더 붙는다. */
+      await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120, false);
       await save(`league-${lg}.json`, {
         league: lg,
         events,
@@ -990,11 +1070,13 @@ async function main() {
 
     const lineups = {};
     const athletes = {};
-    for (const ev of done) {
+    /* 경기 16건이 서로 무관하다 — 한 건씩 기다리면 팀마다 16번의 왕복이
+       그대로 시간이 된다(팀이 늘어날수록 선형으로 늘어난다). */
+    await pool(done, 4, async (ev) => {
       const lg = ev?.league?.slug ?? ev?.season?.slug ?? t.league;
       const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${ev.id}`);
       const mine = (sum?.rosters ?? []).find((r) => String(r?.team?.id ?? '') === t.id);
-      if (!mine?.roster?.length) continue;
+      if (!mine?.roster?.length) return;
 
       const stat = (e, name) => {
         const hit = (e?.stats ?? []).find((x) => x?.name === name);
@@ -1006,7 +1088,7 @@ async function main() {
       const entries = [];
       for (const e of mine.roster) {
         const id = String(e?.athlete?.id ?? '');
-        if (!id) continue;
+        if (!id) continue;                       // eslint-disable-line no-continue
         /* 교체 시각은 여기(요약)에 없다 — subbedIn/subbedOut 이 불리언뿐이다.
            실제 시각은 아래에서 core 로스터로 채운다. */
         entries.push([
@@ -1048,7 +1130,7 @@ async function main() {
               if (athletes[x[0]]) athletes[x[0]].pos = posFromAbbr(it.abbr);
             }
           }
-          console.log(`    ${t.slug} ${ev.id}: core 로스터 ${info.size}명 (교체 시각 ${subs}건)`);
+          if (!subs) console.log(`    ${t.slug} ${ev.id}: 교체 시각 0건`);
         }
         lineups[String(ev.id)] = {
           teamId: t.id,
@@ -1058,8 +1140,7 @@ async function main() {
           hasMinutes,
         };
       }
-      await sleep(220);
-    }
+    });
 
     if (Object.keys(lineups).length) {
       const photos = await teamPhotos(t.league, t.id);
@@ -1067,23 +1148,27 @@ async function main() {
       let fromEspn = 0;
       let fromWiki = 0;
       let gotMinutes = 0;
-      for (const id of Object.keys(athletes)) {
+      /* 선수 한 명당 (사진 + 시즌 출전시간) 이라 30명이면 왕복 60번이다.
+         여기도 줄 세울 이유가 없다. */
+      await pool(Object.keys(athletes), 6, async (id) => {
         // ESPN 사진이 있으면 1순위, 없으면 지난 스냅샷에서 이어받고,
         // 그것도 없으면 위키백과에서 찾아본다.
         const meta = photos.get(id);
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
+        const [wiki, mins] = await Promise.all([
+          meta?.photo ? null : (carried.get(id) ?? wikipediaPhoto(athletes[id].name)),
+          athleteSeasonMinutes(t.league, id),
+        ]);
         if (meta?.photo) {
           athletes[id].photo = meta.photo;
           fromEspn++;
-        } else {
-          const url = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);
-          if (url) { athletes[id].photo = url; fromWiki++; }
+        } else if (wiki) {
+          athletes[id].photo = wiki;
+          fromWiki++;
         }
-        const mins = await athleteSeasonMinutes(t.league, id);
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
-        await sleep(150);
-      }
+      });
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
         codeVersion: CODE_VERSION,
@@ -1101,12 +1186,11 @@ async function main() {
   /* ── 코리안리거 (slow) ───────────────────────────────── */
   if (wants('slow')) {
     const carried = await prevPhotos('koreans.json');
-    const players = [];
-    for (const [id, nameKo] of KOREANS) {
-      const p = await koreanPlayer(id, nameKo, carried.get(String(id)));
-      if (p) players.push(p);
-      await sleep(250);
-    }
+    /* 선수 18명이 서로 무관하다 — 한 명씩 기다릴 이유가 없다.
+       순서는 명단 순서 그대로 유지한다(화면 정렬은 앱이 따로 한다). */
+    const got = await pool(KOREANS, 4, ([id, nameKo]) =>
+      koreanPlayer(id, nameKo, carried.get(String(id))));
+    const players = got.filter(Boolean);
     if (players.length) {
       await save('koreans.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
       console.log(`    코리안리거 ${players.length}명`);

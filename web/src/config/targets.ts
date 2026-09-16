@@ -2,15 +2,24 @@ import type { CompetitionKey } from '../lib/types';
 import bgRma from '../assets/bg-rma.jpg';
 import bgChe from '../assets/bg-che.jpg';
 import bgKor from '../assets/bg-kor.png';
+import bgMun from '../assets/bg-mun.jpg';
+import bgTot from '../assets/bg-tot.jpg';
+import bgNew from '../assets/bg-new.jpg';
 import crestKor from '../assets/crest-kor.png';
 
 /* ──────────────────────────────────────────────────────────────
    추적 대상 (팀 스위처)
-   ESPN team id 는 실제 응답으로 검증됨:
-   Real Madrid 86 / Chelsea 363 / South Korea 451
+   ESPN team id 는 실제 응답으로 검증됨 (eng.1 /teams 응답에서 확인):
+   Real Madrid 86 / Chelsea 363 / Manchester United 360 /
+   Tottenham Hotspur 367 / Newcastle United 361 / South Korea 451
+
+   각 팀의 참가 대회도 ESPN 일정 응답에서 확인했다 —
+   맨유만 uefa.champions 가 있고, 토트넘·뉴캐슬은 이번 시즌 유럽대항전이
+   없다(uefa.europa / uefa.europa.conf 참가 팀 목록에도 없다).
    ────────────────────────────────────────────────────────────── */
 
-export type TargetId = 'real-madrid' | 'chelsea' | 'korea';
+export type TargetId =
+  | 'real-madrid' | 'chelsea' | 'man-united' | 'tottenham' | 'newcastle' | 'korea';
 export type TargetKind = 'club' | 'national';
 
 export interface TargetTheme {
@@ -137,6 +146,95 @@ export const TARGETS: Target[] = [
       'eng.league_cup': '#FFA53D',
       'fifa.cwc': '#E879A6',
       'uefa.super_cup': '#A78BFA',
+      'club.friendly': '#6B7789',
+    },
+  },
+  {
+    id: 'man-united',
+    kind: 'club',
+    espnTeamId: '360',
+    newsQuery: '맨체스터 유나이티드',
+    name: 'Man United',
+    nameEn: 'Manchester United',
+    abbr: 'MAN',
+    subtitle: 'Premier League · Champions League',
+    crest: CREST('360'),
+    bg: bgMun,
+    bgKind: 'photo',
+    theme: {
+      brand: '#DA020E',
+      accent: '#FF6B72',
+      secondary: '#FBE122',   // 엠블럼의 금빛 노랑
+      onAccent: '#2A0004',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(218,2,14,.26), transparent 60%)',
+    },
+    league: 'eng.1',
+    competitions: ['eng.1', 'uefa.champions', 'eng.fa', 'eng.league_cup'],
+    palette: {
+      'eng.1': '#A855F7',            // Premier League 브랜드 퍼플
+      'uefa.champions': '#4C8DFF',
+      'eng.fa': '#2ED3B7',
+      'eng.league_cup': '#FFA53D',
+      'fifa.cwc': '#E879A6',
+      'uefa.super_cup': '#A78BFA',
+      'club.friendly': '#6B7789',
+    },
+  },
+  {
+    id: 'tottenham',
+    kind: 'club',
+    espnTeamId: '367',
+    newsQuery: '토트넘 홋스퍼',
+    name: 'Tottenham',
+    nameEn: 'Tottenham Hotspur',
+    abbr: 'TOT',
+    subtitle: 'Premier League',
+    crest: CREST('367'),
+    bg: bgTot,
+    bgKind: 'photo',
+    theme: {
+      brand: '#132257',
+      accent: '#8AB0FF',
+      secondary: '#E3E9FF',   // 토트넘의 흰색
+      onAccent: '#060E24',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(60,96,200,.26), transparent 60%)',
+    },
+    league: 'eng.1',
+    competitions: ['eng.1', 'eng.fa', 'eng.league_cup'],
+    palette: {
+      'eng.1': '#A855F7',
+      'uefa.europa': '#FF8A3D',
+      'eng.fa': '#2ED3B7',
+      'eng.league_cup': '#FFA53D',
+      'club.friendly': '#6B7789',
+    },
+  },
+  {
+    id: 'newcastle',
+    kind: 'club',
+    espnTeamId: '361',
+    newsQuery: '뉴캐슬 유나이티드',
+    name: 'Newcastle',
+    nameEn: 'Newcastle United',
+    abbr: 'NEW',
+    subtitle: 'Premier League',
+    crest: CREST('361'),
+    bg: bgNew,
+    bgKind: 'photo',
+    theme: {
+      brand: '#241F20',
+      accent: '#E6EAF2',      // 검정은 어두운 배경에서 안 보인다 — 흑백의 흰쪽을 쓴다
+      secondary: '#41B6E6',   // 엠블럼의 하늘색
+      onAccent: '#0B0B0C',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(230,234,242,.16), transparent 60%)',
+    },
+    league: 'eng.1',
+    competitions: ['eng.1', 'eng.fa', 'eng.league_cup'],
+    palette: {
+      'eng.1': '#A855F7',
+      'uefa.europa': '#FF8A3D',
+      'eng.fa': '#2ED3B7',
+      'eng.league_cup': '#FFA53D',
       'club.friendly': '#6B7789',
     },
   },

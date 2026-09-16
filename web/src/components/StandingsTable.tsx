@@ -40,6 +40,24 @@ const ZONE_KO: Record<string, string> = {
 };
 const zoneLabel = (text: string) => ZONE_KO[text.toLowerCase()] ?? text;
 
+/*
+ * 띠 색만 우리가 정한다.
+ * "몇 위가 어디" 인지는 여전히 ESPN 이 정하지만, ESPN 이 주는 색은
+ * #81D6AC · #c6d1e0 · #B2BFD0 처럼 서로 거의 구분이 안 되는 연한 색이라
+ * 표 왼쪽에서 무엇이 무엇인지 알아볼 수가 없다.
+ * 대회별로 쓰는 관용색(챔스 하늘색 · 유로파 주황 · 컨퍼런스 초록)으로 바꾼다.
+ * 모르는 구분은 ESPN 색을 그대로 쓴다.
+ */
+const ZONE_COLOR: { match: RegExp; color: string }[] = [
+  { match: /champions league|round of 16|knockout/i, color: '#4CC9F0' }, // 하늘색
+  { match: /europa/i, color: '#FF9F2E' },                                // 주황
+  { match: /conference/i, color: '#2ED573' },                            // 초록
+  { match: /relegation|eliminated/i, color: '#FF5C6C' },                 // 빨강
+  { match: /promotion/i, color: '#C084FC' },
+];
+const zoneColor = (z: { color: string; text: string }) =>
+  ZONE_COLOR.find((c) => c.match.test(z.text))?.color ?? z.color;
+
 /** 연속된 순위는 "1–4위", 떨어져 있으면 "5위 · 10위" 로 적는다 */
 function rankRange(ranks: number[]): string {
   const sorted = [...ranks].sort((a, b) => a - b);
@@ -80,7 +98,7 @@ export function StandingsTable({ table, matches, focusTeamId }: Props) {
       {legend.length > 0 && (
         <div className="tbl__legend">
           {legend.map((z) => (
-            <span className="tbl__lg" key={z.text} style={{ ['--zone' as string]: z.color }}>
+            <span className="tbl__lg" key={z.text} style={{ ['--zone' as string]: zoneColor(z) }}>
               <i aria-hidden="true" />
               <b className="num">{rankRange(z.ranks)}</b>
               {zoneLabel(z.text)}
@@ -113,7 +131,7 @@ export function StandingsTable({ table, matches, focusTeamId }: Props) {
               className="tbl__line"
               aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : r.team.id)}
-              style={zone ? ({ ['--zone' as string]: zone.color } as React.CSSProperties) : undefined}
+              style={zone ? ({ ['--zone' as string]: zoneColor(zone) } as React.CSSProperties) : undefined}
               data-zone={!!zone}
               title={zone ? zoneLabel(zone.text) : undefined}
             >

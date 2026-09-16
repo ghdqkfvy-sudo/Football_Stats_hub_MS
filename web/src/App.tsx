@@ -126,7 +126,7 @@ export default function App() {
           </div>
 
           <div className="hdr__row">
-            <div className="switch">
+            <div className="switch" data-scroll>
               <span className="switch__label">CLUB</span>
               {TARGETS.filter((t) => t.kind === 'club').map((t) => (
                 <button

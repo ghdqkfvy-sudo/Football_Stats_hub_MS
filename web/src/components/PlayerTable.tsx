@@ -13,6 +13,17 @@ const FILTERS: { id: string; label: string }[] = [
   { id: 'F', label: 'FW' },
 ];
 
+/** 정렬 가능한 열 — 머리글을 누르면 그 값 기준 내림차순부터 시작한다 */
+type SortKey = 'apps' | 'starts' | 'minutes' | 'goals' | 'assists' | 'points';
+const NUM_OF: Record<SortKey, (p: PlayerSeason) => number> = {
+  apps: (p) => p.apps,
+  starts: (p) => p.starts,
+  minutes: (p) => p.minutes,
+  goals: (p) => p.goals,
+  assists: (p) => p.assists,
+  points: (p) => p.points,
+};
+
 interface Props {
   players: PlayerSeason[];
   activeId: string | null;
@@ -21,10 +32,24 @@ interface Props {
 
 export function PlayerTable({ players, activeId, onHover }: Props) {
   const [filter, setFilter] = useState('ALL');
-  const rows = useMemo(
-    () => (filter === 'ALL' ? players : players.filter((p) => p.pos === filter)),
-    [players, filter],
-  );
+
+  /* 정렬을 걸지 않았을 때의 기본 순서는 "베스트 11 먼저, 그다음 기여도 순"
+     이다(PlayersTab 에서 만들어 넘겨 준다). 머리글을 누르면 그 열 기준
+     내림차순, 한 번 더 누르면 오름차순, 세 번째에 기본으로 돌아간다. */
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean } | null>(null);
+  const clickSort = (key: SortKey) =>
+    setSort((s) => (s?.key !== key ? { key, desc: true } : s.desc ? { key, desc: false } : null));
+
+  const rows = useMemo(() => {
+    const base = filter === 'ALL' ? players : players.filter((p) => p.pos === filter);
+    if (!sort) return base;
+    const val = NUM_OF[sort.key];
+    // 같은 값이면 원래 순서를 지킨다(정렬이 목록을 흔들지 않게)
+    return base
+      .map((p, i) => ({ p, i }))
+      .sort((a, b) => (sort.desc ? val(b.p) - val(a.p) : val(a.p) - val(b.p)) || a.i - b.i)
+      .map((x) => x.p);
+  }, [players, filter, sort]);
 
   /* 골·도움 게이지의 기준은 스쿼드 최고 기록이다. 절대값이 아니라
      팀 안에서의 비중으로 읽혀야 한 줄만 봐도 누가 해결사인지 보인다. */
@@ -36,6 +61,25 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
   const [card, setCard] = useState<{ p: PlayerSeason; top: number; left: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
+
+  /*
+   * 머리글과 본문 열을 맞춘다.
+   * 목록에만 스크롤바가 생기므로 본문의 폭이 그만큼 좁아지고, 결과적으로
+   * 모든 숫자 열이 머리글보다 왼쪽으로 밀린다(실측 10px). 스크롤바 두께는
+   * 브라우저·OS 마다 다르니 값을 적어 두지 않고 실제로 재서 머리글에
+   * 같은 만큼 오른쪽 여백을 준다.
+   */
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    const wrap = wrapRef.current;
+    if (!el || !wrap) return;
+    const sync = () => wrap.style.setProperty('--pt-gutter', `${el.offsetWidth - el.clientWidth}px`);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rows.length]);
 
   /** 카드를 그 줄 옆에 놓는다 (호버 상태는 건드리지 않는다) */
   const placeCard = (p: PlayerSeason, el: HTMLElement) => {
@@ -73,7 +117,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
   }, [activeId, rows]);
 
   return (
-    <div className="pt">
+    <div className="pt" ref={wrapRef}>
       <div className="pt__bar">
         <div className="pt__filters">
           {FILTERS.map((f) => (
@@ -87,13 +131,17 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
 
       <div className="pt__head">
         <span>선수</span>
-        <span className="num">출전</span>
-        <span className="num">선발</span>
-        <span className="num">분</span>
+        {([
+          ['apps', '출전'], ['starts', '선발'], ['minutes', '분'],
+        ] as const).map(([k, label]) => (
+          <SortHead key={k} k={k} label={label} sort={sort} onClick={clickSort} />
+        ))}
         <span>골 / 도움</span>
-        <span className="num">G</span>
-        <span className="num">A</span>
-        <span className="num">P</span>
+        {([
+          ['goals', 'G'], ['assists', 'A'], ['points', 'P'],
+        ] as const).map(([k, label]) => (
+          <SortHead key={k} k={k} label={label} sort={sort} onClick={clickSort} />
+        ))}
       </div>
 
       <div className="pt__list" ref={listRef}>
@@ -134,6 +182,31 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
 
       {card && <PlayerCard p={card.p} top={card.top} left={card.left} />}
     </div>
+  );
+}
+
+/** 정렬 머리글 — 지금 기준인 열에만 화살표가 뜬다 */
+function SortHead({
+  k, label, sort, onClick,
+}: {
+  k: SortKey;
+  label: string;
+  sort: { key: SortKey; desc: boolean } | null;
+  onClick: (k: SortKey) => void;
+}) {
+  const on = sort?.key === k;
+  return (
+    <button
+      type="button"
+      className="num pt__sort"
+      data-on={on}
+      aria-sort={on ? (sort!.desc ? 'descending' : 'ascending') : 'none'}
+      title={on && !sort!.desc ? '눌러서 기본 순서로' : '눌러서 내림차순'}
+      onClick={() => onClick(k)}
+    >
+      {label}
+      {on && <i aria-hidden="true">{sort!.desc ? '▼' : '▲'}</i>}
+    </button>
   );
 }
 
