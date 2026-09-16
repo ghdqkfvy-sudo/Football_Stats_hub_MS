@@ -7,6 +7,12 @@ export interface AthleteInfo {
   name: string;
   jersey: number;
   pos: 'G' | 'D' | 'M' | 'F';
+  /**
+   * ESPN 선수 시즌 통계(`/athletes/{id}/statistics`)의 실제 누적 출전 시간(분).
+   * 경기별 교체 시각(subbedIn/OutAtMinute)은 필드명이 검증되지 않아 신뢰할 수
+   * 없으므로, 이미 검증된(코리안리거 집계에도 쓰는) 이 값이 있으면 우선한다.
+   */
+  minutesSeason?: number;
 }
 
 export interface Lineup {

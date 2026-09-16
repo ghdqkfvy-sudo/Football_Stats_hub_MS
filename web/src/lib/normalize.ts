@@ -124,7 +124,14 @@ export function matchFrom(ev: any): Match | null {
   if (!homeRaw || !awayRaw) return null;
 
   const { status, detail } = statusFrom(pick(c.status, ev.status));
-  const goals = goalsFromDetails(c.details);
+  /*
+   * 정적 스냅샷(scripts/snapshot.mjs)이 종료된 경기마다 core API /plays 로
+   * 득점자+어시스트를 미리 구워서 competitions[0].__goals 에 넣어 둔다.
+   * ESPN 스케줄 응답 자체에는 details[]가 아예 없어(요약 엔드포인트 전용)
+   * 이게 없으면 정적 피드만 쓰는 배포(Worker 프록시 없음)에서는 득점 기록이
+   * 통째로 빈다. 있으면 그걸 쓰고, 없으면(Worker 응답 등) 기존 방식대로.
+   */
+  const goals = Array.isArray((c as any).__goals) ? ((c as any).__goals as GoalEvent[]) : goalsFromDetails(c.details);
 
   return {
     id: String(ev.id),

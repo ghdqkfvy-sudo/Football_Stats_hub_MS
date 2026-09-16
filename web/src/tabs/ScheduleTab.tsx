@@ -42,12 +42,21 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
     setSelectedDay(dayKey(anchor.kickoffUtc));
   }, [matches, next, pinned]);
 
+  /**
+   * 히어로에 보여줄 경기 — 캘린더에서 다른 날짜를 고르면 그 날의 경기로 바뀐다.
+   * 고른 날짜에 경기가 없으면(빈 칸을 눌렀거나 아직 선택 전) 원래의 "다음 경기"로 되돌아간다.
+   */
+  const heroMatch = useMemo(() => {
+    if (!selectedDay) return next ?? null;
+    return matches.find((m) => dayKey(m.kickoffUtc) === selectedDay) ?? next ?? null;
+  }, [matches, selectedDay, next]);
+
   /* ── 순위·승무패 소스 ──────────────────────────────────
-     리그 표는 항상, 다음 경기 대회가 리그와 다르면 그 표도 같이 받는다.
+     리그 표는 항상, 히어로 경기의 대회가 리그와 다르면 그 표도 같이 받는다.
      (최대 2회 호출이고 스냅샷 폴백이 있으므로 히어로 렌더를 막지 않는다) */
   const palette = usePalette();
   const leagueKey = target.league ?? target.competitions[0];
-  const matchKey = next && next.competition !== leagueKey ? next.competition : null;
+  const matchKey = heroMatch && heroMatch.competition !== leagueKey ? heroMatch.competition : null;
   const [tables, setTables] = useState<Record<string, StandingTable | null>>({});
 
   useEffect(() => {
@@ -155,7 +164,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
 
   return (
     <div className="page">
-      {next && <NextMatchHero match={next} focusTeamId={target.espnTeamId} standingOf={standingOf} />}
+      {heroMatch && <NextMatchHero match={heroMatch} focusTeamId={target.espnTeamId} standingOf={standingOf} />}
 
       <section>
         <div className="sec__head">
@@ -198,9 +207,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
 
       <section>
         <div className="sec__head">
-          <h2 className="sec__title">
-            {cursor?.m}월 경기 <span className="num" style={{ color: 'var(--text-lo)', fontWeight: 400 }}>{monthMatches.length}</span>
-          </h2>
+          <h2 className="sec__title">{cursor?.m}월 경기</h2>
           <span className="sec__note">종료된 경기를 누르면 골 기록이 펼쳐집니다</span>
         </div>
         <MonthList

@@ -25,7 +25,7 @@
  *  · slow — 리그 전 팀(리그당 20팀 × 2요청)·스쿼드·코리안리거 → 1시간
  * 한 워크플로에서 다 돌리면 10분마다 수백 요청이 나가 ESPN 에 과하다.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -92,6 +92,110 @@ async function get(url, tries = 3) {
 async function save(name, data) {
   await writeFile(join(OUT, name), JSON.stringify(data), 'utf8');
   console.log(`  ✓ ${name}`);
+}
+
+/* ── 득점/도움 상세 (core API /plays) ────────────────────
+   팀/리그 일정(schedule) 응답에는 애초에 details[]가 없다(요약 엔드포인트
+   전용 필드). 그래서 정적 피드만 보는 배포(Worker 프록시 없음)에서는
+   "이달의 경기"·"대회별 선수 기록"이 득점자를 하나도 못 보여줬다.
+   종료된 경기마다 core /plays 를 한 번 떠서 competitions[0].__goals 에
+   박아 두면 클라이언트는 추가 요청 없이 바로 득점자를 그린다.
+   (normalize.ts 의 goalsFromPlays 와 같은 로직 — 이 스크립트는 순수 JS라
+   타입 파일을 import 할 수 없어 그대로 옮겨 적었다.) */
+function goalsFromPlaysRaw(items) {
+  if (!Array.isArray(items)) return [];
+  const assistsByClock = new Map();
+  for (const p of items) {
+    const text = String(p?.type?.text ?? '');
+    if (!/assist/i.test(text)) continue;
+    const who = p?.participants?.find((x) => /assist/i.test(String(x?.type ?? '')))?.athlete;
+    const name = who?.displayName ?? p?.participants?.[0]?.athlete?.displayName;
+    const clockVal = Number(p?.clock?.value);
+    if (name && Number.isFinite(clockVal)) assistsByClock.set(clockVal, String(name));
+  }
+  return items
+    .filter((p) => p?.scoringPlay === true && p?.shootout !== true)
+    .map((p) => {
+      const clockVal = Number(p?.clock?.value);
+      const dv = String(p?.clock?.displayValue ?? '');
+      const mm = dv.match(/(\d+)/);
+      const minute = mm ? parseInt(mm[1], 10) : Number.isFinite(clockVal) ? Math.floor(clockVal / 60) : 0;
+      const scorer =
+        p?.participants?.find((x) => /scorer/i.test(String(x?.type ?? '')))?.athlete?.displayName
+          ?? p?.participants?.[0]?.athlete?.displayName;
+      return {
+        minute,
+        clock: String(p?.clock?.displayValue ?? `${minute}'`),
+        teamId: String(p?.team?.id ?? ''),
+        scorer: String(scorer ?? '—'),
+        assist: Number.isFinite(clockVal) ? assistsByClock.get(clockVal) : undefined,
+        ownGoal: p?.ownGoal === true,
+        penalty: p?.penaltyKick === true,
+      };
+    })
+    .sort((a, b) => a.minute - b.minute);
+}
+
+/* ── 선수 시즌 누적 출전 시간 ─────────────────────────────
+   경기별 교체 시각(subbedIn/OutAtMinute) 필드명이 검증되지 않아 대부분
+   비어 오고, 그러면 출전시간이 "경기수 × 90분"으로 어림된다(web/src/lib/
+   squad.ts 참고). ESPN 선수 시즌 통계(/athletes/{id}/statistics)의
+   실제 누적값(minutes/timePlayed)은 코리안리거 집계에서 이미 검증된
+   값이라, 있으면 그걸로 총 출전시간을 덮어쓴다. */
+async function athleteSeasonMinutes(leagueSlug, id) {
+  const j = await get(
+    `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/seasons/${SEASON}/types/1/athletes/${id}/statistics`,
+  );
+  const cats = j?.splits?.categories ?? [];
+  const val = (name) => {
+    for (const c of cats) {
+      const hit = (c?.stats ?? []).find((x) => x?.name === name);
+      if (hit) return Number(hit.value) || 0;
+    }
+    return 0;
+  };
+  const minutes = val('minutes') || val('timePlayed') || 0;
+  return minutes > 0 ? minutes : null;
+}
+
+async function fetchGoalsFor(leagueSlug, eventId) {
+  const j = await get(
+    `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/events/${eventId}/competitions/${eventId}/plays?limit=400`,
+  );
+  if (!j) return null; // 실패 — __goals 를 안 붙여서 다음 실행에서 재시도되게 둔다
+  return goalsFromPlaysRaw(j.items);
+}
+
+/** 이전 스냅샷에서 이벤트별 __goals 를 이어받는다 — 종료된 경기의 득점
+    기록은 바뀌지 않으므로 한 번 뜬 경기는 다시 뜨지 않는다. */
+async function prevGoalsMap(fileName) {
+  const map = new Map();
+  try {
+    const raw = await readFile(join(OUT, fileName), 'utf8');
+    const json = JSON.parse(raw);
+    for (const ev of json?.events ?? []) {
+      const g = ev?.competitions?.[0]?.__goals;
+      if (Array.isArray(g)) map.set(String(ev.id), g);
+    }
+  } catch { /* 첫 실행 — 이어받을 이전 파일이 없다 */ }
+  return map;
+}
+
+/** 종료된 경기들에 득점 상세를 채운다(이어받거나, 없으면 새로 떠서). */
+async function enrichGoals(events, defaultLeague, prevMap) {
+  let fetched = 0;
+  for (const ev of events) {
+    const c = ev?.competitions?.[0];
+    if (!c || c?.status?.type?.completed !== true) continue;
+    const id = String(ev.id);
+    const cached = prevMap.get(id);
+    if (cached) { c.__goals = cached; continue; }
+    const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
+    const goals = await fetchGoalsFor(lg, id);
+    if (goals) { c.__goals = goals; fetched++; }
+    await sleep(150);
+  }
+  if (fetched) console.log(`    득점 상세 신규 ${fetched}경기`);
 }
 
 /* ── 한국어 뉴스 ──────────────────────────────────────
@@ -265,6 +369,8 @@ async function main() {
     events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
     if (events.length) {
+      const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
+      await enrichGoals(events, t.league, prevMap);
       await save(`schedule-${t.slug}.json`, { events, team: t.id, fetchedAt: new Date().toISOString() });
     } else {
       console.error(`  ! ${t.slug}: 이벤트 0건 — 기존 파일 유지`);
@@ -313,6 +419,8 @@ async function main() {
     events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
     if (events.length) {
+      const prevMap = await prevGoalsMap(`league-${lg}.json`);
+      await enrichGoals(events, lg, prevMap);
       await save(`league-${lg}.json`, {
         league: lg,
         events,
@@ -425,10 +533,19 @@ async function main() {
     }
 
     if (Object.keys(lineups).length) {
+      let gotMinutes = 0;
+      for (const id of Object.keys(athletes)) {
+        const mins = await athleteSeasonMinutes(t.league, id);
+        if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
+        await sleep(150);
+      }
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes, fetchedAt: new Date().toISOString(),
       });
-      console.log(`    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명`);
+      console.log(
+        `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
+          ` (실제 출전시간 확보 ${gotMinutes}명)`,
+      );
     } else {
       console.error(`  ! ${t.slug}: 라인업 0경기 — 기존 파일 유지`);
     }

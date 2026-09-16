@@ -46,5 +46,8 @@ jobs:
             git pull --rebase --autostash
             git commit -m "chore(data): 팀 일정·뉴스 $(date -u +'%Y-%m-%dT%H:%MZ')"
             git push
+            # GITHUB_TOKEN으로 한 push는 다른 on:push 워크플로우(Pages 배포)를
+            # 자동으로 트리거하지 않는다(무한루프 방지를 위한 GitHub의 기본 동작).
+            # 그래서 여기서 명시적으로 deploy-pages.yml 을 한 번 더 돌려준다.
             gh workflow run deploy-pages.yml --ref main
           fi

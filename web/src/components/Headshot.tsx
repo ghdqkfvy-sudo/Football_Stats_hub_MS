@@ -2,9 +2,18 @@ import { useState } from 'react';
 import { headshot } from '../config/koreans';
 
 /**
- * 선수 헤드샷. 이미지가 없거나 차단되면 등번호 배지로 폴백한다.
- * (Artifact 프리뷰는 외부 이미지를 막으므로 항상 폴백이 보인다)
+ * 선수 헤드샷.
+ *
+ * ⚠️ ESPN은 축구 선수 개인 사진을 공개 API/CDN으로 제공하지 않는다 —
+ * `/i/headshots/soccer/players/full/{id}.png` 패턴을 손흥민·비니시우스
+ * 주니어처럼 확실히 사진이 있어야 할 스타 선수 ID로도 확인해 봤지만 전부
+ * 404였다(선수 프로필·로스터 응답 어디에도 headshot 필드 자체가 없다).
+ * 그래서 네트워크 요청을 시도하지 않고 바로 등번호/이니셜 배지를 보여준다
+ * — 실패하는 이미지 요청을 계속 쏘는 것보다 정직하고 빠르다.
+ * ESPN이 나중에 이 데이터를 제공하게 되면 `ATTEMPT_IMAGE` 를 true로 바꾸면 된다.
  */
+const ATTEMPT_IMAGE = false;
+
 export function Headshot({
   id, jersey, label, size = 34, className = '',
 }: {
@@ -16,7 +25,7 @@ export function Headshot({
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(!ATTEMPT_IMAGE);
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
 
   if (failed) {

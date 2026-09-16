@@ -49,7 +49,10 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  const cd = countdown(match.kickoffUtc, now);
+  const done = match.status === 'finished';
+  const live = match.status === 'live';
+  const cd = done ? null : countdown(match.kickoffUtc, now);
+  const tagText = done ? '경기 결과' : live ? '진행 중' : '다음 경기';
 
   /** "3위 · 3W 0D 1L" — 레퍼런스와 같은 한 줄 요약 */
   const Team = ({ t }: { t: Match['home'] }) => {
@@ -73,11 +76,11 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
   };
 
   return (
-    <section className="hero" aria-label="다음 경기">
+    <section className="hero" aria-label={tagText}>
       <div className="hero__top">
-        <span className="hero__tag">
+        <span className="hero__tag" data-live={live}>
           {BOLT}
-          다음 경기
+          {tagText}
         </span>
         <span className="hero__comp">
           <CompCrest k={match.competition} size={17} />
@@ -95,30 +98,44 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
 
       <div className="hero__fx">
         <Team t={match.home} />
-        <div className="fxvs">VS</div>
+        <div className="fxvs">
+          {done || live ? (
+            <span className="num">
+              {match.homeScore ?? 0}
+              <i>-</i>
+              {match.awayScore ?? 0}
+            </span>
+          ) : (
+            'VS'
+          )}
+        </div>
         <Team t={match.away} />
       </div>
 
       <div className="hero__when">
         <div className="when__date">{kstFullDate(match.kickoffUtc)}</div>
-        <div className="when__time">
-          <span className="when__ico">{ALARM}</span>
-          <b className="num">{kstTime(match.kickoffUtc)}</b>
-          <em>KST</em>
-        </div>
-      </div>
-
-      <div className="hero__cd" role="timer" aria-label="킥오프까지 남은 시간">
-        {([['일', cd.days], ['시', cd.hours], ['분', cd.minutes], ['초', cd.seconds]] as const).map(
-          ([label, v], i) => (
-            <div className="cdu" key={label}>
-              {i > 0 && <span className="cdu__sep" aria-hidden="true">:</span>}
-              <b className="num">{i === 0 ? v : String(v).padStart(2, '0')}</b>
-              <i>{label}</i>
-            </div>
-          ),
+        {!done && (
+          <div className="when__time">
+            <span className="when__ico">{ALARM}</span>
+            <b className="num">{kstTime(match.kickoffUtc)}</b>
+            <em>KST</em>
+          </div>
         )}
       </div>
+
+      {cd && (
+        <div className="hero__cd" role="timer" aria-label="킥오프까지 남은 시간">
+          {([['일', cd.days], ['시', cd.hours], ['분', cd.minutes], ['초', cd.seconds]] as const).map(
+            ([label, v], i) => (
+              <div className="cdu" key={label}>
+                {i > 0 && <span className="cdu__sep" aria-hidden="true">:</span>}
+                <b className="num">{i === 0 ? v : String(v).padStart(2, '0')}</b>
+                <i>{label}</i>
+              </div>
+            ),
+          )}
+        </div>
+      )}
     </section>
   );
 }

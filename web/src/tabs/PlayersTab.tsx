@@ -34,7 +34,10 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     [matches, squad, target.espnTeamId],
   );
 
-  const xi = useMemo(() => bestEleven(players, formation), [players, formation]);
+  const xi = useMemo(
+    () => bestEleven(players, formation, target.espnTeamId),
+    [players, formation, target.espnTeamId],
+  );
 
   /** 베스트 11(공격→골키퍼) 먼저, 나머지는 선발·출전·득점 순 */
   const ordered = useMemo(() => orderForList(players, xi.slots), [players, xi]);

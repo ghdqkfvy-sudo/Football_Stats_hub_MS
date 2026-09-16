@@ -73,6 +73,9 @@ export function buildSquad(
   const sorted = [...matches].sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc));
 
   for (const m of sorted) {
+    // 클럽 친선경기는 팀 컨디션 점검용이라 공식 기록에서 뺀다.
+    // (국가대표 친선전(fifa.friendly)은 실제 A매치라 그대로 집계한다)
+    if (m.competition === 'club.friendly') continue;
     const lu = lineups[m.id];
     if (!lu || lu.teamId !== teamId) continue;
     covered++;
@@ -148,6 +151,16 @@ export function buildSquad(
       : 0;
     p.points = p.goals + p.assists;
     p.byComp.sort((x, y) => y.goals + y.assists - (x.goals + x.assists) || y.apps - x.apps);
+    /*
+     * 경기별 교체 시각(subbedIn/OutAtMinute)은 ESPN 응답 필드명이 검증되지
+     * 않아 대부분 비어 오고, 그러면 선발은 90분·교체는 0분으로 어림돼
+     * "출전시간 = 경기수 × 90분" 처럼 보인다. ESPN 선수 시즌 통계
+     * (/athletes/{id}/statistics 의 minutes/timePlayed — 코리안리거 집계에서
+     * 이미 검증된 값)가 있으면 그 실제 누적값으로 총 출전시간을 덮어쓴다.
+     * (경기별 상세 내역은 실제 기록이 없으므로 여전히 어림값이다)
+     */
+    const real = athletes[p.id]?.minutesSeason;
+    if (real !== undefined && real > 0) p.minutes = real;
     // 선발·출전시간을 기본으로 하고 공격포인트를 얹는다
     p.score = p.starts * 3 + p.apps + p.minutes / 90 + p.goals * 2.5 + p.assists * 1.5;
     return p;
@@ -191,22 +204,34 @@ export interface Slot {
 }
 
 /**
- * 검증된 ESPN 슬롯 배치. 레알 마드리드 6경기로 4-2-3-1 을 확인했다.
+ * 검증된 ESPN 슬롯 배치. ESPN의 formationPlace 번호가 어떤 자리를 뜻하는지는
+ * 팀마다(어쩌면 팀의 데이터 소스마다) 다를 수 있어, 실제 경기로 맞춰본 팀에만
+ * 적용한다 — 레알 마드리드 6경기로 4-2-3-1 을 확인했다.
  * 배열은 뒤에서 앞으로(골키퍼 → 공격), 각 줄은 화면 왼쪽부터의 순서다.
+ *
+ * 새 팀을 추가했는데 같은 포메이션이라고 이 번호가 그대로 맞으리라는 보장이
+ * 없다. 그래서 팀 단위로 "검증됨"을 명시하지 않는 한, 다른 팀은 항상 아래
+ * 포지션 그룹 기준 배치(verified: false)로 떨어진다 — 틀린 자리를 확신 있게
+ * 보여주는 것보다, 부정확할 수 있다고 정직하게 표시하는 편이 낫다.
  */
 const SLOT_ROWS: Record<string, number[][]> = {
   '4-2-3-1': [[1], [3, 5, 6, 2], [4, 8], [11, 10, 7], [9]],
 };
 
+/** 위 SLOT_ROWS 의 자리 번호가 실제로 확인된 팀 (espnTeamId) */
+const VERIFIED_TEAMS: Record<string, Set<string>> = {
+  '4-2-3-1': new Set(['86']), // Real Madrid
+};
+
 const POS_ORDER: PlayerSeason['pos'][] = ['G', 'D', 'M', 'F'];
 
-export function bestEleven(players: PlayerSeason[], formation: string | null): {
+export function bestEleven(players: PlayerSeason[], formation: string | null, teamId?: string): {
   slots: Slot[];
   formation: string;
   verified: boolean;
 } {
   const shape = formation ?? '4-3-3';
-  const rows = SLOT_ROWS[shape];
+  const rows = teamId && VERIFIED_TEAMS[shape]?.has(teamId) ? SLOT_ROWS[shape] : undefined;
 
   if (rows) {
     /* 슬롯 의미가 검증된 포메이션.

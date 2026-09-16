@@ -212,6 +212,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: -.01em;
   white-space: nowrap;
 }
+.hero__tag[data-live='true'] {
+  border-color: color-mix(in srgb, var(--loss) 65%, transparent);
+  color: var(--loss);
+  animation: barPulse 1.7s ease-in-out infinite;
+}
 .hero__comp {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13px; font-weight: 600; color: var(--text-hi);
@@ -451,6 +456,19 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .bar:hover, .bar:focus-visible {
   transform: scaleY(1.5); opacity: 1;
   box-shadow: 0 0 16px color-mix(in srgb, var(--c) 80%, transparent);
+}
+
+/* 선택된 날짜의 경기 막대 — 펄스닷과 같은 리듬으로 커졌다 작아졌다 */
+.bar[data-sel='true'] {
+  animation: barPulse 1.9s cubic-bezier(.4,0,.6,1) infinite;
+  transform-origin: center;
+}
+@keyframes barPulse {
+  0%, 100% { transform: scaleY(1); box-shadow: 0 1px 10px color-mix(in srgb, var(--c) 45%, transparent); }
+  50% { transform: scaleY(2.1); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 85%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar[data-sel='true'] { animation: none; transform: scaleY(1.4); }
 }
 
 /* 범례 */

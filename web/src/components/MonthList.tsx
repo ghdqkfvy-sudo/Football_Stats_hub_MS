@@ -57,8 +57,6 @@ export function MonthList({
         const isOpen = openId === m.id;
         const onSelectedDay = selectedDay !== null && dayKey(m.kickoffUtc) === selectedDay;
         const c = palette.color(m.competition);
-        const homeLost = done && (m.homeScore ?? 0) < (m.awayScore ?? 0);
-        const awayLost = done && (m.awayScore ?? 0) < (m.homeScore ?? 0);
 
         return (
           <div
@@ -85,7 +83,7 @@ export function MonthList({
               <span className="ml__tick" aria-hidden="true" />
 
               <span className="ml__match">
-                <span className="ml__side r" data-lost={homeLost}>
+                <span className="ml__side r">
                   <Crest team={m.home} size={20} />
                   <b>{m.home.abbr}</b>
                 </span>
@@ -98,7 +96,7 @@ export function MonthList({
                   <span className="ml__vs">vs</span>
                 )}
 
-                <span className="ml__side" data-lost={awayLost}>
+                <span className="ml__side">
                   <Crest team={m.away} size={20} />
                   <b>{m.away.abbr}</b>
                 </span>

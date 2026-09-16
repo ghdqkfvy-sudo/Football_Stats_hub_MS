@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Match } from '../lib/types';
-import { dayKey, kstParts, kstTime, monthGrid, todayKey } from '../lib/kst';
+import { dayKey, kstTime, monthGrid, todayKey } from '../lib/kst';
 import { usePalette } from '../lib/palette';
 import { Crest } from './Crest';
 import { CompBadge } from './Bits';
@@ -22,6 +22,10 @@ interface Props {
 }
 
 interface Box { x: number; y: number; w: number; h: number }
+
+/** 실제 마우스가 있는 기기인지 — 터치 기기는 "호버" 개념이 없어 탭으로 대신한다 */
+const HAS_HOVER =
+  typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
 export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, nextDay }: Props) {
   const [hover, setHover] = useState<string | null>(null);
@@ -154,6 +158,7 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                     <button
                       className="bar"
                       data-done={done}
+                      data-sel={selected}
                       style={{ ['--c' as string]: palette.color(m.competition) }}
                       title={label}
                       aria-label={label}
@@ -163,6 +168,17 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                       onBlur={() => setHover((h) => (h === m.id ? null : h))}
                       onClick={(e) => {
                         e.stopPropagation();
+                        /*
+                         * 터치 기기에는 호버가 없다 — 첫 탭은 (마우스 호버와
+                         * 같은 자리인) 미리보기만 띄우고, 이미 띄워진 채로
+                         * 한 번 더 누르면 그때 상세를 연다. 실제 마우스가
+                         * 있는 기기는 이미 호버로 미리보기가 떠 있으니
+                         * 클릭 한 번으로 바로 연다.
+                         */
+                        if (!HAS_HOVER && hover !== m.id) {
+                          setHover(m.id);
+                          return;
+                        }
                         onSelectDay(cell.key);
                         onPick(m);
                       }}
@@ -229,7 +245,6 @@ function MatchPopover({ m, col }: { m: Match; col: number }) {
       {!done && m.venue && (
         <div className="pop__g">
           <div className="pop__gi">
-            <span>{kstParts(m.kickoffUtc).month}.{kstParts(m.kickoffUtc).date}</span>
             <span>{m.venue}</span>
           </div>
         </div>

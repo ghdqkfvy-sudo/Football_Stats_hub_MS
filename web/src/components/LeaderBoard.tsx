@@ -23,7 +23,7 @@ const COLS: { key: Key; label: string; suffix: string; reverse: boolean }[] = [
 ];
 
 export function LeaderBoard({
-  rows, limit = 10, note,
+  rows, limit = 8, note,
 }: { rows: LeaderRow[]; limit?: number; note?: string }) {
   return (
     <>
@@ -47,26 +47,38 @@ function Column({
 }) {
   const sorted = [...rows]
     .filter((r) => r[col.key] > 0)
-    .sort((a, b) => b[col.key] - a[col.key] || b.goals - a.goals || a.name.localeCompare(b.name))
-    .slice(0, limit);
+    .sort((a, b) => b[col.key] - a[col.key] || b.goals - a.goals || a.name.localeCompare(b.name));
+
+  /*
+   * 공동 순위 처리: 기록(r[col.key])이 같으면 같은 등수를 받는다(1,2,2,4식).
+   * "limit 등까지" 는 줄 수가 아니라 등수 기준이라, 8등이 여럿이면 전부 보여준다.
+   */
+  let rank = 0;
+  let prevVal: number | null = null;
+  const ranked = sorted.map((r, i) => {
+    if (prevVal === null || r[col.key] !== prevVal) rank = i + 1;
+    prevVal = r[col.key];
+    return { r, rank };
+  });
+  const shown = ranked.filter((x) => x.rank <= limit);
 
   // 기준값은 이 선수단의 최고 기록 — 절대값이 아니라 팀 안에서의 비중으로 읽힌다
-  const max = sorted[0]?.[col.key] ?? 1;
+  const max = shown[0]?.r[col.key] ?? 1;
 
   return (
     <section className="lbc" data-rev={col.reverse}>
       <header className="lbc__h">
         <h3>{col.label}</h3>
-        <span className="lbc__n num">{sorted.length}</span>
+        <span className="lbc__n num">{shown.length}</span>
       </header>
 
-      {sorted.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="lbc__none">집계된 기록이 없습니다.</p>
       ) : (
         <ol className="lbc__list">
-          {sorted.map((r, i) => (
-            <li className="lbc__row" key={`${r.name}-${r.teamId}`} data-top={i === 0}>
-              <span className="lbc__rank num">{i + 1}</span>
+          {shown.map(({ r, rank: rk }) => (
+            <li className="lbc__row" key={`${r.name}-${r.teamId}`} data-top={rk === 1}>
+              <span className="lbc__rank num">{rk}</span>
               {r.team ? <Crest team={r.team} size={18} /> : <span className="lbc__pad" />}
               <span className="lbc__name">{r.name}</span>
               <span className="lbc__meter" aria-hidden="true">
