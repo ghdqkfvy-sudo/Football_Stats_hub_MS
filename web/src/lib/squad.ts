@@ -42,6 +42,8 @@ export interface PlayerSeason {
   byComp: CompSplit[];
   /** 최근 경기 기록 (최신순) */
   recent: RecentGame[];
+  /** 경기별 출전 시간이 실제 교체 기록에서 온 것인지 (어림값이 아닌지) */
+  realMinutes: boolean;
   score: number;
 }
 
@@ -61,11 +63,26 @@ export interface RecentGame {
 
 const FULL_TIME = 90;
 
-/** 교체 정보로 출전 시간을 계산한다 */
-function minutesOf(place: number, starter: boolean, inMin?: number, outMin?: number): number {
-  if (starter) return Math.min(FULL_TIME, outMin ?? FULL_TIME);
-  if (inMin !== undefined) return Math.max(0, Math.min(FULL_TIME, (outMin ?? FULL_TIME) - inMin));
-  return place > 0 ? FULL_TIME : 0;
+/**
+ * 실제 출전 시간(분).
+ *
+ * ⚠️ 여기에 오래된 버그가 있었다. JSON 배열에서 `undefined` 는 `null` 로
+ * 직렬화되는데, 예전 코드가 `inMin !== undefined` 로만 검사해서 **null 이
+ * 통과**했다. 그러면 `90 - null` = 90 이 되어, 아예 뛰지 않은 벤치 선수까지
+ * 전부 "교체 출전 90분" 으로 기록됐다. `!= null` 로 둘 다 걸러야 한다.
+ *
+ * 교체 시각은 ESPN 요약에는 없고 core 경기 로스터에만 있다
+ * (`subbedOut: {didSub:true, clock:{displayValue:"86'"}}`). 스냅샷이 그걸
+ * 받아 넣어 주므로, 값이 없으면 "그 경기는 안 뛰었다" 로 본다.
+ */
+function minutesOf(
+  starter: boolean,
+  inMin?: number | null,
+  outMin?: number | null,
+): number {
+  if (starter) return Math.max(0, Math.min(FULL_TIME, outMin ?? FULL_TIME));
+  if (inMin != null) return Math.max(0, Math.min(FULL_TIME, (outMin ?? FULL_TIME) - inMin));
+  return 0;   // 교체 투입 기록이 없으면 출전하지 않은 것이다
 }
 
 export function buildSquad(
@@ -73,7 +90,13 @@ export function buildSquad(
   lineups: Record<string, Lineup>,
   athletes: Record<string, AthleteInfo>,
   teamId: string,
-): { players: PlayerSeason[]; formation: string | null; covered: number } {
+): {
+  players: PlayerSeason[];
+  formation: string | null;
+  covered: number;
+  /** 포메이션별 채택 경기 수 (많은 순) — 화면에 근거로 보여 준다 */
+  formationTally: { shape: string; n: number }[];
+} {
   const byId = new Map<string, PlayerSeason>();
   let covered = 0;
 
@@ -92,8 +115,14 @@ export function buildSquad(
     if (!lu || lu.teamId !== teamId) continue;
     formationCount[lu.formation] = (formationCount[lu.formation] ?? 0) + 1;
   }
-  const formation =
-    Object.entries(formationCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  /* 빈 문자열(포메이션 정보가 없는 경기)은 후보에서 뺀다 — 그게 1등이 되면
+     줄 수를 못 구해 배치가 통째로 망가진다.
+     동률이면 더 최근에 쓴 쪽이 이긴다(sorted 가 최신순이라 먼저 들어간다). */
+  const formationTally = Object.entries(formationCount)
+    .filter(([shape]) => shape.trim() !== '')
+    .sort((a, b) => b[1] - a[1])
+    .map(([shape, n]) => ({ shape, n }));
+  const formation = formationTally[0]?.shape ?? null;
 
   for (const m of sorted) {
     // 클럽 친선경기는 팀 컨디션 점검용이라 공식 기록에서 뺀다.
@@ -113,7 +142,7 @@ export function buildSquad(
     for (const [id, place, starter, inMin, outMin, eg, ea, abbr] of lu.entries) {
       const info = athletes[id];
       if (!info) continue;                       // 이름을 모르는 선수는 지어내지 않는다
-      const mins = minutesOf(place, starter, inMin, outMin);
+      const mins = minutesOf(starter, inMin, outMin);
       if (mins === 0) continue;                  // 미출전 벤치는 집계하지 않는다
 
       let p = byId.get(id);
@@ -122,7 +151,7 @@ export function buildSquad(
           id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
           slots: {}, modalSlot: 0, posPlaces: {}, posAny: {}, modalPos: '',
-          byComp: [], recent: [], score: 0,
+          byComp: [], recent: [], score: 0, realMinutes: false,
         };
         byId.set(id, p);
       }
@@ -148,6 +177,7 @@ export function buildSquad(
       split.goals += g;
       split.assists += a;
       p.minutes += mins;
+      if (lu.hasMinutes) p.realMinutes = true;
       p.goals += g;
       p.assists += a;
       if (place > 0) p.slots[place] = (p.slots[place] ?? 0) + 1;
@@ -202,8 +232,11 @@ export function buildSquad(
      * 이미 검증된 값)가 있으면 그 실제 누적값으로 총 출전시간을 덮어쓴다.
      * (경기별 상세 내역은 실제 기록이 없으므로 여전히 어림값이다)
      */
+    /* 경기별 실제 교체 기록이 있으면 그 합이 정답이다(모든 대회 포함).
+       없을 때만 시즌 누적값으로 대신한다 — 그 값은 **리그 기록만**이라
+       컵·유럽대항전 출전이 빠진다는 점을 감안해야 한다. */
     const real = athletes[p.id]?.minutesSeason;
-    if (real !== undefined && real > 0) p.minutes = real;
+    if (!p.realMinutes && real !== undefined && real > 0) p.minutes = real;
     // 선발·출전시간을 기본으로 하고 공격포인트를 얹는다
     p.score = p.starts * 3 + p.apps + p.minutes / 90 + p.goals * 2.5 + p.assists * 1.5;
     return p;
@@ -211,7 +244,7 @@ export function buildSquad(
 
   players.sort((a, b) => b.score - a.score);
 
-  return { players, formation, covered };
+  return { players, formation, covered, formationTally };
 }
 
 /**

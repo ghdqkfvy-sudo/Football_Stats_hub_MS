@@ -1,4 +1,5 @@
 import type { Match } from '../lib/types';
+import { assignAssists, leftoverAssists } from '../lib/assists';
 
 /**
  * 종료 경기의 득점 기록 — 시간순 한 줄씩.
@@ -28,9 +29,11 @@ export function GoalSheet({ m, loading }: { m: Match; loading?: boolean }) {
   const abbrOf = (teamId: string) =>
     teamId === m.home.id ? m.home.abbr : teamId === m.away.id ? m.away.abbr : '—';
 
-  /* 어시스트는 골과 짝지어 오지 않는다 — ESPN 은 "이 경기에서 이 선수가
-     도움 n" 형태로만 준다. 그래서 골 목록 아래에 팀별로 모아 적는다. */
-  const assisters = (m.playerStats ?? []).filter((s) => s.a > 0);
+  /* ESPN 은 "이 골의 도움은 누구" 를 안 준다. 대신 골 시각과 각 선수의
+     출전 구간을 알 수 있으므로, 시간상 가능한 조합이 유일할 때만 골에
+     붙인다(lib/assists.ts). 애매하면 아래 "도움" 줄에 따로 적는다. */
+  const assigned = assignAssists(m.goals, m.playerStats);
+  const assisters = leftoverAssists(m.playerStats, assigned);
 
   return (
     <>
@@ -44,10 +47,10 @@ export function GoalSheet({ m, loading }: { m: Match; loading?: boolean }) {
             {g.penalty && <em className="gl__tag">PK</em>}
             {g.ownGoal && <em className="gl__tag">OG</em>}
           </span>
-          {g.assist && (
+          {(g.assist ?? assigned.get(i)) && (
             <span className="gl__a">
               <i>A</i>
-              {g.assist}
+              {g.assist ?? assigned.get(i)}
             </span>
           )}
         </li>

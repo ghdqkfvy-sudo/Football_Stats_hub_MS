@@ -61,7 +61,17 @@ export interface Match {
    * 경기별 선수 기록(양 팀) — ESPN 요약 응답의 rosters 에서 모은 값이다.
    * 스코어보드 details 는 득점자만 주므로, **도움**은 이 경로에서만 온다.
    */
-  playerStats?: { teamId: string; name: string; g: number; a: number }[];
+  playerStats?: {
+    id?: string;
+    teamId: string;
+    name: string;
+    g: number;
+    a: number;
+    /** 투입 분 (선발 0, 모르면 null) — 도움을 골에 배정할 때 쓴다 */
+    in?: number | null;
+    /** 교체 아웃 분 (끝까지 뛰었으면 null) */
+    out?: number | null;
+  }[];
 }
 
 export interface StandingRow {

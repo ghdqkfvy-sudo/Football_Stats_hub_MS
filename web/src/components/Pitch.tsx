@@ -11,6 +11,8 @@ interface Props {
   chem: number;
   activeId: string | null;
   onHover: (id: string | null) => void;
+  /** 포메이션별 채택 경기 수 — 왜 이 포메이션인지 근거로 보여 준다 */
+  tally?: { shape: string; n: number }[];
   /** 클릭으로 고정 선택된 선수 — 마우스를 치워도 하이라이트가 남는다 */
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
@@ -18,8 +20,10 @@ interface Props {
 
 /** 세로 축구장 — 아래가 골키퍼, 위가 공격 */
 export function Pitch({
-  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect,
+  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect, tally,
 }: Props) {
+  const picked = tally?.find((x) => x.shape === formation)?.n;
+  const total = tally?.reduce((a, x) => a + x.n, 0) ?? 0;
   const rowCount = Math.max(...slots.map((s) => s.row)) + 1;
 
   return (
@@ -28,8 +32,15 @@ export function Pitch({
         <span className="pitch__t">
           베스트 <b>11</b>
         </span>
-        <b className="pitch__f num">{formation}</b>
-        <span className="pitch__note num">{covered}/{covered}경기</span>
+        <b
+          className="pitch__f num"
+          title={tally?.length ? `채택 내역 — ${tally.map((x) => `${x.shape} ${x.n}경기`).join(' · ')}` : undefined}
+        >
+          {formation}
+        </b>
+        <span className="pitch__note num">
+          {picked !== undefined ? `${picked}/${total}경기 채택` : `${covered}경기`}
+        </span>
       </div>
 
       <div className="pitch__chem">
@@ -116,6 +127,7 @@ function PlayerChip({
       <span className="chipbox__name">{last}</span>
       <span className="chipbox__stat num">
         출전 {p.apps}
+        <em className="s">선발 {p.starts}</em>
         {p.goals > 0 && <em className="g">⚽{p.goals}</em>}
         {p.assists > 0 && <em className="a">A{p.assists}</em>}
       </span>

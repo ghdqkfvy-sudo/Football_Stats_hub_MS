@@ -161,7 +161,10 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
         <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={40} className="pcard__hs" />
         <div>
           <b>{p.name}</b>
-          <span><em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em> · 시즌 {p.apps}경기</span>
+          <span>
+            <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
+            {' · '}시즌 {p.apps}경기 (선발 {p.starts})
+          </span>
         </div>
       </div>
 

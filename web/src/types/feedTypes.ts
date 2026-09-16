@@ -8,7 +8,16 @@
  * 역할과 좌우가 약어 안에 그대로 들어 있어, 팀마다 뜻이 달라지는
  * formationPlace 숫자보다 훨씬 믿을 만한 배치 근거다.
  */
-export type LineupEntry = [string, number, boolean, number?, number?, number?, number?, string?];
+export type LineupEntry = [
+  string,                 // athleteId
+  number,                 // formationPlace (0 = 미출전)
+  boolean,                // starter
+  (number | null)?,       // 교체 투입 분 — core 로스터의 subbedIn.clock (없으면 null)
+  (number | null)?,       // 교체 아웃 분 — core 로스터의 subbedOut.clock (없으면 null)
+  number?,                // 골
+  number?,                // 도움
+  string?,                // 포지션 약어
+];
 
 export interface AthleteInfo {
   name: string;
@@ -43,6 +52,11 @@ export interface Lineup {
    * false 면 집계가 득점 이벤트 이름 매칭으로 내려간다(정확도가 떨어진다).
    */
   hasStats?: boolean;
+  /**
+   * 교체 시각(core 경기 로스터)을 실제로 받아 넣었는지.
+   * false 면 경기별 출전 시간은 어림값이므로 시즌 누적값을 대신 쓴다.
+   */
+  hasMinutes?: boolean;
 }
 
 export interface Article {

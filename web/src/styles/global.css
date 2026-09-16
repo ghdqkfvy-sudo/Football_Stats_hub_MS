@@ -1176,11 +1176,17 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chipbox__stat em { font-style: normal; font-weight: 800; }
 .chipbox__stat em.g { color: #FFD75E; }
 .chipbox__stat em.a { color: #7FE3FF; }
-.chipbox { cursor: pointer; }
+.chipbox { cursor: pointer; transition: transform .14s; }
+/* 마우스를 올리면 칩 전체가 살짝 떠오른다 — 어디를 가리키는지 분명하게 */
+.chipbox:hover { transform: translateY(-3px); }
 .chipbox[data-active='true'] .chipbox__ring {
-  transform: scale(1.12);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 35%, transparent),
-              0 0 22px color-mix(in srgb, var(--pc) 75%, transparent);
+  transform: scale(1.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 55%, transparent),
+              0 0 26px color-mix(in srgb, var(--pc) 90%, transparent);
+}
+.chipbox[data-active='true'] .chipbox__name { color: var(--pc); }
+.chipbox[data-active='true'] .chipbox__tag {
+  background: var(--pc); color: #06101f; border-color: transparent;
 }
 /* 클릭으로 고정 선택한 선수 — 마우스를 치워도 남는다 */
 .chipbox[data-selected='true'] .chipbox__ring {
@@ -1728,3 +1734,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   color: var(--text-lo); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 4px;
 }
 .gl__aname b { color: var(--accent); font-size: 11px; }
+
+/* 피치 칩의 선발 출전 수 */
+.chipbox__stat em.s { color: var(--text-mid); font-weight: 700; }

@@ -215,7 +215,8 @@ function playerStatsFrom(sum) {
       };
       const g = val('totalGoals');
       const a = val('goalAssists');
-      if (g > 0 || a > 0) out.push({ teamId, name, g, a });
+      const id = String(e?.athlete?.id ?? '');
+      if (g > 0 || a > 0) out.push({ id, teamId, name, g, a });
     }
   }
   return out;
@@ -236,7 +237,7 @@ async function prevStatsMap(fileName) {
 }
 
 /** 종료된 경기에 선수별 득점·도움을 채운다 */
-async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120) {
+async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120, withWindows = false) {
   let fetched = 0;
   for (const ev of events) {
     const c = ev?.competitions?.[0];
@@ -249,7 +250,24 @@ async function enrichPlayerStats(events, defaultLeague, prevMap, budget = 120) {
     const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
     const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${id}`);
     if (sum?.rosters) {
-      c.__stats = playerStatsFrom(sum);
+      const stats = playerStatsFrom(sum);
+      /* 도움을 골에 배정하려면 "그 선수가 몇 분부터 몇 분까지 뛰었는지" 가
+         필요하다. 그 정보는 core 경기 로스터에만 있다(요약은 불리언뿐).
+         이달의 경기에만 필요하므로 팀 일정에서만 받는다. */
+      if (withWindows && stats.some((x) => x.a > 0)) {
+        for (const tid of [...new Set(stats.map((x) => x.teamId))]) {
+          const info = await coreLineupInfo(lg, id, tid);
+          if (!info.size) continue;
+          for (const x of stats) {
+            if (x.teamId !== tid) continue;
+            const it = info.get(x.id);
+            if (!it) continue;
+            x.in = it.starter ? 0 : (it.inMin ?? null);
+            x.out = it.outMin ?? null;
+          }
+        }
+      }
+      c.__stats = stats;
       fetched++;
     }
     await sleep(150);
@@ -274,17 +292,39 @@ async function positionAbbr(leagueSlug, posId) {
   return abbr;
 }
 
-async function coreLineupPositions(leagueSlug, eventId, teamId) {
+/* core 경기 로스터 한 번이면 자리 약어와 **교체 시각**을 같이 얻는다.
+   실측 구조:
+     "subbedIn":  {"didSub": false}
+     "subbedOut": {"didSub": true, "clock": {"value": 5143, "displayValue": "86'"}}
+   요약(summary) 쪽 로스터는 subbedIn/subbedOut 이 그냥 불리언이라 시각이 없다.
+   그래서 실제 출전 시간은 이 경로로만 알 수 있다. */
+const clockMin = (o) => {
+  if (o?.didSub !== true) return undefined;
+  const dv = String(o?.clock?.displayValue ?? '');
+  const m = dv.match(/(\d+)/);
+  if (m) return parseInt(m[1], 10);
+  const v = Number(o?.clock?.value);
+  return Number.isFinite(v) ? Math.round(v / 60) : undefined;
+};
+
+async function coreLineupInfo(leagueSlug, eventId, teamId) {
   const j = await get(
     `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/events/${eventId}/competitions/${eventId}/competitors/${teamId}/roster`,
   );
   const out = new Map();
   for (const e of j?.entries ?? []) {
     const id = String(e?.playerId ?? '');
+    if (!id) continue;
     const posId = String(e?.position?.$ref ?? '').match(/positions\/(\d+)/)?.[1];
-    if (!id || !posId) continue;
-    const abbr = await positionAbbr(leagueSlug, posId);
-    if (abbr) out.set(id, abbr);
+    const abbr = posId ? await positionAbbr(leagueSlug, posId) : undefined;
+    out.set(id, {
+      abbr,
+      starter: e?.starter === true,
+      inMin: clockMin(e?.subbedIn),
+      outMin: clockMin(e?.subbedOut),
+      // 교체로도 안 들어갔고 선발도 아니면 그 경기는 아예 안 뛴 것이다
+      played: e?.starter === true || e?.subbedIn?.didSub === true,
+    });
   }
   return out;
 }
@@ -539,14 +579,21 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
   const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
   if (!prof) return null;
 
-  const teamRef = prof?.team?.$ref;
+  /* ⚠️ core 선수 응답에는 `team` 키가 없다 — `defaultTeam` / `defaultLeague` 다.
+     예전 코드가 `prof.team.$ref` 를 보다가 전부 빈 값이 됐고, 그래서 리그를
+     못 구해 대회 기록 조회를 통째로 건너뛰었다(손흥민 stats: []).
+     실측: defaultTeam=.../soccer/teams/18966, defaultLeague=.../leagues/usa.1 */
+  const teamRef = prof?.defaultTeam?.$ref ?? prof?.team?.$ref;
   const team = teamRef ? await get(teamRef) : null;
   const clubId = String(team?.id ?? '0');
   const club = String(team?.displayName ?? team?.name ?? '');
 
-  // 소속 리그 slug 는 팀 응답의 $ref 경로에서 읽는다
-  const league = String(teamRef ?? '').match(/leagues\/([\w.]+)\//)?.[1] ?? '';
+  const league =
+    String(prof?.defaultLeague?.$ref ?? '').match(/leagues\/([\w.]+)/)?.[1] ??
+    String(teamRef ?? '').match(/leagues\/([\w.]+)/)?.[1] ??
+    '';
   const leagueName = String(team?.groups?.name ?? '') || league;
+  if (!league) console.error(`  ! ${nameKo}(${id}) 소속 리그를 못 찾음 — 대회 기록 건너뜀`);
 
   const posAbbr = String(prof?.position?.abbreviation ?? 'M').toUpperCase();
   const pos = posAbbr.startsWith('G') ? 'G'
@@ -663,7 +710,7 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
       await enrichGoals(events, t.league, prevMap);
-      await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40);
+      await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40, true);
       await save(`schedule-${t.slug}.json`, {
         events, team: t.id,
         goalsSource: GOALS_SOURCE, statsSource: STATS_SOURCE,
@@ -773,8 +820,14 @@ async function main() {
      유일한 경로다(예전에 이름으로 맞추다 도움이 통째로 0 이 됐다). */
   if (wants('slow')) for (const t of TEAMS) {
     const sched = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${t.id}/schedule`);
+    /* 최근 16경기만 모은다. 단 **클럽 친선경기는 제외**한다 —
+       프리시즌 친선전은 포메이션·라인업을 실험하는 자리라 그대로 섞이면
+       "가장 많이 쓴 포메이션" 이 왜곡된다(첼시가 4-4-2/3-4-3 친선전 때문에
+       실제 주 포메이션이 아닌 값으로 잡혔다). 국가대표 친선전은 실제
+       A매치라 그대로 둔다. */
     const done = (sched?.events ?? [])
       .filter((e) => e?.competitions?.[0]?.status?.type?.completed)
+      .filter((e) => (e?.league?.slug ?? e?.season?.slug) !== 'club.friendly')
       .sort((a, b) => String(b.date).localeCompare(String(a.date)))
       .slice(0, 16);
 
@@ -797,12 +850,14 @@ async function main() {
       for (const e of mine.roster) {
         const id = String(e?.athlete?.id ?? '');
         if (!id) continue;
+        /* 교체 시각은 여기(요약)에 없다 — subbedIn/subbedOut 이 불리언뿐이다.
+           실제 시각은 아래에서 core 로스터로 채운다. */
         entries.push([
           id,
           Number(e?.formationPlace ?? 0) || 0,
           e?.starter === true,
-          e?.subbedInAtMinute ?? undefined,
-          e?.subbedOutAtMinute ?? undefined,
+          null,
+          null,
           stat(e, 'totalGoals'),
           stat(e, 'goalAssists'),
           // 'CD-L' · 'AM-R' 처럼 좌우까지 들어 있는 ESPN 자리 약어
@@ -818,26 +873,32 @@ async function main() {
         }
       }
       if (entries.length) {
-        /* 요약이 자리 약어를 하나도 안 준 경기는 core 경기 로스터로 메운다.
-           (첼시가 이 경우였다 — 그래서 배치가 통째로 틀어졌다) */
-        if (!entries.some((x) => x[7])) {
-          const posMap = await coreLineupPositions(lg, ev.id, t.id);
-          if (posMap.size) {
-            for (const x of entries) {
-              const abbr = posMap.get(x[0]);
-              if (abbr) {
-                x[7] = abbr;
-                if (athletes[x[0]]) athletes[x[0]].pos = posFromAbbr(abbr);
-              }
+        /* core 경기 로스터로 (1) 실제 교체 시각과 (2) 자리 약어를 채운다.
+           요약 쪽에는 교체 시각이 아예 없고, 대회에 따라 자리 약어도 없다
+           (첼시가 그 경우였다 — 그래서 배치가 통째로 틀어졌다). */
+        const info = await coreLineupInfo(lg, ev.id, t.id);
+        const hasMinutes = info.size > 0;
+        if (info.size) {
+          let subs = 0;
+          for (const x of entries) {
+            const it = info.get(x[0]);
+            if (!it) continue;
+            x[3] = it.inMin ?? null;
+            x[4] = it.outMin ?? null;
+            if (it.inMin != null || it.outMin != null) subs++;
+            if (!x[7] && it.abbr) {
+              x[7] = it.abbr;
+              if (athletes[x[0]]) athletes[x[0]].pos = posFromAbbr(it.abbr);
             }
-            console.log(`    ${t.slug} ${ev.id}: core 로스터에서 자리 ${posMap.size}건 보강`);
           }
+          console.log(`    ${t.slug} ${ev.id}: core 로스터 ${info.size}명 (교체 시각 ${subs}건)`);
         }
         lineups[String(ev.id)] = {
           teamId: t.id,
           formation: String(mine?.formation ?? ''),
           entries,
           hasStats: true,
+          hasMinutes,
         };
       }
       await sleep(220);

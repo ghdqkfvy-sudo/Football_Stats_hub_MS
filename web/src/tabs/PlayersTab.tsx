@@ -37,7 +37,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     };
   }, [target.espnTeamId, matches]);
 
-  const { players, formation, covered } = useMemo(
+  const { players, formation, covered, formationTally } = useMemo(
     () => buildSquad(matches, squad?.lineups ?? {}, squad?.athletes ?? {}, target.espnTeamId),
     [matches, squad, target.espnTeamId],
   );
@@ -102,6 +102,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             verified={xi.verified}
             covered={covered}
             chem={teamCohesion(xi.slots, covered)}
+            tally={formationTally}
             activeId={activeId}
             onHover={setHoverId}
             selectedId={pinnedId}
