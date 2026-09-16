@@ -47,36 +47,55 @@ function rankRows(rows: LeaderRow[], key: Key, cap: number): Ranked[] {
   return ranked.filter((x) => x.rank <= cap);
 }
 
-const EXPANDED_CAP = 15;
+/* 기본: 8위까지 · 최대 8명   ·   더보기: 10위까지 · 최대 15명
+   공동 순위 때문에 8위가 여러 명이어도 줄 수는 상한을 넘지 않는다.
+   세 표의 바깥 크기는 그리드 stretch 가 맞춰 준다. */
+const CAPS = {
+  basic: { rank: 8, rows: 8 },
+  more: { rank: 10, rows: 15 },
+};
 
 export function LeaderBoard({
-  rows, limit = 8, note,
-}: { rows: LeaderRow[]; limit?: number; note?: string }) {
+  rows, note, variant = 'table',
+}: {
+  rows: LeaderRow[];
+  note?: string;
+  /** table = 숫자만 (대회 순위표) · bar = 게이지 (팀 내 기록) */
+  variant?: 'table' | 'bar';
+}) {
   const [expanded, setExpanded] = useState(false);
-  const cap = expanded ? EXPANDED_CAP : limit;
+  const cap = expanded ? CAPS.more : CAPS.basic;
 
   const cols = useMemo(
-    () => COLS.map((col) => ({ col, shown: rankRows(rows, col.key, cap) })),
+    () =>
+      COLS.map((col) => ({
+        col,
+        shown: rankRows(rows, col.key, cap.rank).slice(0, cap.rows),
+      })),
     [rows, cap],
   );
 
-  // 8등 밖에 더 보여줄 선수가 있을 때만 "더보기" 를 띄운다
   const hasMore = useMemo(
-    () => COLS.some((c) => rankRows(rows, c.key, EXPANDED_CAP).length > rankRows(rows, c.key, limit).length),
-    [rows, limit],
+    () =>
+      COLS.some(
+        (c) =>
+          rankRows(rows, c.key, CAPS.more.rank).slice(0, CAPS.more.rows).length >
+          rankRows(rows, c.key, CAPS.basic.rank).slice(0, CAPS.basic.rows).length,
+      ),
+    [rows],
   );
 
   return (
     <>
-      <div className="lb3">
+      <div className="lb3" data-variant={variant}>
         {cols.map(({ col, shown }) => (
-          <Column key={col.key} col={col} shown={shown} />
+          <Column key={col.key} col={col} shown={shown} variant={variant} />
         ))}
       </div>
 
       {hasMore && (
         <button className="lb3__more" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
-          {expanded ? '접기' : `더보기 (${EXPANDED_CAP}위까지)`}
+          {expanded ? '접기' : `더보기 (${CAPS.more.rank}위까지)`}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true">
             <path d={expanded ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
           </svg>
@@ -90,11 +109,14 @@ export function LeaderBoard({
 }
 
 function Column({
-  col, shown,
+  col, shown, variant,
 }: {
   col: (typeof COLS)[number];
   shown: Ranked[];
+  variant: 'table' | 'bar';
 }) {
+  // 게이지 기준값은 그 표의 1위 — 팀 안에서의 비중으로 읽힌다
+  const max = shown[0]?.r[col.key] ?? 1;
   return (
     <section className="lbc" data-rev={col.reverse}>
       <header className="lbc__h">
@@ -111,6 +133,11 @@ function Column({
               <span className="lbc__rank num">{rk}</span>
               {r.team ? <Crest team={r.team} size={18} /> : <span className="lbc__pad" />}
               <span className="lbc__name">{r.name}</span>
+              {variant === 'bar' && (
+                <span className="lbc__meter" aria-hidden="true">
+                  <i style={{ width: `${Math.max(7, (r[col.key] / max) * 100)}%` }} />
+                </span>
+              )}
               <span className="lbc__v num">
                 {r[col.key]}
                 <em>{col.suffix}</em>

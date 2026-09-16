@@ -12,6 +12,8 @@ import type { AthleteInfo, Lineup } from '../types/feedTypes';
 export interface CompSplit {
   competition: string;
   apps: number;
+  /** 그 대회 선발 출전 수 */
+  starts: number;
   goals: number;
   assists: number;
 }
@@ -183,7 +185,6 @@ export function buildSquad(
       const info = athletes[id];
       if (!info) continue;                       // 이름을 모르는 선수는 지어내지 않는다
       const mins = minutesOf(starter, inMin, outMin);
-      if (mins === 0) continue;                  // 미출전 벤치는 집계하지 않는다
 
       let p = byId.get(id);
       if (!p) {
@@ -195,6 +196,12 @@ export function buildSquad(
         };
         byId.set(id, p);
       }
+
+      /* 벤치에만 앉고 끝난 경기는 기록을 올리지 않는다.
+         단 **명단에서 지우지는 않는다** — 백업 골키퍼가 통째로 사라지면
+         스쿼드가 비어 보인다(루닌이 7경기 전부 미출전이라 사라졌었다).
+         출전 0 으로 목록 맨 아래에 남고, 베스트 11 후보에서는 빠진다. */
+      if (mins === 0) continue;
 
       /* 라인업이 선수별 골·도움을 들고 있으면 그걸 쓴다(ESPN 집계 원본).
          없을 때만 예전처럼 득점 이벤트의 이름을 맞춰 본다 — 표기가 달라
@@ -210,10 +217,11 @@ export function buildSquad(
       if (starter) p.starts++;
       let split = p.byComp.find((c) => c.competition === m.competition);
       if (!split) {
-        split = { competition: m.competition, apps: 0, goals: 0, assists: 0 };
+        split = { competition: m.competition, apps: 0, starts: 0, goals: 0, assists: 0 };
         p.byComp.push(split);
       }
       split.apps++;
+      if (starter) split.starts++;
       split.goals += g;
       split.assists += a;
       p.minutes += mins;
@@ -429,7 +437,7 @@ export function bestEleven(
   const shape = formation ?? '4-3-3';
 
   if (slotShape?.length) {
-    const byAbbr = fillByActualSlots(players, slotShape);
+    const byAbbr = fillByActualSlots(players, slotShape, shape);
     if (byAbbr) return { ...byAbbr, formation: shape };
   }
   return { ...fillByDepth(players, shape), formation: shape };
@@ -439,6 +447,7 @@ export function bestEleven(
 function fillByActualSlots(
   players: PlayerSeason[],
   slotShape: SlotSpec[],
+  shape: string,
 ): { slots: Slot[]; verified: boolean } | null {
   // 자리 하나하나로 펼친다 (CM 2명이면 CM 자리 두 개)
   const seats: { abbr: string; player: PlayerSeason | null }[] = [];
@@ -473,7 +482,7 @@ function fillByActualSlots(
     if (seat.player) continue;
     const want = roleOf(seat.abbr)?.depth ?? 3;
     const cand = players
-      .filter((p) => !used.has(p.id))
+      .filter((p) => !used.has(p.id) && p.apps > 0)
       .sort(
         (a, b) =>
           Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||
@@ -485,17 +494,44 @@ function fillByActualSlots(
     }
   }
 
-  /* 줄 묶기 — 자리의 깊이가 같으면 같은 줄이다.
-     3-4-2-1 이면 G(0) / CD·CD-L·CD-R(1) / LM·CM·RM(3) / AM-L·AM-R(4) / F(5) */
+  /*
+   * 줄 나누기 — **줄 수는 포메이션 문자열이 정한다**.
+   *
+   * ⚠️ 자리의 깊이만으로 묶으면 안 된다. 첼시 3-4-2-1 의 실제 자리는
+   *   G / CD-L·CD·CD-R / LM·CM-L·CM-R·RM / CF-L·CF-R / F
+   * 인데, ESPN 이 2선 두 명을 CF-L/CF-R(센터포워드)로 주기 때문에 최전방 F 와
+   * 깊이가 같아진다. 깊이로만 묶으면 셋이 한 줄이 되어 3-4-3 처럼 보였다.
+   *
+   * 그래서 3-4-2-1 → [1,3,4,2,1] 처럼 줄 크기를 문자열에서 가져오고,
+   * 자리들을 (깊이 오름차순, 좌우 치우침 큰 순)으로 세워 앞에서부터 담는다.
+   * 같은 깊이면 좌우로 벌어진 자리가 뒤쪽 줄에, 가운데 자리가 맨 앞줄에 간다
+   * — CF-L·CF-R 이 2선, F 가 최전방이 되는 이유다.
+   */
   const depthOf = (abbr: string) => roleOf(abbr)?.depth ?? 3;
   const lateralOf = (abbr: string) => roleOf(abbr)?.lateral ?? 0;
-  const depths = [...new Set(seats.map((s) => depthOf(s.abbr)))].sort((a, b) => a - b);
+
+  const counts = shape.split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  const rowSizes = counts.length ? [1, ...counts] : null;
+
+  const ordered = [...seats].sort(
+    (a, b) =>
+      depthOf(a.abbr) - depthOf(b.abbr) ||
+      Math.abs(lateralOf(b.abbr)) - Math.abs(lateralOf(a.abbr)),
+  );
+
+  // 포메이션이 말하는 줄 크기와 실제 인원이 맞을 때만 쓴다
+  const sizes =
+    rowSizes && rowSizes.reduce((a, b) => a + b, 0) === ordered.length
+      ? rowSizes
+      : [...new Set(ordered.map((s) => depthOf(s.abbr)))]
+          .sort((a, b) => a - b)
+          .map((d) => ordered.filter((s) => depthOf(s.abbr) === d).length);
 
   const slots: Slot[] = [];
-  depths.forEach((d, ri) => {
-    const row = seats
-      .filter((s) => depthOf(s.abbr) === d)
-      .sort((a, b) => lateralOf(a.abbr) - lateralOf(b.abbr));
+  let at = 0;
+  sizes.forEach((n, ri) => {
+    const row = ordered.slice(at, at + n).sort((a, b) => lateralOf(a.abbr) - lateralOf(b.abbr));
+    at += n;
     row.forEach((s, ci) => {
       slots.push({ row: ri, col: ci, rowCount: row.length, player: s.player, label: s.abbr });
     });
@@ -525,14 +561,14 @@ function fillByDepth(players: PlayerSeason[], shape: string): { slots: Slot[]; v
     const picked: PlayerSeason[] = [];
     if (ri === 0) {
       const gk =
-        players.find((p) => roleFor(p).depth === 0 && !used.has(p.id)) ??
-        players.find((p) => !used.has(p.id));
+        players.find((p) => roleFor(p).depth === 0 && !used.has(p.id) && p.apps > 0) ??
+        players.find((p) => !used.has(p.id) && p.apps > 0);
       if (gk) picked.push(gk);
     } else {
       const want = idealDepth(ri);
       picked.push(
         ...players
-          .filter((p) => !used.has(p.id) && roleFor(p).depth !== 0)
+          .filter((p) => !used.has(p.id) && roleFor(p).depth !== 0 && p.apps > 0)
           .sort(
             (a, b) =>
               Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||

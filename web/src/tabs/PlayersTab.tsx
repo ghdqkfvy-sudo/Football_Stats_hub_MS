@@ -120,7 +120,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
           <h2 className="sec__title">팀 공격 포인트</h2>
           <span className="sec__note">{covered}경기 득점 기록 기준</span>
         </div>
-        <LeaderBoard rows={leaders} limit={12} />
+        <LeaderBoard rows={leaders} variant="bar" />
       </section>
     </div>
   );

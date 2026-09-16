@@ -185,7 +185,9 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
       <div className="pcard__hero">
         <div className="pcard__mins num">
           <b>{p.minutes}</b>
-          <span>출전 시간(분)</span>
+          {/* 경기별 실제 교체 기록이 있으면 모든 대회 합계지만, 없으면
+              시즌 통계(리그 전용)를 쓴 값이라 라벨을 구분해 준다. */}
+          <span>{p.realMinutes ? '출전 시간(분)' : '리그 출전 시간(분)'}</span>
         </div>
         <div className="pcard__ap num" data-on={p.points > 0}>
           <b>{p.points}</b>
@@ -200,7 +202,7 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
             <div className="pcard__comp" key={c.competition}>
               <i style={{ background: palette.color(c.competition) }} />
               <span className="pcard__cn">{palette.name(c.competition)}</span>
-              <span className="pcard__ca num">{c.apps}경기</span>
+              <span className="pcard__ca num">{c.apps}경기<i>선발 {c.starts}</i></span>
               <span className="pcard__cg num">
                 <b>{c.goals}</b>G <b>{c.assists}</b>A
               </span>

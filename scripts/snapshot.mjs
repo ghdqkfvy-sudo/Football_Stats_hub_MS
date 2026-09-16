@@ -660,13 +660,20 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
         for (const ev of c?.events ?? []) {
           const meta = events[String(ev?.eventId ?? '')] ?? {};
           rows.push({
+            eventId: String(ev?.eventId ?? ''),
             competition: league,
             result: String(meta?.gameResult ?? 'D').toUpperCase().slice(0, 1) || 'D',
             opponentId: String(meta?.opponent?.id ?? '0'),
             opponent: String(meta?.opponent?.displayName ?? ''),
             score: String(meta?.score ?? ''),
-            started: false,
-            minutes: 0,
+            /* 선발 여부와 출전 시간은 gamelog 에 **없다**(G/A/슈팅/파울/카드뿐).
+               예전에는 started:false, minutes:0 을 그냥 박아 넣어 화면에
+               "교체 0분" 처럼 거짓으로 보였다. 아래에서 core 경기 로스터로
+               실제 값을 채우고, 못 채우면 undefined 로 두어 화면이 "기록 없음"
+               으로 처리하게 한다. */
+            started: undefined,
+            minutes: undefined,
+            subIn: undefined,
             goals: Number(ev?.stats?.[iG] ?? 0) || 0,
             assists: Number(ev?.stats?.[iA] ?? 0) || 0,
             date: String(meta?.gameDate ?? ''),
@@ -676,6 +683,22 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     }
     rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
     recent.push(...rows.slice(0, 3));
+
+    /* 최근 3경기의 실제 선발/교체 시각을 core 경기 로스터에서 채운다.
+       (요약 로스터는 subbedIn/subbedOut 이 불리언뿐이라 시각이 없다) */
+    for (const r of recent) {
+      if (!r.eventId || clubId === '0') continue;
+      const info = await coreLineupInfo(league, r.eventId, clubId);
+      const it = info.get(String(id));
+      if (!it) continue;
+      r.started = it.starter;
+      r.subIn = it.starter ? undefined : (it.inMin ?? undefined);
+      r.minutes = it.starter
+        ? Math.min(90, it.outMin ?? 90)
+        : it.inMin != null
+          ? Math.max(0, Math.min(90, (it.outMin ?? 90) - it.inMin))
+          : 0;
+    }
   }
 
   /* 사진: ESPN 은 소속팀 로스터에만 갖고 있고 그마저 대부분 비어 있다.
@@ -773,7 +796,7 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`league-${lg}.json`);
       await enrichGoals(events, lg, prevMap);
-      await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120);
+      await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120, true);
       await save(`league-${lg}.json`, {
         league: lg,
         events,

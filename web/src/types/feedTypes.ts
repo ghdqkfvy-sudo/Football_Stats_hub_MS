@@ -80,13 +80,21 @@ export interface KoreanStat {
 }
 
 export interface KoreanGame {
+  /** ESPN 경기 id — 선발/교체 시각을 경기 로스터에서 채울 때 쓴다 */
+  eventId?: string;
   competition: string;
   result: 'W' | 'D' | 'L';
   opponentId: string;
   opponent: string;
   score: string;
-  started: boolean;
-  minutes: number;
+  /**
+   * 선발 여부 · 출전 시간 · 교체 투입 분.
+   * gamelog 에는 이 정보가 없어서 경기 로스터에서 따로 채운다.
+   * 못 채우면 undefined — 화면은 "기록 없음" 으로 둔다(0분으로 꾸미지 않는다).
+   */
+  started?: boolean;
+  minutes?: number;
+  subIn?: number;
   goals: number;
   assists: number;
   yellow?: boolean;

@@ -21,7 +21,9 @@ export function FutureTab({ target }: { target: Target }) {
   useEffect(() => {
     let alive = true;
     setStats({});
-    if (!HAS_PROXY) return;
+    /* 예전에는 여기서 프록시가 없으면 그냥 돌아갔다. 그런데 loadFutureStat
+       자체가 정적 피드(future.json) 폴백을 갖고 있어서, 프록시가 없는 배포
+       (GitHub Pages)에서는 기록이 영영 안 뜨는 상태였다. */
     for (const p of rows) {
       loadFutureStat(p.league, p.id).then((s) => {
         if (alive) setStats((m) => ({ ...m, [p.id]: s }));

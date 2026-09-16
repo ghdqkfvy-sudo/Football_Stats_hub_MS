@@ -270,7 +270,15 @@ function RecentPanel({ p }: { p: KoreanPlayer }) {
             <span className="krr__opp">vs {gm.opponent}</span>
             <span className="krr__sc num">{gm.score}</span>
             <span className="krr__m num">
-              {gm.started ? '선발' : '교체'} {gm.minutes}'
+              {/* 선발/교체·출전시간은 경기 로스터에서 온 실제 값일 때만 적는다.
+                  없으면 "-" — 예전처럼 0분으로 꾸미지 않는다. */}
+              {gm.started === undefined
+                ? '-'
+                : gm.started
+                  ? `선발 ${gm.minutes ?? 90}'`
+                  : gm.subIn !== undefined
+                    ? `교체 ${gm.subIn}'(${gm.minutes ?? 0})`
+                    : '교체'}
               {gm.goals > 0 && <em className="krr__gg">{gm.goals}G</em>}
               {gm.assists > 0 && <em className="krr__aa">A{gm.assists}</em>}
               {gm.yellow && <em className="krr__y" />}

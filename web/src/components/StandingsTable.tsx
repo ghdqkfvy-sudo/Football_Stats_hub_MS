@@ -20,6 +20,23 @@ export function StandingsTable({ table, matches, focusTeamId, zones = [] }: Prop
 
   return (
     <div className="tbl">
+      {/* 색 띠가 무엇을 뜻하는지 표 위에 적어 둔다 —
+          색만 칠해 두면 마우스를 올려 보기 전에는 알 수가 없다. */}
+      {zones.length > 0 && (
+        <div className="tbl__legend">
+          {zones.map((z, i) => {
+            const from = i === 0 ? 1 : zones[i - 1].upTo + 1;
+            return (
+              <span className="tbl__lg" key={z.label} style={{ ['--zone' as string]: z.color }}>
+                <i aria-hidden="true" />
+                <b className="num">{from === z.upTo ? `${z.upTo}위` : `${from}–${z.upTo}위`}</b>
+                {z.label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       <div className="tbl__head" role="row">
         <span className="tbl__rank">#</span>
         <span className="tbl__team">TEAM</span>
