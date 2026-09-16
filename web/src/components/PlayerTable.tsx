@@ -282,12 +282,13 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
         {/* 숫자 네 칸은 있는 그대로 — 강조 상자는 공격 포인트 하나만 쓴다 */}
         <div className="pcard__stats">
           {([
-            ['출전', p.apps],
-            ['선발', p.starts],
-            ['골', p.goals],
-            ['도움', p.assists],
-          ] as const).map(([k, v]) => (
-            <div key={k}>
+            ['출전', p.apps, false],
+            ['선발', p.starts, false],
+            ['골', p.goals, true],
+            ['도움', p.assists, true],
+          ] as const).map(([k, v, tint]) => (
+            // 골·도움 숫자는 팀 컬러로 — 상자는 그대로 두고 값만 눈에 띄게
+            <div key={k} data-tint={tint && v > 0 ? true : undefined}>
               <b className="num">{v}</b>
               <span>{k}</span>
             </div>

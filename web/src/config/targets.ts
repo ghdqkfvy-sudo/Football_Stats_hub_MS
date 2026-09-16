@@ -314,6 +314,28 @@ const COMPS: CompetitionMeta[] = [
   { key: 'club.friendly',    name: 'Club Friendly',     short: 'CF',  color: '#7A8699' },
   { key: 'fifa.cwc',         name: 'Club World Cup',    short: 'CWC', color: '#E879A6', logo: LL(1932) },
   { key: 'uefa.super_cup',   name: 'UEFA Super Cup',    short: 'USC', color: '#A78BFA', logo: LL(1272) },
+
+  /* 코리안리거가 뛰는 리그들.
+     ⚠️ 여기 없는 대회는 회색(#8FA0B8)으로 떨어진다 — 그래서 이강인(라리가)만
+     빨간 게이지고 나머지는 전부 회색으로 보였다. 리그마다 색을 줘야 카드가
+     한 체계로 읽힌다. 앰블럼은 스냅샷이 API 에서 받아 오므로 여기 없어도 된다. */
+  { key: 'ger.1',            name: 'Bundesliga',        short: 'BUN', color: '#E4232C' },
+  { key: 'ita.1',            name: 'Serie A',           short: 'SA',  color: '#2E7BEF' },
+  { key: 'fra.1',            name: 'Ligue 1',           short: 'L1',  color: '#DCE23A' },
+  { key: 'por.1',            name: 'Primeira Liga',     short: 'PPL', color: '#2ED573' },
+  { key: 'ned.1',            name: 'Eredivisie',        short: 'ERE', color: '#FF7A2F' },
+  { key: 'bel.1',            name: 'Pro League',        short: 'BEL', color: '#5BC8E8' },
+  { key: 'sco.1',            name: 'Scottish Prem',     short: 'SPL', color: '#8B7BFF' },
+  { key: 'den.1',            name: 'Superliga',         short: 'DEN', color: '#E05B8A' },
+  { key: 'tur.1',            name: 'Süper Lig',         short: 'TUR', color: '#F2544B' },
+  { key: 'gre.1',            name: 'Super League',      short: 'GRE', color: '#4FA3E3' },
+  { key: 'jpn.1',            name: 'J1 League',         short: 'J1',  color: '#E8546B' },
+  { key: 'usa.1',            name: 'MLS',               short: 'MLS', color: '#3FD7C0' },
+  { key: 'eng.2',            name: 'Championship',      short: 'CHA', color: '#C084FC' },
+  { key: 'eng.3',            name: 'League One',        short: 'L1E', color: '#9CA8BC' },
+  { key: 'esp.2',            name: 'LaLiga 2',          short: 'LL2', color: '#F58E86' },
+  { key: 'ger.2',            name: '2. Bundesliga',     short: 'BL2', color: '#F09090' },
+  { key: 'kor.1',            name: 'K League 1',        short: 'K1',  color: '#4CC9F0' },
 ];
 
 const COMP_MAP = new Map(COMPS.map((c) => [c.key, c]));

@@ -32,10 +32,14 @@ export interface FuturePlayer {
   /** 지금 뛰는 리그 slug (스탯 조회에 쓴다) */
   league: string;
   pos?: 'G' | 'D' | 'M' | 'F';
-  /** 조항 설명. 확인되지 않은 금액·비율은 적지 않는다. */
-  note: string;
-  /** 사실 확인 기준일 */
-  checked: string;
+  /**
+   * 조항 설명 — **화면에는 쓰지 않는다.**
+   * 금액·비율·기한처럼 출처를 댈 수 없는 값은 보여 주지 않기로 했다
+   * (화면에는 조항 종류만 뜬다). 근거 메모로만 남긴다.
+   */
+  note?: string;
+  /** 사실 확인 기준일 (메모) */
+  checked?: string;
 }
 
 export const CLAUSE_LABEL: Record<ClauseKind, string> = {
@@ -56,6 +60,13 @@ export const FUTURE: FuturePlayer[] = [
     id: '337970', name: 'Nico Paz', parentTeamId: '86', kind: 'buyback',
     club: 'Como', league: 'ita.1', pos: 'M',
     note: '레알 마드리드 유스 출신. 이적 당시 단계별 바이백 조항이 보도됐다. 정확한 금액은 공식 확인된 바 없다.',
+    checked: '2026-09-16',
+  },
+  {
+    /* ESPN 검색으로 확인: uid s:600~a:380318 · 현 소속 Serie A */
+    id: '380318', name: 'Jacobo Ramón', parentTeamId: '86', kind: 'buyback',
+    club: 'Como', league: 'ita.1', pos: 'D',
+    note: '카스티야 출신 센터백. 이적 시 바이백 조항이 보도됐다.',
     checked: '2026-09-16',
   },
   {

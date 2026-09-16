@@ -924,6 +924,19 @@ async function googleNewsKo(q) {
 /* ── 코리안리거 한 명 ─────────────────────────────────
    core 는 athlete 를 $ref 로만 주므로 프로필 → 소속팀 → 대회별 기록 순으로
    따라가야 한다. 리그와 유럽대항전을 합쳐 주는 엔드포인트는 없다. */
+/** 대회 참가팀 id 집합 — "나가는 팀인지" 를 판단하는 유일한 근거 */
+const teamsInCache = new Map();
+function teamsIn(slug) {
+  if (teamsInCache.has(slug)) return teamsInCache.get(slug);
+  const p = (async () => {
+    const j = await get(`${SITE}/apis/site/v2/sports/soccer/${slug}/teams`);
+    const list = j?.sports?.[0]?.leagues?.[0]?.teams ?? [];
+    return new Set(list.map((t) => String(t?.team?.id ?? '')).filter(Boolean));
+  })();
+  teamsInCache.set(slug, p);
+  return p;
+}
+
 /** 대회 슬러그 → 어두운 배경용 리그 앰블럼 주소 (core 리그 객체가 준다) */
 const leagueLogoCache = new Map();
 function leagueLogoOf(slug) {
@@ -999,8 +1012,16 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
   }
   for (const [lg, label] of EURO) {
     const s = await pull(lg, label);
-    if (s) stats.push(s);
-    await sleep(150);
+    if (s) { stats.push(s); continue; }
+    /* 기록이 없다고 줄을 빼면 "이 선수는 유럽대항전에 안 나간다" 와
+       "나가는 팀인데 아직 출전이 없다" 가 구분되지 않는다.
+       소속 클럽이 그 대회 참가팀이면 0경기로 남겨 둔다. */
+    if (clubId !== '0' && (await teamsIn(lg)).has(clubId)) {
+      stats.push({
+        competition: lg, label,
+        apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, yellow: 0, red: 0,
+      });
+    }
   }
 
   // 최근 3경기 — 소속 리그 gamelog 에서
@@ -1039,11 +1060,15 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
       }
     }
     rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-    recent.push(...rows.slice(0, 3));
 
-    /* 최근 3경기의 실제 선발/교체 시각을 core 경기 로스터에서 채운다.
+    /* gamelog 에는 **명단에 든 경기**가 다 들어온다 — 한 번도 안 뛴 경기까지.
+       그대로 실으면 화면에 "교체" 로 잡힌다(김민재 샬케전이 그랬다).
+       그래서 후보를 넉넉히 두고, 실제 출전이 확인된 경기만 3개 채운다. */
+    const pickFrom = rows.slice(0, 8);
+
+    /* 실제 선발/교체 시각을 core 경기 로스터에서 채운다.
        (요약 로스터는 subbedIn/subbedOut 이 불리언뿐이라 시각이 없다) */
-    for (const r of recent) {
+    for (const r of pickFrom) {
       if (!r.eventId || clubId === '0') continue;
       const info = await coreLineupInfo(league, r.eventId, clubId);
       const it = info.get(String(id));
@@ -1056,6 +1081,15 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
           ? Math.max(0, Math.min(90, (it.outMin ?? 90) - it.inMin))
           : 0;
     }
+
+    /* 실제로 그라운드를 밟은 경기만 남긴다.
+       · 선발      → 출전
+       · 교체 투입 → 출전
+       · 선발 아님 + 투입 시각 없음 → **미출전**(명단에만 있었다)
+       확인 자체를 못 한 경기(started === undefined)는 판단하지 않고 남긴다 —
+       화면이 "기록 없음" 으로 처리한다. */
+    const played = (r) => r.started !== false || r.subIn !== undefined;
+    recent.push(...pickFrom.filter(played).slice(0, 3));
   }
 
   /* 사진: 소속팀 로스터 → ESPN 관용 주소(HEAD 로 확인) → 이어받기 → 위키백과 */

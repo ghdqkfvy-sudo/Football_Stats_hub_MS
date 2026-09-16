@@ -1,7 +1,6 @@
-import type { Match } from '../lib/types';
+import type { Match, TeamRef } from '../lib/types';
 import type { H2HGame, LastFiveGame } from '../lib/api';
 import { Crest } from './Crest';
-import { kstShortDate } from '../lib/kst';
 
 /**
  * 다음 경기 미리보기 — "요즘 어떤가" 와 "만나면 어땠나" 두 가지만 본다.
@@ -10,6 +9,9 @@ import { kstShortDate } from '../lib/kst';
  * 준다(아직 안 치른 경기의 요약에도 들어 있다). 상대전적은 우리 팀의
  * 이번 시즌·지난 시즌 일정에서 그 상대와의 경기만 추린 것이다.
  * 둘 다 스냅샷이 미리 구워 둔다(scripts/snapshot.mjs 의 nextMatchPreview).
+ *
+ * 배치는 위의 다음 경기 카드와 **좌우를 맞춘다** — 왼쪽이 홈, 오른쪽이 원정.
+ * 같은 팀이 화면 위아래에서 다른 자리에 있으면 눈이 한 번 더 일한다.
  */
 interface Props {
   match: Match;
@@ -18,7 +20,6 @@ interface Props {
   h2h: H2HGame[];
 }
 
-/** 우리 기준 승/무/패 */
 function recordOf(games: { result?: string }[]) {
   let w = 0;
   let d = 0;
@@ -32,11 +33,9 @@ function recordOf(games: { result?: string }[]) {
 }
 
 export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
-  const us = match.home.id === focusTeamId ? match.home : match.away;
-  const them = match.home.id === focusTeamId ? match.away : match.home;
-
-  const ourFive = lastFive[us.id] ?? [];
-  const theirFive = lastFive[them.id] ?? [];
+  const ourFive = lastFive[focusTeamId] ?? [];
+  const oppId = match.home.id === focusTeamId ? match.away.id : match.home.id;
+  const theirFive = lastFive[oppId] ?? [];
   if (!ourFive.length && !theirFive.length && !h2h.length) return null;
 
   /* 상대전적은 **우리 기준** 으로 다시 읽는다 — 저장된 값은 홈/원정 스코어라
@@ -53,9 +52,20 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
 
   return (
     <div className="mprev">
+      {/* 위 카드와 같은 순서 — 홈 / 원정 */}
       <div className="mprev__forms">
-        <FormColumn team={us} games={ourFive} mine />
-        <FormColumn team={them} games={theirFive} />
+        <FormColumn
+          team={match.home}
+          games={lastFive[match.home.id] ?? []}
+          side="HOME"
+          mine={match.home.id === focusTeamId}
+        />
+        <FormColumn
+          team={match.away}
+          games={lastFive[match.away.id] ?? []}
+          side="AWAY"
+          mine={match.away.id === focusTeamId}
+        />
       </div>
 
       {meetings.length > 0 && (
@@ -69,28 +79,24 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
           <div className="mprev__bar" aria-hidden="true">
             {(['W', 'D', 'L'] as const).map((k) => {
               const n = k === 'W' ? rec.w : k === 'D' ? rec.d : rec.l;
-              return n > 0 ? (
-                <i key={k} data-r={k} style={{ flexGrow: n }}>
-                  {n}
-                </i>
-              ) : null;
+              return n > 0 ? <i key={k} data-r={k} style={{ flexGrow: n }} /> : null;
             })}
           </div>
           <div className="mprev__rec num">
-            <b data-r="W">{rec.w}승</b>
-            <b data-r="D">{rec.d}무</b>
-            <b data-r="L">{rec.l}패</b>
+            <b data-r="W">{rec.w}<span>W</span></b>
+            <b data-r="D">{rec.d}<span>D</span></b>
+            <b data-r="L">{rec.l}<span>L</span></b>
           </div>
 
           <div className="mprev__list">
-            {meetings.slice(0, 5).map((g) => (
+            {meetings.slice(0, 3).map((g) => (
               <div className="mprev__m" key={g.id}>
                 <i className="fchip" data-r={g.result}>{g.result}</i>
-                <span className="mprev__md num">{kstShortDate(g.date)}</span>
-                <span className="mprev__mw">{g.home ? '홈' : '원정'}</span>
-                <span className="mprev__ms num">
-                  {g.ours ?? '-'} : {g.theirs ?? '-'}
+                <span className="mprev__md num">{ymd(g.date)}</span>
+                <span className="mprev__mw" data-side={g.home ? 'H' : 'A'}>
+                  {g.home ? 'Home' : 'Away'}
                 </span>
+                <Score a={g.ours} b={g.theirs} res={g.result} />
               </div>
             ))}
           </div>
@@ -100,39 +106,92 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
   );
 }
 
+/** 2026.03.13 — 두 시즌을 합쳐 보여 주므로 연도가 없으면 헷갈린다 */
+function ymd(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const kst = new Date(d.getTime() + 9 * 3600 * 1000);
+  const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(kst.getUTCDate()).padStart(2, '0');
+  return `${kst.getUTCFullYear()}.${mm}.${dd}`;
+}
+
+/** 스코어 한 칸 — 결과 색을 띤 캡슐. 숫자만 나열하면 승패가 안 읽힌다. */
+function Score({ a, b, res }: { a?: number; b?: number; res?: 'W' | 'D' | 'L' }) {
+  return (
+    <span className="scorepill num" data-r={res}>
+      <b>{a ?? '-'}</b>
+      <i>:</i>
+      <b>{b ?? '-'}</b>
+    </span>
+  );
+}
+
 function FormColumn({
-  team, games, mine = false,
+  team, games, side, mine,
 }: {
-  team: { id: string; name: string; shortName: string; abbr: string; logo: string };
+  team: TeamRef;
   games: LastFiveGame[];
-  mine?: boolean;
+  side: 'HOME' | 'AWAY';
+  mine: boolean;
 }) {
   const rec = recordOf(games);
   return (
     <div className="mprev__col" data-mine={mine}>
       <div className="mprev__team">
-        <Crest team={team} size={20} />
+        <span className="mprev__side" data-side={side}>{side}</span>
+        <Crest team={team} size={22} />
         <b>{team.shortName}</b>
-        <span className="num">
-          {rec.w}승 {rec.d}무 {rec.l}패
+        {mine && <em className="mprev__you">우리 팀</em>}
+      </div>
+
+      <div className="mprev__sum">
+        <span className="mprev__chips">
+          {games.length === 0
+            ? <i className="mprev__noform">기록 없음</i>
+            : games.map((g, i) => (
+                <i className="fchip" key={i} data-r={g.result || '-'}>{g.result || '-'}</i>
+              ))}
+        </span>
+        <span className="mprev__rec2 num">
+          {rec.w}W {rec.d}D {rec.l}L
         </span>
       </div>
 
-      {games.length === 0 ? (
-        <p className="nogoal">최근 경기 기록 없음</p>
-      ) : (
+      {games.length > 0 && (
         <div className="mprev__games">
-          {games.map((g, i) => (
-            <div className="mprev__g" key={`${g.date}-${i}`} title={g.competition}>
-              <i className="fchip" data-r={g.result || '-'}>{g.result || '-'}</i>
-              <span className="mprev__go">
-                {g.atVs === 'vs' ? 'vs' : '@'} {g.opponent}
-              </span>
-              <span className="mprev__gs num">{g.score}</span>
-            </div>
-          ))}
+          {games.map((g, i) => {
+            const [ms, ts] = String(g.score ?? '').split('-');
+            const res = (g.result || undefined) as 'W' | 'D' | 'L' | undefined;
+            return (
+              <div className="mprev__g" key={`${g.date}-${i}`} title={g.competition}>
+                {/* 상대 표기는 항상 "vs" 로 통일하고, 홈/원정은 따로 배지로 —
+                    vs 와 @ 를 섞으면 어느 쪽이 홈인지 매번 다시 읽어야 한다. */}
+                <span className="mprev__gh" data-side={g.atVs === 'vs' ? 'H' : 'A'}>
+                  {g.atVs === 'vs' ? 'H' : 'A'}
+                </span>
+                <Crest
+                  team={{
+                    id: g.opponentId,
+                    name: g.opponentName || g.opponent,
+                    shortName: g.opponentName || g.opponent,
+                    abbr: g.opponent,
+                    logo: g.opponentLogo || '',
+                  }}
+                  size={17}
+                />
+                <span className="mprev__go">vs {g.opponentName || g.opponent}</span>
+                <Score a={num(ms)} b={num(ts)} res={res} />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+
+const num = (v?: string) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};

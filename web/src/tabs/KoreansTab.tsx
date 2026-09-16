@@ -39,6 +39,7 @@ function LeagueMark({ src, color }: { src?: string; color: string }) {
 }
 
 export function KoreansTab() {
+  const palette = usePalette();
   /* 명단과 정렬 규칙만 코드에 있고, 기록은 전부 네트워크에서 온다 */
   const [KOREANS, setKoreans] = useState<KoreanPlayer[] | null>(null);
   const [source, setSource] = useState<Source>('none');
@@ -172,7 +173,8 @@ export function KoreansTab() {
           </button>
           {leagues.map(([slug, name]) => (
             <button key={slug} aria-pressed={league === slug} onClick={() => setLeague(slug)}>
-              {name}
+              {/* 아는 대회면 사람이 읽는 이름으로 (피드의 leagueName 은 비면 슬러그다) */}
+              {palette.name(slug) === slug ? name : palette.name(slug)}
             </button>
           ))}
         </nav>
@@ -230,7 +232,9 @@ function KoreanCard({
             {/* 리그 앰블럼도 API 가 준 주소다 — 리그 로고 id 를 코드에 적어
                 두면 선수가 새 리그로 옮길 때마다 빈칸이 된다. */}
             <LeagueMark src={p.leagueLogo} color={palette.color(p.league)} />
-            {p.leagueName}
+            {/* 피드의 leagueName 은 비어 오면 슬러그(ger.1)가 된다 —
+                아는 대회면 사람이 읽는 이름으로 바꿔 준다. */}
+            {palette.name(p.league) === p.league ? p.leagueName : palette.name(p.league)}
           </span>
         </div>
       </div>
@@ -252,9 +256,8 @@ function KoreanCard({
                   {s.apps}경기 <em>(선발 {s.starts})</em>
                 </span>
                 <span className="krcc__ga num">
-                  <b data-on={s.goals > 0}>{s.goals}</b>
-                  <i className="krcc__sl">/</i>
-                  <b data-on={s.assists > 0}>{s.assists}</b>
+                  <b data-k="g" data-on={s.goals > 0}>{s.goals}</b>
+                  <b data-k="a" data-on={s.assists > 0}>{s.assists}</b>
                 </span>
                 <span className="krcc__p num">{s.goals + s.assists}</span>
               </div>
@@ -262,27 +265,30 @@ function KoreanCard({
           </div>
 
           <div className="krc__foot">
-            <span>합계</span>
+            <span className="eyebrow">합계</span>
             <span className="krc__sum num">
-              <em>G</em> {g}
-              <em>A</em> {a}
-              <b>AP {g + a}</b>
+              <b data-k="g" data-on={g > 0}><i>G</i>{g}</b>
+              <b data-k="a" data-on={a > 0}><i>A</i>{a}</b>
+              <b data-k="p" data-on={g + a > 0}><i>AP</i>{g + a}</b>
             </span>
           </div>
         </>
       )}
 
-      {open && <RecentPanel p={p} />}
+      <RecentPanel p={p} open={open} />
     </article>
   );
 }
 
 /** 호버 — 최근 3경기 기록 */
-function RecentPanel({ p }: { p: KoreanPlayer }) {
+function RecentPanel({ p, open }: { p: KoreanPlayer; open: boolean }) {
   const palette = usePalette();
 
+  /* 넓은 화면에서는 카드 위에 떠오르는 호버 패널이고, 좁은 화면에서는
+     카드 아래에 그대로 붙는다(모바일에는 호버가 없어 안 보였다).
+     둘 다 CSS 가 정한다 — 항상 그려 두고 data-open 만 넘긴다. */
   return (
-    <div className="krr" role="tooltip">
+    <div className="krr" role="tooltip" data-open={open}>
       <div className="krr__h">
         <span className="eyebrow">최근 3경기 기록</span>
         <b>{p.nameKo}</b>
@@ -294,7 +300,11 @@ function RecentPanel({ p }: { p: KoreanPlayer }) {
           자동으로 채워지며, 스냅샷 프리뷰에는 일부 선수만 담겨 있습니다.
         </p>
       ) : (
-        p.recent.map((gm, i) => (
+        p.recent
+          /* 명단에만 있었던 경기는 "교체" 로 잡히면 안 된다 — 스냅샷에서
+             이미 걸러 내지만, 예전 피드가 남아 있을 수 있어 화면에서도 막는다. */
+          .filter((gm) => gm.started !== false || gm.subIn !== undefined)
+          .map((gm, i) => (
           <div className="krr__g" key={i}>
             <i className="fchip" data-r={gm.result}>{gm.result}</i>
             <i className="krr__c" style={{ background: palette.color(gm.competition) }} />
