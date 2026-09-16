@@ -1,11 +1,14 @@
 /**
  * 도움을 골에 배정한다 — 시간으로 좁혀서.
  *
- * ESPN 은 "이 골의 도움은 누구" 를 어디서도 주지 않는다. 확인한 것:
+ * ⚠️ 이건 **대비책**이다. 진짜 답은 core `/plays` 의 득점 play 가 주는
+ * participants(type:"assister") 이고, 스냅샷이 그걸 골에 직접 붙인다
+ * (scripts/snapshot.mjs 의 corePlayAssists). 여기 로직은 그 값을 아직
+ * 못 받은 경기에만 쓴다.
+ *
+ * 나머지 경로는 실제로 확인해 봤고 도움이 없었다:
  *  · 스코어보드 details  → 득점자만 (athletesInvolved 1명)
- *  · 요약 keyEvents      → 아예 없음
- *  · core /plays         → 도움 play 는 있지만 선수가 $ref 라 이름이 없고,
- *                          한 경기 1,404개라 페이지를 다 받아야 한다
+ *  · 요약 keyEvents      → 키 자체가 없음 (boxscore/rosters/leaders/news 뿐)
  *
  * 대신 두 가지는 확실히 안다.
  *  1) 골이 몇 분에 났는지 (스코어보드 details)
@@ -120,6 +123,7 @@ export function assignAssists(
 /** 배정되지 못하고 남은 도움 (화면 아래에 따로 적는다) */
 export function leftoverAssists(
   stats: MatchPlayerStat[] | undefined,
+  /** 이미 어떤 골에 붙은 도움 (API 값 + 추론값 모두 넣어야 중복이 안 생긴다) */
   assigned: Map<number, string>,
 ): MatchPlayerStat[] {
   if (!stats?.length) return [];

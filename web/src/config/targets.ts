@@ -2,6 +2,7 @@ import type { CompetitionKey } from '../lib/types';
 import bgRma from '../assets/bg-rma.jpg';
 import bgChe from '../assets/bg-che.jpg';
 import bgKor from '../assets/bg-kor.png';
+import crestKor from '../assets/crest-kor.png';
 
 /* ──────────────────────────────────────────────────────────────
    추적 대상 (팀 스위처)
@@ -65,11 +66,14 @@ export const COUNTRY_CREST = (code: string) =>
 
 /**
  * ESPN 이 주는 값이 아쉬운 팀만 교정한다.
- * 국가대표는 엠블럼 대신 **국기**가 알아보기 쉽고, 약어도 ESPN 은 'KR' 을
- * 주지만 축구에서는 'KOR' 이 통용된다.
+ * 국가대표는 엠블럼 대신 **태극 문양**이 알아보기 쉽고, 약어도 ESPN 은
+ * 'KR' 을 주지만 축구에서는 'KOR' 이 통용된다.
+ *
+ * 엠블럼을 CDN 이 아니라 번들에 넣어 둔 이유: 외부 이미지가 막힌 환경이나
+ * 주소가 바뀌었을 때 Crest 가 글자 배지('KR')로 떨어진다. 국기는 늘 보여야 한다.
  */
 export const TEAM_OVERRIDE: Record<string, { abbr?: string; logo?: string }> = {
-  '451': { abbr: 'KOR', logo: COUNTRY_CREST('kor') },
+  '451': { abbr: 'KOR', logo: crestKor },
 };
 
 export const TARGETS: Target[] = [
@@ -145,7 +149,7 @@ export const TARGETS: Target[] = [
     nameEn: 'South Korea',
     abbr: 'KOR',
     subtitle: 'National Team · Koreans Abroad',
-    crest: COUNTRY_CREST('kor'),
+    crest: crestKor,
     bg: bgKor,
     bgKind: 'flag',
     theme: {

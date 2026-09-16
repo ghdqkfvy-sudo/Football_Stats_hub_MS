@@ -40,7 +40,13 @@ export function KoreansTab() {
   const all = KOREANS ?? [];
   const leagues = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const p of all) if (!seen.has(p.league)) seen.set(p.league, p.leagueName);
+    /* 리그 이름이 비어 오는 선수가 있다(ESPN 이 defaultLeague 이름을 안 주는
+       경우). 그대로 두면 글자 없는 빈 칩이 하나 생기므로 슬러그로 대신한다. */
+    for (const p of all) {
+      const slug = String(p.league ?? '').trim();
+      if (!slug || seen.has(slug)) continue;
+      seen.set(slug, String(p.leagueName ?? '').trim() || slug);
+    }
     return [...seen.entries()].sort(
       (a, b) => (LEAGUE_ORDER[a[0]] ?? 99) - (LEAGUE_ORDER[b[0]] ?? 99),
     );

@@ -204,11 +204,28 @@ export function standingsFrom(json: any, competition: string, competitionName: s
         form: formOf(e),
       }));
       rows.sort((a, b) => a.rank - b.rank || b.points - a.points);
+
+      /* 진출권·강등권은 ESPN 이 행마다 note 로 준다
+         ({color:'#81D6AC', description:'Champions League', rank:1}).
+         규정을 우리가 적어 두면 반드시 틀린다 — 실제로 프리미어리그를
+         "5위까지 챔스" 로 박아 뒀는데 2026-27 은 4위까지였다. */
+      const zones: Record<number, { color: string; text: string }> = {};
+      for (const e of entries) {
+        const n = e?.note;
+        const rank = Number(n?.rank);
+        const text = String(n?.description ?? '').trim();
+        if (!n || !Number.isFinite(rank) || !text) continue;
+        // 가끔 '##B5E7CE' 처럼 # 이 두 번 붙어 온다
+        const color = String(n.color ?? '').replace(/^#+/, '#');
+        zones[rank] = { color: color || '#8892A6', text };
+      }
+
       return {
         competition,
         competitionName: String(pick(g?.name, competitionName)),
         groupName: g?.name && json?.children?.length > 1 ? String(g.name) : undefined,
         rows,
+        zones: Object.keys(zones).length ? zones : undefined,
         derived: false,
         updatedAt: new Date().toISOString(),
       };

@@ -178,6 +178,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
             month={cursor.m}
             selectedDay={selectedDay}
             nextDay={next ? dayKey(next.kickoffUtc) : null}
+            focusTeamId={target.espnTeamId}
             onSelectDay={(k) => {
               setPinned(true);
               setSelectedDay(k);

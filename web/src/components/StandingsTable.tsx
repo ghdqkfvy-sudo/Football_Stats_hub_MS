@@ -9,31 +9,83 @@ interface Props {
   matches: Match[];
   /** 이 팀 행을 강조한다 */
   focusTeamId: string;
-  /** 상위 N위까지 별도 색 띠 (챔스 진출권 등) */
-  zones?: { upTo: number; color: string; label: string }[];
 }
 
-export function StandingsTable({ table, matches, focusTeamId, zones = [] }: Props) {
+/**
+ * ESPN 이 주는 영문 구분을 한국어로만 옮긴다.
+ * **어느 순위가 어디에 해당하는지는 옮기지 않는다** — 그건 ESPN 이 정한다.
+ * 모르는 문구는 원문 그대로 보여 준다(새 대회가 생겨도 안 깨지게).
+ */
+const ZONE_KO: Record<string, string> = {
+  'champions league': '챔피언스리그 진출',
+  'champions league qualifying': '챔피언스리그 예선',
+  'europa league': '유로파리그 진출',
+  'europa league qualifying': '유로파리그 예선',
+  'conference league': '컨퍼런스리그 진출',
+  'conference league qualifying': '컨퍼런스리그 예선',
+  'uefa conference league qualifying': '컨퍼런스리그 예선',
+  'relegation': '강등',
+  'relegation playoff': '강등 플레이오프',
+  'promotion': '승격',
+  'promotion playoff': '승격 플레이오프',
+  'qualifies for round of 16': '16강 직행',
+  'qualifies for knockout round playoffs': '16강 플레이오프',
+  'qualifies for knockout play-offs': '16강 플레이오프',
+  'knockout phase playoffs - seeded': '16강 PO (시드)',
+  'knockout phase playoffs - unseeded': '16강 PO (비시드)',
+  'knockout phase play-offs - seeded': '16강 PO (시드)',
+  'knockout phase play-offs - unseeded': '16강 PO (비시드)',
+  'eliminated': '탈락',
+  'group stage': '조별리그',
+};
+const zoneLabel = (text: string) => ZONE_KO[text.toLowerCase()] ?? text;
+
+/** 연속된 순위는 "1–4위", 떨어져 있으면 "5위 · 10위" 로 적는다 */
+function rankRange(ranks: number[]): string {
+  const sorted = [...ranks].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
+    parts.push(i === j ? `${sorted[i]}위` : `${sorted[i]}–${sorted[j]}위`);
+    i = j + 1;
+  }
+  return parts.join(' · ');
+}
+
+export function StandingsTable({ table, matches, focusTeamId }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
-  const zoneOf = (rank: number) => zones.find((z) => rank <= z.upTo);
+  const zoneOf = (rank: number) => table.zones?.[rank];
+
+  /* 범례는 표에 실제로 들어 있는 구분만 모아 만든다 —
+     같은 설명끼리 묶고, 가장 높은 순위가 앞에 오게 세운다. */
+  const legend = (() => {
+    const by = new Map<string, { color: string; ranks: number[] }>();
+    for (const [rank, z] of Object.entries(table.zones ?? {})) {
+      const hit = by.get(z.text) ?? { color: z.color, ranks: [] };
+      hit.ranks.push(Number(rank));
+      by.set(z.text, hit);
+    }
+    return [...by.entries()]
+      .map(([text, v]) => ({ text, color: v.color, ranks: v.ranks }))
+      .sort((a, b) => Math.min(...a.ranks) - Math.min(...b.ranks));
+  })();
 
   return (
     <div className="tbl">
       {/* 색 띠가 무엇을 뜻하는지 표 위에 적어 둔다 —
           색만 칠해 두면 마우스를 올려 보기 전에는 알 수가 없다. */}
-      {zones.length > 0 && (
+      {legend.length > 0 && (
         <div className="tbl__legend">
-          {zones.map((z, i) => {
-            const from = i === 0 ? 1 : zones[i - 1].upTo + 1;
-            return (
-              <span className="tbl__lg" key={z.label} style={{ ['--zone' as string]: z.color }}>
-                <i aria-hidden="true" />
-                <b className="num">{from === z.upTo ? `${z.upTo}위` : `${from}–${z.upTo}위`}</b>
-                {z.label}
-              </span>
-            );
-          })}
+          {legend.map((z) => (
+            <span className="tbl__lg" key={z.text} style={{ ['--zone' as string]: z.color }}>
+              <i aria-hidden="true" />
+              <b className="num">{rankRange(z.ranks)}</b>
+              {zoneLabel(z.text)}
+            </span>
+          ))}
         </div>
       )}
 
@@ -63,7 +115,7 @@ export function StandingsTable({ table, matches, focusTeamId, zones = [] }: Prop
               onClick={() => setOpen(isOpen ? null : r.team.id)}
               style={zone ? ({ ['--zone' as string]: zone.color } as React.CSSProperties) : undefined}
               data-zone={!!zone}
-              title={zone?.label}
+              title={zone ? zoneLabel(zone.text) : undefined}
             >
               <span className="tbl__rank num">{r.rank}</span>
               <span className="tbl__team">

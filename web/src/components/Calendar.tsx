@@ -19,6 +19,8 @@ interface Props {
   onPick: (m: Match) => void;
   /** 다음 경기 날짜(KST dayKey) — 그 칸 숫자에 골드 원이 채워진다 */
   nextDay?: string | null;
+  /** 지금 보고 있는 팀 — 득점자 옆 팀 약어를 팀 컬러로 칠할 기준 */
+  focusTeamId?: string;
 }
 
 interface Box { x: number; y: number; w: number; h: number }
@@ -27,7 +29,7 @@ interface Box { x: number; y: number; w: number; h: number }
 const HAS_HOVER =
   typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
-export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, nextDay }: Props) {
+export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, nextDay, focusTeamId }: Props) {
   /* 미리보기는 경기 막대가 아니라 **날짜 칸 전체**에 마우스를 올리면 뜬다.
      막대는 얇아서 조준하기가 어렵고, 하루에 여러 경기가 있으면 어느 막대에
      올렸는지에 따라 다른 카드가 떠서 산만했다. 이제 그 날 경기를 한 카드에
@@ -188,7 +190,7 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
               </div>
 
               {hoverDay === cell.key && list.length > 0 && (
-                <DayPopover matches={list} col={dow} />
+                <DayPopover matches={list} col={dow} focusTeamId={focusTeamId} />
               )}
             </div>
           );
@@ -199,13 +201,13 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
 }
 
 /** 날짜 칸 호버 미리보기 — 그 날 경기를 한 카드에 모아 보여준다. */
-function DayPopover({ matches, col }: { matches: Match[]; col: number }) {
+function DayPopover({ matches, col, focusTeamId }: { matches: Match[]; col: number; focusTeamId?: string }) {
   const shift = col <= 1 ? 'calc(-50% + 64px)' : col >= 5 ? 'calc(-50% - 64px)' : '-50%';
   return (
     <div className="pop" style={{ transform: `translateX(${shift})` }} role="tooltip">
       {matches.map((m, i) => (
         <div className="pop__m" key={m.id} data-first={i === 0}>
-          <MatchBlock m={m} />
+          <MatchBlock m={m} focusTeamId={focusTeamId} />
         </div>
       ))}
     </div>
@@ -213,8 +215,13 @@ function DayPopover({ matches, col }: { matches: Match[]; col: number }) {
 }
 
 /** 경기 한 건 — 결과와 득점자를 바로 보여준다. */
-function MatchBlock({ m }: { m: Match }) {
+function MatchBlock({ m, focusTeamId }: { m: Match; focusTeamId?: string }) {
   const done = m.status === 'finished';
+
+  /* 득점자가 어느 팀인지 한 눈에 — 우리 팀은 팀 컬러, 상대는 흰색.
+     이름만 있으면 5-2 경기에서 누가 누구 팀인지 읽을 수가 없다. */
+  const abbrOf = (teamId: string) =>
+    teamId === m.home.id ? m.home.abbr : teamId === m.away.id ? m.away.abbr : '';
   const homeLost = done && (m.homeScore ?? 0) < (m.awayScore ?? 0);
   const awayLost = done && (m.awayScore ?? 0) < (m.homeScore ?? 0);
 
@@ -242,11 +249,18 @@ function MatchBlock({ m }: { m: Match }) {
         <div className="pop__g">
           {m.goals.map((g, i) => (
             <div className="pop__gi" key={i}>
-              <span className="num">{g.clock}</span>
-              <span>
+              <span className="pop__gt num">{g.clock}</span>
+              <span
+                className="pop__gteam num"
+                data-opp={focusTeamId && g.teamId ? g.teamId !== focusTeamId : undefined}
+              >
+                {abbrOf(g.teamId)}
+              </span>
+              <span className="pop__gn">
                 {g.scorer}
                 {g.penalty ? ' (PK)' : ''}
                 {g.ownGoal ? ' (OG)' : ''}
+                {g.assist && <i className="pop__ga">A {g.assist}</i>}
               </span>
             </div>
           ))}

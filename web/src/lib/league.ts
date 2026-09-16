@@ -115,6 +115,9 @@ export function buildTable(
       return {
         competition, competitionName,
         rows: finish(acc),
+        /* 순위를 다시 계산해도 "몇 위가 챔스권인가" 는 그대로다 —
+           ESPN 이 준 순위별 구분을 그대로 들고 간다. */
+        zones: espn.zones,
         derived: true,
         updatedAt: new Date().toISOString(),
       };

@@ -36,11 +36,24 @@ export function GoalSheet({
   const abbrOf = (teamId: string) =>
     teamId === m.home.id ? m.home.abbr : teamId === m.away.id ? m.away.abbr : '—';
 
-  /* ESPN 은 "이 골의 도움은 누구" 를 안 준다. 대신 골 시각과 각 선수의
-     출전 구간을 알 수 있으므로, 시간상 가능한 조합이 유일할 때만 골에
-     붙인다(lib/assists.ts). 애매하면 아래 "도움" 줄에 따로 적는다. */
-  const assigned = assignAssists(m.goals, m.playerStats);
-  const assisters = leftoverAssists(m.playerStats, assigned);
+  /* 1순위는 API 가 직접 준 도움이다 — core /plays 의 득점 play 가
+     participants 에 type:"assister" 를 같이 준다(스냅샷이 미리 붙여 둔다).
+     아직 안 받은 경기만 시간 추론으로 메우고(lib/assists.ts), 그것도
+     애매하면 아래 "도움" 줄에 따로 적는다. */
+  const guessed = assignAssists(
+    m.goals.map((g) => (g.assist ? { ...g, ownGoal: true } : g)), // 이미 붙은 골은 후보에서 뺀다
+    m.playerStats,
+  );
+  /** i번째 골의 도움 이름 — API 값이 있으면 그것, 없으면 추론값 */
+  const assistOf = (i: number) => m.goals[i].assist ?? guessed.get(i);
+
+  // 남은 도움 줄을 셀 때는 API 값도 "이미 쓴 도움" 으로 세야 중복이 안 생긴다
+  const used = new Map<number, string>();
+  m.goals.forEach((_, i) => {
+    const a = assistOf(i);
+    if (a) used.set(i, a);
+  });
+  const assisters = leftoverAssists(m.playerStats, used);
 
   return (
     <>
@@ -58,10 +71,15 @@ export function GoalSheet({
             {g.penalty && <em className="gl__tag">PK</em>}
             {g.ownGoal && <em className="gl__tag">OG</em>}
           </span>
-          {(g.assist ?? assigned.get(i)) && (
-            <span className="gl__a">
+          {assistOf(i) && (
+            <span
+              className="gl__a"
+              // 추론으로 붙인 도움은 살짝 흐리게 — 근거가 다르다는 걸 숨기지 않는다
+              data-guess={g.assist ? undefined : true}
+              title={g.assist ? undefined : '출전 시간으로 좁힌 추정 도움'}
+            >
               <i>A</i>
-              {g.assist ?? assigned.get(i)}
+              {assistOf(i)}
             </span>
           )}
         </li>

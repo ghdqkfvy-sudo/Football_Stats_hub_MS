@@ -46,7 +46,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-11';
+const CODE_VERSION = 'snap-12';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -155,11 +155,16 @@ function goalsFromDetailsRaw(details) {
     .map((d) => {
       const people = Array.isArray(d?.athletesInvolved) ? d.athletesInvolved : [];
       const minute = minuteOf(d?.clock);
+      const cv = Number(d?.clock?.value);
       return {
         minute,
         clock: String(d?.clock?.displayValue ?? `${minute}'`),
+        /* core /plays 의 같은 골을 찾아 도움을 붙일 때 쓰는 열쇠.
+           두 응답은 같은 시계(초 단위)를 쓰므로 분보다 훨씬 안전하다. */
+        clockValue: Number.isFinite(cv) ? cv : undefined,
         teamId: String(d?.team?.id ?? ''),
         scorer: String(people[0]?.displayName ?? people[0]?.shortName ?? '—'),
+        scorerId: people[0]?.id ? String(people[0].id) : undefined,
         // 스코어보드 details 는 보통 득점자만 준다 — 어시스트는 있으면 받는다
         assist: people[1]?.displayName ? String(people[1].displayName) : undefined,
         ownGoal: d?.ownGoal === true,
@@ -469,7 +474,7 @@ async function athleteSeasonMinutes(leagueSlug, id) {
  * 파서를 고친 뒤에도 그 값이 영원히 살아남았다. 그래서 (1) 소스가 바뀌면
  * 버전을 올리고 (2) 이어받을 때 값이 멀쩡한지도 검사한다.
  */
-const GOALS_SOURCE = 'scoreboard-v2';
+const GOALS_SOURCE = 'scoreboard-v3';
 
 /** 득점 한 건이 쓸 만한 값인지 — 팀과 득점자가 실제로 들어 있어야 한다 */
 const goalLooksValid = (g) =>
@@ -486,10 +491,14 @@ async function prevGoalsMap(fileName) {
     // 다른 소스로 만들어진 파일이면 통째로 버리고 새로 받는다
     if (json?.goalsSource !== GOALS_SOURCE) return map;
 
+    const assistsOk = json?.assistsSource === ASSISTS_SOURCE;
     for (const ev of json?.events ?? []) {
-      const g = ev?.competitions?.[0]?.__goals;
+      const c = ev?.competitions?.[0];
+      const g = c?.__goals;
       // 빈 배열(0-0)은 그대로 인정하되, 값이 있으면 전부 멀쩡해야 이어받는다
-      if (Array.isArray(g) && g.every(goalLooksValid)) map.set(String(ev.id), g);
+      if (Array.isArray(g) && g.every(goalLooksValid)) {
+        map.set(String(ev.id), { goals: g, assists: assistsOk && c.__assists === true });
+      }
     }
   } catch { /* 첫 실행 — 이어받을 이전 파일이 없다 */ }
   return map;
@@ -504,7 +513,11 @@ async function enrichGoals(events, defaultLeague, prevMap) {
     if (!c || c?.status?.type?.completed !== true) continue;
     const id = String(ev.id);
     const cached = prevMap.get(id);
-    if (cached) { c.__goals = cached; continue; }
+    if (cached) {
+      c.__goals = cached.goals;
+      if (cached.assists) c.__assists = true;
+      continue;
+    }
 
     const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
     const base = ymd(ev?.date);
@@ -527,6 +540,116 @@ async function enrichGoals(events, defaultLeague, prevMap) {
   }
   if (fetched) console.log(`    득점 상세 신규 ${fetched}경기`);
   if (missed) console.log(`    득점 상세 못 찾음 ${missed}경기 (다음 실행에서 재시도)`);
+}
+
+/* ── 골마다 도움 (core /plays) ─────────────────────────────
+ * 오랫동안 "ESPN 은 이 골의 도움을 안 준다" 고 적어 두고 시간으로 추론했다.
+ * **틀렸다.** core `/plays` 의 득점 play 는 participants 를 두 개 준다:
+ *
+ *   "participants": [
+ *     { "order": 1, "type": "scorer",   "athlete": { "$ref": ".../athletes/291281?..." } },
+ *     { "order": 2, "type": "assister", "athlete": { "$ref": ".../athletes/252107?..." } }
+ *   ]
+ *   "text": "Goal! Real Madrid 3, Rayo Vallecano 0. Jude Bellingham (Real Madrid)
+ *            right footed shot from the centre of the box... Assisted by Vinícius Júnior."
+ *
+ * (2026-09-12 esp.1 401882880 35' 벨링엄 골로 실측. eng.league_cup 401908127
+ *  에서도 같은 엔드포인트가 살아 있다 — count 1570.)
+ *
+ * 선수 이름은 $ref 안에 없지만 `text` 의 "Assisted by …" 에 그대로 있고,
+ * id 는 $ref URL 에서 뽑을 수 있다. 그래서 추론이 아니라 **API 가 준 값**
+ * 으로 골↔도움을 잇는다 — 대회·팀을 가리지 않고, 상대 팀 골까지.
+ *
+ * 값이 비싸다(경기당 1,400~1,600 play, 1,000개씩 2페이지). 그래서
+ *  · 팀 일정 파일에만 적용한다(리그 전체 380경기에는 쓰지 않는다)
+ *  · 끝난 경기는 한 번만 받고 `__assists` 표시를 이어받는다
+ *  · 한 회차에 받을 경기 수를 제한해 여러 번에 걸쳐 채운다
+ */
+const ASSISTS_SOURCE = 'core-plays-v1';
+
+/* "Assisted by Vinícius Júnior." / "… with a cross." / "… following a fast break."
+   앞쪽 이름만 떼어 낸다. 이름에 마침표가 든 선수(J. 같은 이니셜)는 없다고
+   봐도 되지만, 혹시 몰라 수식어 접속사도 함께 끊는다. */
+const ASSIST_RE = /Assisted by\s+([^.]+?)(?:\s+with\s|\s+following\s|\s+after\s|\s+from\s|\.|$)/;
+
+async function corePlayAssists(leagueSlug, eventId) {
+  const out = [];
+  let page = 1;
+  let pageCount = 1;
+  let ok = false;               // 응답을 한 번이라도 제대로 받았는가
+  while (page <= pageCount && page <= 4) {
+    const j = await get(
+      `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/events/${eventId}/competitions/${eventId}/plays?limit=1000&page=${page}`,
+    );
+    if (!j) break;
+    ok = true;
+    pageCount = Number(j.pageCount) || 1;
+    for (const p of j.items ?? []) {
+      if (p?.scoringPlay !== true) continue;
+      // 승부차기는 득점 기록이 아니다 (연장은 4피리어드까지)
+      if (Number(p?.period?.number) > 4) continue;
+      const parts = Array.isArray(p.participants) ? p.participants : [];
+      const a = parts.find((x) => String(x?.type ?? '').toLowerCase() === 'assister');
+      if (!a) continue;
+      const id = String(a?.athlete?.$ref ?? '').match(/athletes\/(\d+)/)?.[1];
+      const name = (String(p?.text ?? '').match(ASSIST_RE)?.[1] ?? '').trim();
+      if (!name && !id) continue;
+      const sc = parts.find((x) => String(x?.type ?? '').toLowerCase() === 'scorer');
+      const cv = Number(p?.clock?.value);
+      out.push({
+        clockValue: Number.isFinite(cv) ? cv : undefined,
+        minute: parseInt(String(p?.clock?.displayValue ?? '').match(/(\d+)/)?.[1] ?? '0', 10),
+        scorerId: String(sc?.athlete?.$ref ?? '').match(/athletes\/(\d+)/)?.[1],
+        assist: name || undefined,
+        assistId: id,
+      });
+    }
+    page++;
+    await sleep(120);
+  }
+  // 한 페이지도 못 받았으면 "도움 없음" 이 아니라 "모름" 이다 — 구분해서 돌려준다
+  return ok ? out : null;
+}
+
+/** 종료 경기의 __goals 에 도움을 붙인다 */
+async function enrichAssists(events, defaultLeague, budget = 12) {
+  let fetched = 0;
+  let none = 0;
+  for (const ev of events) {
+    const c = ev?.competitions?.[0];
+    if (!c || c?.status?.type?.completed !== true) continue;
+    if (c.__assists === true) continue;           // 이미 한 번 받아 본 경기
+
+    const goals = Array.isArray(c.__goals) ? c.__goals : [];
+    // PK·자책골에는 도움이 없다 — 그것만 남았으면 받을 이유가 없다
+    const need = goals.some((g) => !g.ownGoal && !g.penalty && !g.assist);
+    if (!need) { c.__assists = true; continue; }
+    if (fetched >= budget) continue;
+
+    const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
+    if (!lg) continue;
+
+    const list = await corePlayAssists(lg, String(ev.id));
+    fetched++;
+    // 응답 자체를 못 받았으면 표시하지 않는다 — 다음 회차에 다시 시도한다
+    if (list === null) continue;
+    let hits = 0;
+    for (const a of list) {
+      /* 시계 초값이 있으면 그것으로, 없으면 분+득점자 id 로 같은 골을 찾는다 */
+      let g = a.clockValue !== undefined
+        ? goals.find((x) => Number(x.clockValue) === a.clockValue)
+        : undefined;
+      if (!g && a.scorerId) g = goals.find((x) => x.scorerId === a.scorerId && Math.abs(x.minute - a.minute) <= 1);
+      if (!g) g = goals.find((x) => x.minute === a.minute && !x.assist);
+      if (!g || g.assist) continue;
+      g.assist = a.assist;
+      g.assistId = a.assistId;
+      hits++;
+    }
+    c.__assists = true;
+    if (!hits) none++;
+  }
+  if (fetched) console.log(`    도움 매칭 신규 ${fetched}경기 (매칭 0건 ${none})`);
 }
 
 /* ── 한국어 뉴스 ──────────────────────────────────────
@@ -741,10 +864,13 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
       await enrichGoals(events, t.league, prevMap);
+      /* 골↔도움은 core /plays 가 실제로 알려 준다(participants type=assister).
+         경기당 페이지가 커서 회차를 나눠 채운다 — 끝난 경기는 한 번이면 끝. */
+      await enrichAssists(events, t.league, 12);
       await enrichPlayerStats(events, t.league, await prevStatsMap(`schedule-${t.slug}.json`), 40, true);
       await save(`schedule-${t.slug}.json`, {
         events, team: t.id,
-        goalsSource: GOALS_SOURCE, statsSource: STATS_SOURCE,
+        goalsSource: GOALS_SOURCE, statsSource: STATS_SOURCE, assistsSource: ASSISTS_SOURCE,
         fetchedAt: new Date().toISOString(),
       });
     } else {

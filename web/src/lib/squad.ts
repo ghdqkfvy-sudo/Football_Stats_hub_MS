@@ -255,6 +255,11 @@ export function buildSquad(
     }
   }
 
+  /* 큰 분류(GK/DF/MF/FW)는 **그 팀 주 포메이션에서 선 줄**로 정한다.
+     ESPN 은 3-4-2-1 의 2선을 CF-L/CF-R(센터포워드)로 주지만, 그 줄은
+     2선이므로 MF 로 보여 준다. 반대로 포메이션은 절대 손대지 않는다. */
+  const posByLine = posByFormation(slotShape, formation);
+
   const players = [...byId.values()].map((p) => {
     const entries = Object.entries(p.slots);
     p.modalSlot = entries.length
@@ -268,10 +273,14 @@ export function buildSquad(
     p.modalPos =
       pickModal(p.posPlaces) ?? pickModal(p.posAny) ?? athletes[p.id]?.posAbbr ?? '';
 
-    /* 화면에 쓰는 큰 분류는 약어에서 다시 뽑는다 — 스냅샷이 예전 규칙으로
-       잘못 저장해 둔 값(CM·CAM·CF 를 수비수로 본)을 여기서 바로잡는다. */
+    /* 화면에 쓰는 큰 분류.
+       1순위 — 주 포메이션에서 그 자리가 속한 줄 (2선이면 MF)
+       2순위 — 약어 자체의 역할표 (스냅샷이 예전 규칙으로 CM·CAM·CF 를
+               수비수로 저장해 둔 값을 여기서 바로잡는다) */
+    const byLine = posByLine.get(p.modalPos);
     const role = roleOf(p.modalPos);
-    if (role) p.pos = role.pos;
+    if (byLine) p.pos = byLine;
+    else if (role) p.pos = role.pos;
     p.points = p.goals + p.assists;
     p.byComp.sort((x, y) => y.goals + y.assists - (x.goals + x.assists) || y.apps - x.apps);
     /*
@@ -443,6 +452,81 @@ export function bestEleven(
   return { ...fillByDepth(players, shape), formation: shape };
 }
 
+/**
+ * 자리 구성(slotShape)을 포메이션의 줄로 나눈다 — 줄마다 자리 약어 목록.
+ *
+ * ⚠️ 자리의 깊이만으로 묶으면 안 된다. 첼시 3-4-2-1 의 실제 자리는
+ *   G / CD-L·CD·CD-R / LM·CM-L·CM-R·RM / CF-L·CF-R / F
+ * 인데, ESPN 이 2선 두 명을 CF-L/CF-R(센터포워드)로 주기 때문에 최전방 F 와
+ * 깊이가 같아진다. 깊이로만 묶으면 셋이 한 줄이 되어 3-4-3 처럼 보였다.
+ *
+ * 그래서 3-4-2-1 → [1,3,4,2,1] 처럼 줄 크기를 **포메이션 문자열에서** 가져오고,
+ * 자리들을 (깊이 오름차순, 좌우 치우침 큰 순)으로 세워 앞에서부터 담는다.
+ * 같은 깊이면 좌우로 벌어진 자리가 뒤쪽 줄에, 가운데 자리가 맨 앞줄에 간다
+ * — CF-L·CF-R 이 2선, F 가 최전방이 되는 이유다.
+ *
+ * 포메이션은 API 가 준 값 그대로 쓴다. 선수의 포지션 분류(FW/MF)가
+ * 어떻든 줄 수를 다시 계산하지 않는다 — 그게 3-4-2-1 을 3-4-3 으로
+ * 바꿔 버렸던 원인이다.
+ */
+export function slotRows(slotShape: SlotSpec[], shape: string): string[][] | null {
+  const seats: string[] = [];
+  for (const { abbr, n } of slotShape) for (let k = 0; k < n; k++) seats.push(abbr);
+  if (!seats.length) return null;
+
+  const depthOf = (abbr: string) => roleOf(abbr)?.depth ?? 3;
+  const lateralOf = (abbr: string) => roleOf(abbr)?.lateral ?? 0;
+
+  const counts = shape.split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  const rowSizes = counts.length ? [1, ...counts] : null;
+
+  const ordered = [...seats].sort(
+    (a, b) => depthOf(a) - depthOf(b) || Math.abs(lateralOf(b)) - Math.abs(lateralOf(a)),
+  );
+
+  // 포메이션이 말하는 줄 크기와 실제 인원이 맞을 때만 쓴다
+  const sizes =
+    rowSizes && rowSizes.reduce((a, b) => a + b, 0) === ordered.length
+      ? rowSizes
+      : [...new Set(ordered.map(depthOf))]
+          .sort((a, b) => a - b)
+          .map((d) => ordered.filter((s) => depthOf(s) === d).length);
+
+  const out: string[][] = [];
+  let at = 0;
+  for (const n of sizes) {
+    out.push(ordered.slice(at, at + n).sort((a, b) => lateralOf(a) - lateralOf(b)));
+    at += n;
+  }
+  return out;
+}
+
+/**
+ * 줄의 성격 → 화면에 쓰는 큰 분류.
+ * 2선(AM)은 공격적이어도 **미드필더**다 — 3-4-2-1 의 파머·로저스처럼
+ * ESPN 이 CF-L/CF-R(센터포워드)로 적어 주더라도, 그 팀에서 실제로 선
+ * 줄이 2선이면 MF 로 보여 준다. 분류가 포메이션을 바꾸는 게 아니라,
+ * 포메이션이 분류를 정한다.
+ */
+const POS_BY_LINE: Record<LineKind, PlayerSeason['pos']> = {
+  GK: 'G', DEF: 'D', MID: 'M', AM: 'M', FW: 'F',
+};
+
+/** 자리 약어 → 그 팀 주 포메이션에서의 큰 분류 (없으면 null) */
+export function posByFormation(
+  slotShape: SlotSpec[],
+  shape: string | null,
+): Map<string, PlayerSeason['pos']> {
+  const map = new Map<string, PlayerSeason['pos']>();
+  const rows = shape ? slotRows(slotShape, shape) : null;
+  if (!rows) return map;
+  rows.forEach((row, ri) => {
+    const pos = POS_BY_LINE[lineKind(ri, rows.length)];
+    for (const abbr of row) if (!map.has(abbr)) map.set(abbr, pos);
+  });
+  return map;
+}
+
 /** 실제 자리 기록으로 채우기 */
 function fillByActualSlots(
   players: PlayerSeason[],
@@ -507,41 +591,40 @@ function fillByActualSlots(
    * 같은 깊이면 좌우로 벌어진 자리가 뒤쪽 줄에, 가운데 자리가 맨 앞줄에 간다
    * — CF-L·CF-R 이 2선, F 가 최전방이 되는 이유다.
    */
-  const depthOf = (abbr: string) => roleOf(abbr)?.depth ?? 3;
-  const lateralOf = (abbr: string) => roleOf(abbr)?.lateral ?? 0;
+  const rows = slotRows(slotShape, shape);
+  if (!rows) return null;
 
-  const counts = shape.split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0);
-  const rowSizes = counts.length ? [1, ...counts] : null;
-
-  const ordered = [...seats].sort(
-    (a, b) =>
-      depthOf(a.abbr) - depthOf(b.abbr) ||
-      Math.abs(lateralOf(b.abbr)) - Math.abs(lateralOf(a.abbr)),
-  );
-
-  // 포메이션이 말하는 줄 크기와 실제 인원이 맞을 때만 쓴다
-  const sizes =
-    rowSizes && rowSizes.reduce((a, b) => a + b, 0) === ordered.length
-      ? rowSizes
-      : [...new Set(ordered.map((s) => depthOf(s.abbr)))]
-          .sort((a, b) => a - b)
-          .map((d) => ordered.filter((s) => depthOf(s.abbr) === d).length);
+  /* 자리 약어별로 앉을 사람을 꺼내 쓴다 — 같은 약어가 두 자리면 두 명 */
+  const pool = new Map<string, (PlayerSeason | null)[]>();
+  for (const s of seats) {
+    const list = pool.get(s.abbr) ?? [];
+    list.push(s.player);
+    pool.set(s.abbr, list);
+  }
 
   const slots: Slot[] = [];
-  let at = 0;
-  sizes.forEach((n, ri) => {
-    const row = ordered.slice(at, at + n).sort((a, b) => lateralOf(a.abbr) - lateralOf(b.abbr));
-    at += n;
-    row.forEach((s, ci) => {
-      slots.push({ row: ri, col: ci, rowCount: row.length, player: s.player, label: s.abbr });
+  rows.forEach((row, ri) => {
+    row.forEach((abbr, ci) => {
+      slots.push({
+        row: ri,
+        col: ci,
+        rowCount: row.length,
+        player: pool.get(abbr)?.shift() ?? null,
+        label: abbr,
+      });
     });
   });
 
   const filled = slots.filter((s) => s.player).length;
-  // 좌우까지 아는 상세 약어로 채워졌는지 (G/D/M/F 만으로는 좌우를 장담 못 한다)
+  /* 좌우까지 아는 상세 약어로 채워졌는지.
+     ⚠️ "모든 약어가 상세할 것" 을 요구하면 안 된다 — 골키퍼는 어느 팀이든
+     그냥 'G' 이고 최전방 원톱도 'F' 라서, 정상적인 4-2-3-1 조차 매번
+     "라인업 기록 부족" 경고가 붙었다. 판단 기준은 **좌우 정보가 하나도
+     없는 경우**(전부 G/D/M/F)뿐이다. */
   const verified =
     filled === slots.length &&
-    slotShape.every((x) => !!roleOf(x.abbr) && !COARSE.has(x.abbr.toUpperCase()));
+    slotShape.every((x) => !!roleOf(x.abbr)) &&
+    !slotShape.every((x) => COARSE.has(x.abbr.toUpperCase()));
 
   return { slots, verified };
 }

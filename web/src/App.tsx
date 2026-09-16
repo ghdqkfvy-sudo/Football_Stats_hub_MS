@@ -149,7 +149,10 @@ export default function App() {
                   aria-pressed={t.id === targetId}
                   onClick={() => setTargetId(t.id)}
                 >
-                  🇰🇷 {t.name}
+                  {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
+                      태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
+                  <img src={t.crest} alt="" />
+                  {t.name}
                 </button>
               ))}
             </div>

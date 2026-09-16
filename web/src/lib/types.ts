@@ -88,11 +88,25 @@ export interface StandingRow {
   form: ('W' | 'D' | 'L')[];
 }
 
+/** 진출·강등 구분 — ESPN 이 순위표 행마다 note 로 직접 알려 준다 */
+export interface StandingZone {
+  /** ESPN 이 준 색 (그대로 쓴다) */
+  color: string;
+  /** ESPN 이 준 영문 설명 — 화면에서는 한국어로 옮겨 보여 준다 */
+  text: string;
+}
+
 export interface StandingTable {
   competition: CompetitionKey;
   competitionName: string;
   groupName?: string;
   rows: StandingRow[];
+  /**
+   * 순위 → 구분. "몇 위까지 챔스" 같은 규정을 코드에 적어 두지 않는다 —
+   * 대회·시즌마다 다르고 실제로 틀렸었다(2026-27 PL 은 4위까지,
+   * 라리가는 5위까지였다). ESPN 응답의 note 를 그대로 옮긴 값이다.
+   */
+  zones?: Record<number, StandingZone>;
   /** ESPN 원본이 불완전해 경기 결과로 재계산했는지 여부 */
   derived: boolean;
   updatedAt: string;

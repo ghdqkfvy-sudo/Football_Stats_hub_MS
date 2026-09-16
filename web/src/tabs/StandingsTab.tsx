@@ -8,22 +8,6 @@ import { StandingsTable } from '../components/StandingsTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 
-/** 진출권 구분 띠 — 대회마다 다르다 */
-const ZONES: Record<string, { upTo: number; color: string; label: string }[]> = {
-  'esp.1': [
-    { upTo: 4, color: '#4C8DFF', label: '챔피언스리그 진출권' },
-    { upTo: 6, color: '#FF9F2E', label: '유로파리그 진출권' },
-  ],
-  'eng.1': [
-    { upTo: 5, color: '#4C8DFF', label: '챔피언스리그 진출권' },
-    { upTo: 7, color: '#FF9F2E', label: '유로파리그 진출권' },
-  ],
-  'uefa.champions': [
-    { upTo: 8, color: '#2ED573', label: '16강 직행' },
-    { upTo: 24, color: '#4C8DFF', label: '플레이오프' },
-  ],
-};
-
 /** 순위가 안 맞아 보일 때 제일 먼저 필요한 정보는 "언제 뜬 값인가" 다 */
 const SRC: Record<Source, string> = {
   live: '실시간',
@@ -124,7 +108,6 @@ export function StandingsTab({ target }: { target: Target }) {
               table={table}
               matches={data.matches}
               focusTeamId={target.espnTeamId}
-              zones={ZONES[active]}
             />
             <p className="tbl__hint">팀을 누르면 홈·원정 경기 결과가 펼쳐집니다.</p>
           </section>

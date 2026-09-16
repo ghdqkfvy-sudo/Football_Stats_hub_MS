@@ -419,7 +419,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: flex; flex-direction: column; gap: 4px;
   cursor: pointer; z-index: 1; border-radius: 12px;
 }
-.day[data-out='true'] { opacity: .3; }
+/* 지난달·다음달 날짜는 흐리게. 단 opacity 를 칸 전체에 걸면 그 위에 뜨는
+   미리보기 카드까지 같이 흐려져 글씨가 안 읽힌다 — 칸 안의 내용만 흐린다. */
+.day[data-out='true'] > .day__n,
+.day[data-out='true'] > .day__bars { opacity: .3; }
 /* 호버 중인 칸은 통째로 위로 올린다.
    .day 가 z-index 로 쌓임 맥락을 만들기 때문에, 안쪽 미리보기 카드의
    z-index 를 아무리 올려도 뒤에 오는 다른 날짜 칸이 그 위를 덮는다. */
@@ -445,7 +448,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
   text-shadow: none;
 }
-.day[data-selected='true'][data-out='true'] { opacity: .5; }
+.day[data-selected='true'][data-out='true'] > .day__n,
+.day[data-selected='true'][data-out='true'] > .day__bars { opacity: .5; }
 
 /* 경기 = 대회 컬러 막대. 칸 아래쪽에 모아 붙인다. */
 .day__bars { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
@@ -517,8 +521,17 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .pop__row b { margin-left: auto; font-family: var(--font-display); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pop__row[data-lost='true'] { color: var(--text-lo); }
 .pop__g { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
-.pop__gi { display: flex; gap: 7px; font-size: 11.5px; color: var(--text-mid); }
-.pop__gi span:first-child { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 28px; }
+.pop__gi { display: flex; gap: 7px; font-size: 11.5px; color: var(--text-mid); align-items: baseline; }
+/* 시각은 정보의 뼈대일 뿐이라 회색으로 눕히고, 눈은 팀·이름으로 간다 */
+.pop__gt { color: var(--text-lo); min-width: 30px; }
+/* 팀 약어 — 우리 팀은 팀 컬러, 상대 팀은 흰색. 색만으로 편이 갈린다 */
+.pop__gteam { min-width: 30px; font-weight: 700; font-size: 10.5px; letter-spacing: .02em; color: var(--accent); }
+.pop__gteam[data-opp='true'] { color: #fff; }
+.pop__gn { color: var(--text-hi); }
+.pop__ga { display: block; font-style: normal; font-size: 10.5px; color: var(--text-lo); }
+
+/* 추론으로 붙인 도움은 흐리게 — API 가 준 값과 근거가 다르다 */
+.gl__a[data-guess='true'] { opacity: .62; border-bottom: 1px dotted currentColor; }
 
 /* ── 이달의 경기 ─────────────────────────────────────
    구성: [날짜] [대회 구별 택] [홈 · 스코어 · 원정] [대회명 · 상태]
@@ -800,10 +813,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .tbl__row[data-focus='true'] .tbl__line {
   background: color-mix(in srgb, var(--accent) 9%, transparent);
 }
-.tbl__row[data-focus='true'] .tbl__line::after {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-  background: var(--accent);
-}
+/* 우리 팀 행에 팀 컬러 띠를 또 그리면 왼쪽에 색이 두 개 겹쳐
+   "이게 진출권 색인가 팀 색인가" 가 헷갈린다. 왼쪽 띠는 진출권 전용으로
+   비워 두고, 우리 팀은 배경·순위·승점 색으로만 구분한다. */
 .tbl__row[data-open='true'] .tbl__line { background: rgba(255,255,255,.05); }
 
 .tbl__line > .num { text-align: center; font-size: 12.5px; color: var(--text-mid); }
@@ -1014,12 +1026,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      베일 알파로만 만든다. */
   filter: saturate(.52) contrast(1.0) brightness(.62) hue-rotate(-4deg);
 }
-/* 대한민국: 흰 깃면을 뺀 태극·4괘만 남긴 아트워크 */
+/* 대한민국: 태극기 아트워크.
+   예전 파일은 국기를 확대해 잘라 낸 그림이라 태극 문양 자체가 이미지의
+   오른쪽 위에 박혀 있었다 — background-position 으로 가운데에 놓이는 건
+   '이미지'지 '문양'이 아니어서, CSS 로는 아무리 해도 안 옮겨졌다.
+   지금은 문양이 정확히 한가운데인 그림(3:2 국기 규격)을 쓴다. */
 .bgart[data-kind='flag'] .bgart__img {
-  /* 태극 문양이 화면 가운데에 오도록 — 예전 값은 위로 너무 끌어올려
-     깃발이 우상단에 몰린 것처럼 보였다. */
-  background-size: min(1400px, 118%) auto;
-  background-position: 50% 30%;
+  background-size: min(1500px, 120%) auto;
+  background-position: 50% 50%;
   filter: saturate(1) brightness(1);
 }
 /* 팀 그라데이션이 75% 를 덮어 사진은 25% 만 남는다 */
@@ -1061,7 +1075,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 @media (max-width: 640px) {
   .bgart__img { background-position: 50% 16%; }
-  .bgart[data-kind='flag'] .bgart__img { background-size: 175% auto; background-position: 50% 26%; }
+  .bgart[data-kind='flag'] .bgart__img { background-size: 190% auto; background-position: 50% 50%; }
   /* 좁은 화면은 글자 가독성을 위해 그라데이션을 조금 더 얹는다 */
   .bgart__veil { opacity: .80; }
   .day__bars { gap: 3px; }
@@ -1180,9 +1194,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chipbox__stat em { font-style: normal; font-weight: 800; }
 .chipbox__stat em.g { color: #FFD75E; }
 .chipbox__stat em.a { color: #7FE3FF; }
-.chipbox { cursor: pointer; transition: transform .14s; }
-/* 마우스를 올리면 칩 전체가 살짝 떠오른다 — 어디를 가리키는지 분명하게 */
-.chipbox:hover { transform: translateY(-3px); }
+.chipbox {
+  cursor: pointer; position: relative; border-radius: 12px; padding: 4px 2px 2px;
+  transition: transform .14s, background .14s, box-shadow .14s;
+}
+.chipbox__ring { transition: transform .14s, box-shadow .14s; }
+
+/*
+ * 하이라이트는 **두 방향 모두**에서 켜진다.
+ *  · 포메이션 칩에 마우스를 올리면 → 이 칩 + 오른쪽 목록의 같은 줄
+ *  · 목록 줄에 마우스를 올리면     → 그 줄 + 포메이션의 같은 칩
+ * 둘 다 activeId 하나로 묶여 있어서(PlayersTab), 여기서는 그 상태를
+ * 눈에 보이게 만드는 일만 한다. 칩만 살짝 띄우면 잔디 위에서 잘 안 보여
+ * 칩 바탕까지 팀 색으로 깔아 준다.
+ */
+.chipbox:hover,
+.chipbox[data-active='true'] { transform: translateY(-3px); }
+.chipbox[data-active='true'] {
+  background: color-mix(in srgb, var(--pc) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 45%, transparent);
+}
 .chipbox[data-active='true'] .chipbox__ring {
   transform: scale(1.14);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 55%, transparent),
@@ -1250,6 +1281,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .pt__row:last-child { border-bottom: 0; }
 .pt__row:hover, .pt__row[data-active='true'] { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+/* 포메이션에서 고른 선수가 목록의 어느 줄인지 — 왼쪽 띠로 바로 짚어 준다 */
+.pt__row[data-active='true'] { box-shadow: inset 3px 0 0 var(--accent); }
 
 .pt__who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
@@ -1350,12 +1383,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .pcard__comps { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
 .pcard__comp {
-  display: grid; grid-template-columns: 8px minmax(0,1fr) 46px 58px;
+  /* "6경기" 와 "선발 5" 가 한 줄에 다 들어가야 한다 — 46px 로는 좁아서
+     "6경기 선 / 발 5" 로 잘렸다. */
+  display: grid; grid-template-columns: 8px minmax(0,1fr) 78px 58px;
   align-items: center; gap: 8px; padding: 5px 0; font-size: 11.5px; color: var(--text-mid);
 }
 .pcard__comp i { width: 8px; height: 8px; border-radius: 2px; }
 .pcard__cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pcard__ca { text-align: right; color: var(--text-lo); font-size: 11px; }
+.pcard__ca { text-align: right; color: var(--text-lo); font-size: 11px; white-space: nowrap; }
 .pcard__cg { text-align: right; font-size: 11px; color: var(--text-lo); }
 .pcard__cg b { font-family: var(--font-display); font-size: 14px; color: var(--text-hi); font-weight: 700; }
 
