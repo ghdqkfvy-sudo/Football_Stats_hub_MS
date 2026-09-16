@@ -283,16 +283,37 @@ async function athleteSeasonMinutes(leagueSlug, id) {
   return minutes > 0 ? minutes : null;
 }
 
+/*
+ * 이어받기 캐시의 버전.
+ *
+ * ⚠️ 이 값을 올리면 예전 스냅샷의 __goals 를 전부 버리고 다시 받는다.
+ * 실제로 한 번 크게 당했다: core `/plays` 로 받던 시절의 코드가 팀·선수를
+ * $ref 로만 주는 응답을 파싱해서 `teamId:""`, `scorer:"—"` 같은 쓰레기를
+ * 만들어 놨는데, "이미 __goals 가 있으니 건너뛴다"는 이어받기 규칙 때문에
+ * 파서를 고친 뒤에도 그 값이 영원히 살아남았다. 그래서 (1) 소스가 바뀌면
+ * 버전을 올리고 (2) 이어받을 때 값이 멀쩡한지도 검사한다.
+ */
+const GOALS_SOURCE = 'scoreboard-v2';
+
+/** 득점 한 건이 쓸 만한 값인지 — 팀과 득점자가 실제로 들어 있어야 한다 */
+const goalLooksValid = (g) =>
+  !!g && typeof g === 'object' && String(g.teamId ?? '') !== '' && String(g.scorer ?? '') !== '—';
+
 /** 이전 스냅샷에서 이벤트별 __goals 를 이어받는다 — 종료된 경기의 득점
-    기록은 바뀌지 않으므로 한 번 뜬 경기는 다시 뜨지 않는다. */
+    기록은 바뀌지 않으므로 한 번 제대로 뜬 경기는 다시 뜨지 않는다. */
 async function prevGoalsMap(fileName) {
   const map = new Map();
   try {
     const raw = await readFile(join(OUT, fileName), 'utf8');
     const json = JSON.parse(raw);
+
+    // 다른 소스로 만들어진 파일이면 통째로 버리고 새로 받는다
+    if (json?.goalsSource !== GOALS_SOURCE) return map;
+
     for (const ev of json?.events ?? []) {
       const g = ev?.competitions?.[0]?.__goals;
-      if (Array.isArray(g)) map.set(String(ev.id), g);
+      // 빈 배열(0-0)은 그대로 인정하되, 값이 있으면 전부 멀쩡해야 이어받는다
+      if (Array.isArray(g) && g.every(goalLooksValid)) map.set(String(ev.id), g);
     }
   } catch { /* 첫 실행 — 이어받을 이전 파일이 없다 */ }
   return map;
@@ -514,7 +535,9 @@ async function main() {
     if (events.length) {
       const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
       await enrichGoals(events, t.league, prevMap);
-      await save(`schedule-${t.slug}.json`, { events, team: t.id, fetchedAt: new Date().toISOString() });
+      await save(`schedule-${t.slug}.json`, {
+        events, team: t.id, goalsSource: GOALS_SOURCE, fetchedAt: new Date().toISOString(),
+      });
     } else {
       console.error(`  ! ${t.slug}: 이벤트 0건 — 기존 파일 유지`);
     }
@@ -569,6 +592,7 @@ async function main() {
         events,
         standings,
         teams: ids.length,
+        goalsSource: GOALS_SOURCE,
         fetchedAt: new Date().toISOString(),
       });
       const done = events.filter((e) => e?.competitions?.[0]?.status?.type?.completed).length;

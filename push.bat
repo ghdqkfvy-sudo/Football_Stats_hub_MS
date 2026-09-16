@@ -13,6 +13,10 @@ if errorlevel 1 goto no_repo
 git remote get-url origin >nul 2>&1
 if errorlevel 1 goto no_remote
 
+rem Detached HEAD? git pull has no branch to rebase against.
+git symbolic-ref -q --short HEAD >nul 2>&1
+if errorlevel 1 goto detached
+
 git config user.name >nul 2>&1
 if errorlevel 1 goto ask_id
 git config user.email >nul 2>&1
@@ -71,6 +75,13 @@ if errorlevel 1 goto conflict
 echo pushing...
 git push
 if not errorlevel 1 goto done
+rem No upstream set yet? Set it once and retry.
+git rev-parse --abbrev-ref --symbolic-full-name @{u} >nul 2>&1
+if errorlevel 1 (
+    echo Setting upstream to origin/main...
+    git push -u origin HEAD
+    if not errorlevel 1 goto done
+)
 if !TRY! lss 3 goto again
 echo.
 echo [ERROR] push failed 3 times.
@@ -81,9 +92,26 @@ goto end
 echo The data bot pushed in the meantime. Retrying...
 goto retry
 
+:detached
+echo [STOP] You are not on a branch - detached HEAD.
+echo        Your commits are safe, but git cannot pull or push like this.
+echo.
+echo        Run these one at a time in this folder:
+echo            git fetch origin
+echo            git rebase origin/main
+echo            git branch -f main HEAD
+echo            git checkout main
+echo            git push origin main
+echo.
+echo        If the rebase reports a conflict in .github/workflows, run:
+echo            git checkout --theirs .github/workflows/snapshot.yml .github/workflows/snapshot-leagues.yml
+echo            git add .github/workflows
+echo            git rebase --continue
+goto end
+
 :conflict
 echo.
-echo [STOP] Rebase conflict.
+echo [STOP] Rebase failed - conflict, or no upstream branch.
 echo        Usually happens if you ran "npm run snapshot" locally and
 echo        changed web/public/data, which the bot also owns.
 echo.

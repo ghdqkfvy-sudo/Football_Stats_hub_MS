@@ -28,7 +28,11 @@ const HAS_HOVER =
   typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
 export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, nextDay }: Props) {
-  const [hover, setHover] = useState<string | null>(null);
+  /* 미리보기는 경기 막대가 아니라 **날짜 칸 전체**에 마우스를 올리면 뜬다.
+     막대는 얇아서 조준하기가 어렵고, 하루에 여러 경기가 있으면 어느 막대에
+     올렸는지에 따라 다른 카드가 떠서 산만했다. 이제 그 날 경기를 한 카드에
+     모아 보여 준다. */
+  const [hoverDay, setHoverDay] = useState<string | null>(null);
   const palette = usePalette();
 
   const byDay = useMemo(() => {
@@ -133,12 +137,21 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
               data-next={cell.key === nextDay}
               data-selected={selected}
               data-has={list.length > 0}
+              data-hover={hoverDay === cell.key && list.length > 0}
               data-dow={dow}
               role="button"
               tabIndex={0}
               aria-pressed={selected}
               aria-label={`${dnum}일${list.length ? ` 경기 ${list.length}건` : ''}`}
-              onClick={() => onSelectDay(cell.key)}
+              onMouseEnter={() => setHoverDay(cell.key)}
+              onMouseLeave={() => setHoverDay((h) => (h === cell.key ? null : h))}
+              onFocus={() => setHoverDay(cell.key)}
+              onBlur={() => setHoverDay((h) => (h === cell.key ? null : h))}
+              onClick={() => {
+                /* 터치 기기에는 호버가 없다 — 첫 탭은 미리보기만 띄운다 */
+                if (!HAS_HOVER && list.length > 0 && hoverDay !== cell.key) setHoverDay(cell.key);
+                onSelectDay(cell.key);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -162,32 +175,21 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                       style={{ ['--c' as string]: palette.color(m.competition) }}
                       title={label}
                       aria-label={label}
-                      onMouseEnter={() => setHover(m.id)}
-                      onMouseLeave={() => setHover((h) => (h === m.id ? null : h))}
-                      onFocus={() => setHover(m.id)}
-                      onBlur={() => setHover((h) => (h === m.id ? null : h))}
                       onClick={(e) => {
+                        // 막대는 "열기" 전용 — 미리보기는 날짜 칸 호버가 맡는다
                         e.stopPropagation();
-                        /*
-                         * 터치 기기에는 호버가 없다 — 첫 탭은 (마우스 호버와
-                         * 같은 자리인) 미리보기만 띄우고, 이미 띄워진 채로
-                         * 한 번 더 누르면 그때 상세를 연다. 실제 마우스가
-                         * 있는 기기는 이미 호버로 미리보기가 떠 있으니
-                         * 클릭 한 번으로 바로 연다.
-                         */
-                        if (!HAS_HOVER && hover !== m.id) {
-                          setHover(m.id);
-                          return;
-                        }
                         onSelectDay(cell.key);
                         onPick(m);
                       }}
                     />
-                    {hover === m.id && <MatchPopover m={m} col={dow} />}
                   </div>
                 );
               })}
               </div>
+
+              {hoverDay === cell.key && list.length > 0 && (
+                <DayPopover matches={list} col={dow} />
+              )}
             </div>
           );
         })}
@@ -196,15 +198,28 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
   );
 }
 
-/** 캘린더 호버 미리보기 — 결과와 득점자를 바로 보여준다. */
-function MatchPopover({ m, col }: { m: Match; col: number }) {
-  const done = m.status === 'finished';
+/** 날짜 칸 호버 미리보기 — 그 날 경기를 한 카드에 모아 보여준다. */
+function DayPopover({ matches, col }: { matches: Match[]; col: number }) {
   const shift = col <= 1 ? 'calc(-50% + 64px)' : col >= 5 ? 'calc(-50% - 64px)' : '-50%';
+  return (
+    <div className="pop" style={{ transform: `translateX(${shift})` }} role="tooltip">
+      {matches.map((m, i) => (
+        <div className="pop__m" key={m.id} data-first={i === 0}>
+          <MatchBlock m={m} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 경기 한 건 — 결과와 득점자를 바로 보여준다. */
+function MatchBlock({ m }: { m: Match }) {
+  const done = m.status === 'finished';
   const homeLost = done && (m.homeScore ?? 0) < (m.awayScore ?? 0);
   const awayLost = done && (m.awayScore ?? 0) < (m.homeScore ?? 0);
 
   return (
-    <div className="pop" style={{ transform: `translateX(${shift})` }} role="tooltip">
+    <>
       <div className="pop__h">
         <CompBadge k={m.competition} dot={false} />
         <span className="eyebrow">{done ? '경기 종료' : kstTime(m.kickoffUtc) + ' KST'}</span>
@@ -249,6 +264,6 @@ function MatchPopover({ m, col }: { m: Match; col: number }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

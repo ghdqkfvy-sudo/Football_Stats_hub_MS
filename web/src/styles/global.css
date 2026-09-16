@@ -420,6 +420,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   cursor: pointer; z-index: 1; border-radius: 12px;
 }
 .day[data-out='true'] { opacity: .3; }
+/* 호버 중인 칸은 통째로 위로 올린다.
+   .day 가 z-index 로 쌓임 맥락을 만들기 때문에, 안쪽 미리보기 카드의
+   z-index 를 아무리 올려도 뒤에 오는 다른 날짜 칸이 그 위를 덮는다. */
+.day[data-hover='true'] { z-index: 30; }
 .day:hover:not([data-selected='true']) { background: rgba(255,255,255,.035); }
 
 /* 날짜 숫자는 칸 왼쪽 위 — 레퍼런스와 같다 */
@@ -502,6 +506,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border: 1px solid var(--line-2); border-radius: var(--r-md);
   background: var(--ink-850); box-shadow: 0 18px 44px rgba(0,0,0,.7);
   pointer-events: none;
+}
+/* 하루에 여러 경기가 있으면 한 카드에 이어 붙인다 */
+.pop__m + .pop__m {
+  margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line);
 }
 .pop__h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .pop__row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0; }

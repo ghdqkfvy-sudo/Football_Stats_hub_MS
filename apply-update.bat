@@ -76,3 +76,6 @@ echo Cancelled.
 :end
 echo.
 pause
+
+:quiet_end
+endlocal

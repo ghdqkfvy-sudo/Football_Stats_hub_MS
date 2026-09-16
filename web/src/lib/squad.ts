@@ -287,11 +287,19 @@ export function bestEleven(players: PlayerSeason[], formation: string | null): {
   const used = new Set<string>();
   const slots: Slot[] = [];
 
-  /* 골키퍼 줄은 골키퍼 중에서, 나머지 줄은 "뒤에서부터 차례로" 채운다.
-     같은 깊이 안에서는 시즌 점수가 높은 선수가 먼저 들어간다. */
-  const outfield = players
-    .filter((p) => roleFor(p).depth !== 0)
-    .sort((a, b) => roleFor(a).depth - roleFor(b).depth || b.score - a.score);
+  /*
+   * 각 줄이 "어느 깊이의 선수를 원하는지"를 먼저 정한다.
+   * 맨 뒷줄은 수비(1), 맨 앞줄은 최전방(5), 사이는 고르게 나눈다.
+   *   4-2-3-1 → 줄별 목표 깊이 1 · 2.33 · 3.67 · 5
+   *
+   * ⚠️ 예전에는 "깊이 순으로 정렬해 앞에서부터 잘라 넣는" 방식이었는데,
+   * 스쿼드에 수비수가 8명이면 4명을 쓰고 남은 4명이 그다음 줄(중원)까지
+   * 밀고 들어와 11명이 죄다 수비수가 되는 사고가 났다. 줄마다 목표 깊이를
+   * 두고 "그 깊이에 가까운 선수"를 뽑아야 한다.
+   */
+  const outfieldRows = lines.length - 1;
+  const idealDepth = (ri: number) =>
+    outfieldRows <= 1 ? 3 : 1 + ((ri - 1) * 4) / (outfieldRows - 1);
 
   lines.forEach((n, ri) => {
     const picked: PlayerSeason[] = [];
@@ -302,11 +310,16 @@ export function bestEleven(players: PlayerSeason[], formation: string | null): {
         players.find((p) => !used.has(p.id));
       if (gk) picked.push(gk);
     } else {
-      for (const p of outfield) {
-        if (picked.length >= n) break;
-        if (used.has(p.id)) continue;
-        picked.push(p);
-      }
+      const want = idealDepth(ri);
+      const cand = players
+        .filter((p) => !used.has(p.id) && roleFor(p).depth !== 0)
+        // 목표 깊이에 가까운 순 → 같으면 출전 기록이 좋은 순
+        .sort(
+          (a, b) =>
+            Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||
+            b.score - a.score,
+        );
+      picked.push(...cand.slice(0, n));
     }
     for (const p of picked) used.add(p.id);
 
