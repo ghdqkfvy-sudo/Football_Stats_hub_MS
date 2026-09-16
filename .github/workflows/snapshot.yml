@@ -8,6 +8,13 @@ name: 데이터 스냅샷 (팀 일정·뉴스)
 # 5~30분씩 밀릴 수 있다(공식 문서에 명시된 동작). 완전히 안 도는 게 아니라
 # 그 순간의 혼잡을 피해 지연을 줄이려는 것.
 on:
+  # 코드를 푸시하면 최신 데이터도 같이 한 번 떠 준다.
+  # 봇이 올리는 데이터 커밋으로 다시 돌지 않도록 그 경로는 제외한다.
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'web/public/data/**'
+      - '**.md'
   schedule:
     - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
@@ -39,6 +46,11 @@ jobs:
         run: |
           git config user.name  "stats-bot"
           git config user.email "stats-bot@users.noreply.github.com"
+          # 원격을 먼저 당겨 온 다음에 스테이징한다.
+          # (예전 순서는 add → pull --rebase --autostash 였는데, autostash 는
+          #  되살릴 때 스테이징 상태를 잃어버린다. 그래서 바로 다음 commit 이
+          #  "no changes added to commit" 으로 죽고, 데이터가 배포에 한 번도
+          #  반영되지 않았다.)
           git pull --rebase --autostash
           git add web/public/data
           if git diff --staged --quiet; then

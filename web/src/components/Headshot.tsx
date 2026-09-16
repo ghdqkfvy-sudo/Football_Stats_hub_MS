@@ -4,20 +4,23 @@ import { headshot } from '../config/koreans';
 /**
  * 선수 헤드샷.
  *
- * ⚠️ ESPN은 축구 선수 개인 사진을 공개 API/CDN으로 제공하지 않는다 —
- * `/i/headshots/soccer/players/full/{id}.png` 패턴을 손흥민·비니시우스
- * 주니어처럼 확실히 사진이 있어야 할 스타 선수 ID로도 확인해 봤지만 전부
- * 404였다(선수 프로필·로스터 응답 어디에도 headshot 필드 자체가 없다).
- * 그래서 네트워크 요청을 시도하지 않고 바로 등번호/이니셜 배지를 보여준다
- * — 실패하는 이미지 요청을 계속 쏘는 것보다 정직하고 빠르다.
- * ESPN이 나중에 이 데이터를 제공하게 되면 `ATTEMPT_IMAGE` 를 true로 바꾸면 된다.
+ * ESPN 은 축구 선수 사진을 **일부 선수에게만** 준다. 그리고 그 사실을
+ * 알려 주는 곳은 팀 로스터 응답(`/teams/{id}/roster`)의 `headshot.href`
+ * 하나뿐이다 — 경기별 로스터·선수 프로필·검색 응답 어디에도 사진 필드가
+ * 없어서, 예전에 "ESPN 은 축구 헤드샷을 제공하지 않는다"고 잘못 결론 내린
+ * 적이 있다. 실제로는 이렇게 갈린다(실측):
+ *   353951 → 이미지 있음 · 296410 / 149945 → 404
+ *
+ * 그래서 스냅샷이 팀 로스터에서 받아 둔 실제 주소(`src`)가 있으면 그걸
+ * 쓰고, 없으면 관용 주소를 시도해 본 뒤 실패하면 등번호·이니셜 배지로
+ * 떨어진다. 사진이 없는 선수가 섞여 있는 게 정상이다.
  */
-const ATTEMPT_IMAGE = false;
-
 export function Headshot({
-  id, jersey, label, size = 34, className = '',
+  id, src, jersey, label, size = 34, className = '',
 }: {
   id: string;
+  /** 스냅샷이 확인한 실제 사진 주소 — 없으면 관용 주소를 시도한다 */
+  src?: string;
   /** 등번호 배지 (없으면 배지를 그리지 않는다) */
   jersey?: number;
   /** 이미지 실패 시 원 안에 넣을 글자 — 없으면 등번호를 쓴다 */
@@ -25,10 +28,11 @@ export function Headshot({
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(!ATTEMPT_IMAGE);
+  const [failed, setFailed] = useState(false);
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
+  const url = src || headshot(id);
 
-  if (failed) {
+  if (failed || !url) {
     return (
       <span
         className={`hs hs--fallback ${className}`}
@@ -41,7 +45,7 @@ export function Headshot({
   }
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
-      <img src={headshot(id)} alt="" loading="lazy" onError={() => setFailed(true)} />
+      <img src={url} alt="" loading="lazy" onError={() => setFailed(true)} />
       {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
     </span>
   );

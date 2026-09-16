@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import type { LeaderRow } from '../lib/league';
 import { Crest } from './Crest';
 
@@ -6,6 +7,9 @@ import { Crest } from './Crest';
  *
  * 탭으로 전환하던 예전 방식은 "누가 넣고 누가 만들어 줬는지" 를 비교하려면
  * 매번 클릭해야 했다. 세 표를 나란히 두면 한 화면에서 비교된다.
+ *
+ * 기본은 8등까지, "더보기" 를 누르면 15등까지 펼친다. 세 표는 그리드
+ * stretch 로 항상 같은 높이가 된다.
  *
  * 게이지는 팀 컬러 그라데이션이다. 세 지표가 전부 accent 하나로 칠해지면
  * 막대만 봐서는 어떤 표인지 구분이 안 되므로, 도움만 방향을 뒤집는다.
@@ -22,16 +26,66 @@ const COLS: { key: Key; label: string; suffix: string; reverse: boolean }[] = [
   { key: 'points', label: '공격 포인트', suffix: 'P', reverse: false },
 ];
 
+interface Ranked {
+  r: LeaderRow;
+  rank: number;
+}
+
+/**
+ * 공동 순위 처리: 기록이 같으면 같은 등수를 받는다(1,2,2,4식).
+ * "n등까지" 는 줄 수가 아니라 등수 기준이라, n등이 여럿이면 전부 보여준다.
+ */
+function rankRows(rows: LeaderRow[], key: Key, cap: number): Ranked[] {
+  const sorted = [...rows]
+    .filter((r) => r[key] > 0)
+    .sort((a, b) => b[key] - a[key] || b.goals - a.goals || a.name.localeCompare(b.name));
+
+  let rank = 0;
+  let prev: number | null = null;
+  const ranked = sorted.map((r, i) => {
+    if (prev === null || r[key] !== prev) rank = i + 1;
+    prev = r[key];
+    return { r, rank };
+  });
+  return ranked.filter((x) => x.rank <= cap);
+}
+
+const EXPANDED_CAP = 15;
+
 export function LeaderBoard({
   rows, limit = 8, note,
 }: { rows: LeaderRow[]; limit?: number; note?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const cap = expanded ? EXPANDED_CAP : limit;
+
+  const cols = useMemo(
+    () => COLS.map((col) => ({ col, shown: rankRows(rows, col.key, cap) })),
+    [rows, cap],
+  );
+
+  // 8등 밖에 더 보여줄 선수가 있을 때만 "더보기" 를 띄운다
+  const hasMore = useMemo(
+    () => COLS.some((c) => rankRows(rows, c.key, EXPANDED_CAP).length > rankRows(rows, c.key, limit).length),
+    [rows, limit],
+  );
+
   return (
     <>
       <div className="lb3">
-        {COLS.map((c) => (
-          <Column key={c.key} col={c} rows={rows} limit={limit} />
+        {cols.map(({ col, shown }) => (
+          <Column key={col.key} col={col} shown={shown} />
         ))}
       </div>
+
+      {hasMore && (
+        <button className="lb3__more" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
+          {expanded ? '접기' : `더보기 (${EXPANDED_CAP}위까지)`}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true">
+            <path d={expanded ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+          </svg>
+        </button>
+      )}
+
       {/* 주석은 표마다 반복하지 않고 아래에 한 번만 */}
       {note && <p className="lb3__note">{note}</p>}
     </>
@@ -39,29 +93,11 @@ export function LeaderBoard({
 }
 
 function Column({
-  col, rows, limit,
+  col, shown,
 }: {
   col: (typeof COLS)[number];
-  rows: LeaderRow[];
-  limit: number;
+  shown: Ranked[];
 }) {
-  const sorted = [...rows]
-    .filter((r) => r[col.key] > 0)
-    .sort((a, b) => b[col.key] - a[col.key] || b.goals - a.goals || a.name.localeCompare(b.name));
-
-  /*
-   * 공동 순위 처리: 기록(r[col.key])이 같으면 같은 등수를 받는다(1,2,2,4식).
-   * "limit 등까지" 는 줄 수가 아니라 등수 기준이라, 8등이 여럿이면 전부 보여준다.
-   */
-  let rank = 0;
-  let prevVal: number | null = null;
-  const ranked = sorted.map((r, i) => {
-    if (prevVal === null || r[col.key] !== prevVal) rank = i + 1;
-    prevVal = r[col.key];
-    return { r, rank };
-  });
-  const shown = ranked.filter((x) => x.rank <= limit);
-
   // 기준값은 이 선수단의 최고 기록 — 절대값이 아니라 팀 안에서의 비중으로 읽힌다
   const max = shown[0]?.r[col.key] ?? 1;
 

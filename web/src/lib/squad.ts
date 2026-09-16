@@ -21,6 +21,8 @@ export interface PlayerSeason {
   name: string;
   jersey: number;
   pos: 'G' | 'D' | 'M' | 'F';
+  /** 팀 로스터가 알려 준 실제 헤드샷 주소 — 없으면 배지로 그린다 */
+  photo?: string;
   apps: number;
   starts: number;
   minutes: number;
@@ -30,6 +32,10 @@ export interface PlayerSeason {
   /** formationPlace → 선발 횟수 */
   slots: Record<number, number>;
   modalSlot: number;
+  /** ESPN 포지션 약어 → 선발 횟수 ('CD-L', 'AM-R', 'LB' …) */
+  posPlaces: Record<string, number>;
+  /** 가장 많이 선 자리의 ESPN 약어 — 베스트 11 배치의 근거 */
+  modalPos: string;
   /** 대회별 기록 — 호버 카드에서 "리그 3골 · 챔스 1골" 로 보여준다 */
   byComp: CompSplit[];
   /** 최근 경기 기록 (최신순) */
@@ -88,7 +94,7 @@ export function buildSquad(
     const result: 'W' | 'D' | 'L' =
       (mine ?? 0) > (theirs ?? 0) ? 'W' : (mine ?? 0) < (theirs ?? 0) ? 'L' : 'D';
 
-    for (const [id, place, starter, inMin, outMin, eg, ea] of lu.entries) {
+    for (const [id, place, starter, inMin, outMin, eg, ea, abbr] of lu.entries) {
       const info = athletes[id];
       if (!info) continue;                       // 이름을 모르는 선수는 지어내지 않는다
       const mins = minutesOf(place, starter, inMin, outMin);
@@ -97,9 +103,10 @@ export function buildSquad(
       let p = byId.get(id);
       if (!p) {
         p = {
-          id, name: info.name, jersey: info.jersey, pos: info.pos,
+          id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
-          slots: {}, modalSlot: 0, byComp: [], recent: [], score: 0,
+          slots: {}, modalSlot: 0, posPlaces: {}, modalPos: '',
+          byComp: [], recent: [], score: 0,
         };
         byId.set(id, p);
       }
@@ -128,6 +135,8 @@ export function buildSquad(
       p.goals += g;
       p.assists += a;
       if (place > 0) p.slots[place] = (p.slots[place] ?? 0) + 1;
+      // 선발로 선 자리만 센다 — 교체 투입은 자리 의미가 흐리다
+      if (starter && abbr) p.posPlaces[abbr] = (p.posPlaces[abbr] ?? 0) + 1;
       p.recent.push({
         matchId: m.id,
         kickoffUtc: m.kickoffUtc,
@@ -149,6 +158,8 @@ export function buildSquad(
     p.modalSlot = entries.length
       ? Number(entries.sort((x, y) => y[1] - x[1])[0][0])
       : 0;
+    const posEntries = Object.entries(p.posPlaces);
+    p.modalPos = posEntries.length ? posEntries.sort((x, y) => y[1] - x[1])[0][0] : '';
     p.points = p.goals + p.assists;
     p.byComp.sort((x, y) => y.goals + y.assists - (x.goals + x.assists) || y.apps - x.apps);
     /*
@@ -204,95 +215,122 @@ export interface Slot {
 }
 
 /**
- * 검증된 ESPN 슬롯 배치. ESPN의 formationPlace 번호가 어떤 자리를 뜻하는지는
- * 팀마다(어쩌면 팀의 데이터 소스마다) 다를 수 있어, 실제 경기로 맞춰본 팀에만
- * 적용한다 — 레알 마드리드 6경기로 4-2-3-1 을 확인했다.
- * 배열은 뒤에서 앞으로(골키퍼 → 공격), 각 줄은 화면 왼쪽부터의 순서다.
+ * ESPN 포지션 약어 → 배치 정보.
  *
- * 새 팀을 추가했는데 같은 포메이션이라고 이 번호가 그대로 맞으리라는 보장이
- * 없다. 그래서 팀 단위로 "검증됨"을 명시하지 않는 한, 다른 팀은 항상 아래
- * 포지션 그룹 기준 배치(verified: false)로 떨어진다 — 틀린 자리를 확신 있게
- * 보여주는 것보다, 부정확할 수 있다고 정직하게 표시하는 편이 낫다.
+ * ESPN 은 경기별 라인업에 선수마다 **실제 자리 약어**를 준다. 첼시
+ * 2026-09-12 헐시티전(4-2-3-1)을 그대로 받아 확인한 값은 다음과 같다.
+ *   G / LB / CD-L / CD-R / RB / LM / RM / AM-L / AM / AM-R / F
+ * 역할(G·CD·LB·DM·M·AM·F…)과 좌우(`-L`/`-R` 접미, 또는 `L`/`R` 접두)가
+ * 약어 안에 그대로 들어 있다.
+ *
+ * ⚠️ 예전에는 `formationPlace` 숫자를 레알 마드리드 경기로 눈대중해 맞춘
+ * 표를 썼다. 그런데 첼시 실데이터와 대보니 같은 4-2-3-1 인데도 센터백
+ * 두 자리(5·6)가 좌우 반대였다 — 첼시는 6이 CD-L, 5가 CD-R 이다. 숫자는
+ * 팀/데이터 소스마다 뜻이 달라질 수 있다는 뜻이라, 배치 근거를 전부 이
+ * 약어로 옮겼다. 그래서 팀별 "검증" 목록도 더 이상 필요 없다 — 새 팀을
+ * 추가해도 ESPN 이 준 자리 그대로 그려진다.
  */
-const SLOT_ROWS: Record<string, number[][]> = {
-  '4-2-3-1': [[1], [3, 5, 6, 2], [4, 8], [11, 10, 7], [9]],
+interface PosRole {
+  /** 0=GK, 1=수비, 2=수비형MF, 3=중앙MF, 4=공격형MF·윙, 5=최전방 */
+  depth: number;
+  /** 음수=왼쪽, 0=중앙, 양수=오른쪽. 절대값이 클수록 더 바깥이다. */
+  lateral: number;
+}
+
+const DEPTH_BY_CORE: Record<string, number> = {
+  G: 0, GK: 0,
+  B: 1, CB: 1, CD: 1, D: 1, WB: 1, SW: 1, DEF: 1,
+  DM: 2, CDM: 2, DMF: 2,
+  M: 3, CM: 3, MF: 3, MID: 3, CMF: 3,
+  AM: 4, CAM: 4, AMF: 4, W: 4, WF: 4, WM: 4,
+  F: 5, FW: 5, S: 5, ST: 5, CF: 5, SS: 5,
 };
 
-/** 위 SLOT_ROWS 의 자리 번호가 실제로 확인된 팀 (espnTeamId) */
-const VERIFIED_TEAMS: Record<string, Set<string>> = {
-  '4-2-3-1': new Set(['86']), // Real Madrid
-};
+/** 'CD-L' → {depth:1, lateral:-1} · 'LB' → {depth:1, lateral:-2} */
+function roleOf(abbr: string): PosRole | null {
+  const a = String(abbr ?? '').toUpperCase().trim();
+  if (!a) return null;
 
-const POS_ORDER: PlayerSeason['pos'][] = ['G', 'D', 'M', 'F'];
+  let lateral = 0;
+  let core = a;
 
-export function bestEleven(players: PlayerSeason[], formation: string | null, teamId?: string): {
+  const suffix = a.match(/-(L|R|C)$/);
+  if (suffix) {
+    // 'CD-L' 처럼 접미사로 좌우가 붙는 자리 — 같은 줄의 안쪽이다
+    lateral = suffix[1] === 'L' ? -1 : suffix[1] === 'R' ? 1 : 0;
+    core = a.slice(0, a.length - 2);
+  } else if (a.length > 1 && (a[0] === 'L' || a[0] === 'R')) {
+    // 'LB' · 'RM' 처럼 접두사로 좌우가 붙는 자리 — 줄의 바깥쪽이다
+    lateral = a[0] === 'L' ? -2 : 2;
+    core = a.slice(1);
+  }
+
+  const depth = DEPTH_BY_CORE[core] ?? DEPTH_BY_CORE[a];
+  return depth === undefined ? null : { depth, lateral };
+}
+
+/** 약어가 없을 때의 폴백 — 좌우 정보가 없어 줄 안 순서는 정할 수 없다 */
+const DEPTH_BY_POS: Record<PlayerSeason['pos'], number> = { G: 0, D: 1, M: 3, F: 5 };
+
+const roleFor = (p: PlayerSeason): PosRole =>
+  roleOf(p.modalPos) ?? { depth: DEPTH_BY_POS[p.pos], lateral: 0 };
+
+export function bestEleven(players: PlayerSeason[], formation: string | null): {
   slots: Slot[];
   formation: string;
   verified: boolean;
 } {
   const shape = formation ?? '4-3-3';
-  const rows = teamId && VERIFIED_TEAMS[shape]?.has(teamId) ? SLOT_ROWS[shape] : undefined;
-
-  if (rows) {
-    /* 슬롯 의미가 검증된 포메이션.
-       선정 가중치는 사용자가 지정한 순서를 그대로 따른다.
-         1) 그 자리(포메이션 슬롯)에서의 선발 출전 수
-         2) 총 출전 경기 수
-         3) 리그 총 출전 시간
-         4) 공격 포인트
-       중앙 미드필더 줄은 좌/우를 나누지 않고 한 묶음으로 집계한다
-       (4-2-3-1 의 4·8 처럼 좌우가 사실상 같은 자리인 경우). */
-    const used = new Set<string>();
-    const slots: Slot[] = [];
-
-    rows.forEach((row, ri) => {
-      const pooled = lineKind(ri, rows.length) === 'MID' ? row : null;
-      const startsAt = (p: PlayerSeason, place: number) =>
-        pooled
-          ? pooled.reduce((a, k) => a + (p.slots[k] ?? 0), 0)
-          : (p.slots[place] ?? 0);
-
-      row.forEach((place, ci) => {
-        const cand = players
-          .filter((p) => !used.has(p.id) && startsAt(p, place) > 0)
-          .sort(
-            (a, b) =>
-              startsAt(b, place) - startsAt(a, place) ||
-              b.apps - a.apps ||
-              b.minutes - a.minutes ||
-              b.points - a.points,
-          )[0];
-        if (cand) used.add(cand.id);
-        slots.push({ row: ri, col: ci, rowCount: row.length, player: cand ?? null, label: String(place) });
-      });
-    });
-    // 빈 자리는 남은 선수 중 점수순으로 채운다
-    for (const s of slots) {
-      if (s.player) continue;
-      const cand = players.find((p) => !used.has(p.id));
-      if (cand) { used.add(cand.id); s.player = cand; }
-    }
-    return { slots, formation: shape, verified: true };
-  }
-
-  // 검증되지 않은 포메이션 — 슬롯 번호를 추측하지 않고 포지션 그룹으로 채운다
   const counts = shape.split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0);
-  const lines = [1, ...counts];
-  const pools: Record<string, PlayerSeason[]> = { G: [], D: [], M: [], F: [] };
-  for (const p of players) pools[p.pos].push(p);
+  const lines = [1, ...counts]; // 골키퍼 한 줄 + 포메이션이 말하는 줄들
 
+  const used = new Set<string>();
   const slots: Slot[] = [];
-  const midLines = lines.length - 3; // GK, DEF, ... , FWD
+
+  /* 골키퍼 줄은 골키퍼 중에서, 나머지 줄은 "뒤에서부터 차례로" 채운다.
+     같은 깊이 안에서는 시즌 점수가 높은 선수가 먼저 들어간다. */
+  const outfield = players
+    .filter((p) => roleFor(p).depth !== 0)
+    .sort((a, b) => roleFor(a).depth - roleFor(b).depth || b.score - a.score);
+
   lines.forEach((n, ri) => {
-    const group: PlayerSeason['pos'] =
-      ri === 0 ? 'G' : ri === 1 ? 'D' : ri === lines.length - 1 ? 'F' : 'M';
+    const picked: PlayerSeason[] = [];
+
+    if (ri === 0) {
+      const gk =
+        players.find((p) => roleFor(p).depth === 0 && !used.has(p.id)) ??
+        players.find((p) => !used.has(p.id));
+      if (gk) picked.push(gk);
+    } else {
+      for (const p of outfield) {
+        if (picked.length >= n) break;
+        if (used.has(p.id)) continue;
+        picked.push(p);
+      }
+    }
+    for (const p of picked) used.add(p.id);
+
+    // 줄 안에서는 왼쪽 → 중앙 → 오른쪽 순으로 세운다
+    picked.sort((a, b) => roleFor(a).lateral - roleFor(b).lateral || b.score - a.score);
+
     for (let ci = 0; ci < n; ci++) {
-      const cand = pools[group].shift() ?? pools[POS_ORDER.find((k) => pools[k].length)!]?.shift() ?? null;
-      slots.push({ row: ri, col: ci, rowCount: n, player: cand, label: '' });
+      const player = picked[ci] ?? null;
+      slots.push({
+        row: ri,
+        col: ci,
+        rowCount: n,
+        player,
+        label: player?.modalPos ?? '',
+      });
     }
   });
-  void midLines;
-  return { slots, formation: shape, verified: false };
+
+  /* ESPN 자리 약어를 실제로 가진 선수로만 채워졌는지 — 하나라도 비면
+     좌우 순서를 장담할 수 없으므로 화면에 "포지션 그룹 배치"라고 알린다. */
+  const filled = slots.map((s) => s.player).filter((p): p is PlayerSeason => !!p);
+  const verified = filled.length === 11 && filled.every((p) => !!roleOf(p.modalPos));
+
+  return { slots, formation: shape, verified };
 }
 
 

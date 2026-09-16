@@ -94,46 +94,171 @@ async function save(name, data) {
   console.log(`  ✓ ${name}`);
 }
 
-/* ── 득점/도움 상세 (core API /plays) ────────────────────
-   팀/리그 일정(schedule) 응답에는 애초에 details[]가 없다(요약 엔드포인트
+/* ── 득점 상세 (스코어보드 details[]) ──────────────────────
+   팀/리그 일정(schedule) 응답에는 애초에 details[]가 없다(다른 엔드포인트
    전용 필드). 그래서 정적 피드만 보는 배포(Worker 프록시 없음)에서는
    "이달의 경기"·"대회별 선수 기록"이 득점자를 하나도 못 보여줬다.
-   종료된 경기마다 core /plays 를 한 번 떠서 competitions[0].__goals 에
-   박아 두면 클라이언트는 추가 요청 없이 바로 득점자를 그린다.
-   (normalize.ts 의 goalsFromPlays 와 같은 로직 — 이 스크립트는 순수 JS라
-   타입 파일을 import 할 수 없어 그대로 옮겨 적었다.) */
-function goalsFromPlaysRaw(items) {
-  if (!Array.isArray(items)) return [];
-  const assistsByClock = new Map();
-  for (const p of items) {
-    const text = String(p?.type?.text ?? '');
-    if (!/assist/i.test(text)) continue;
-    const who = p?.participants?.find((x) => /assist/i.test(String(x?.type ?? '')))?.athlete;
-    const name = who?.displayName ?? p?.participants?.[0]?.athlete?.displayName;
-    const clockVal = Number(p?.clock?.value);
-    if (name && Number.isFinite(clockVal)) assistsByClock.set(clockVal, String(name));
-  }
-  return items
-    .filter((p) => p?.scoringPlay === true && p?.shootout !== true)
-    .map((p) => {
-      const clockVal = Number(p?.clock?.value);
-      const dv = String(p?.clock?.displayValue ?? '');
-      const mm = dv.match(/(\d+)/);
-      const minute = mm ? parseInt(mm[1], 10) : Number.isFinite(clockVal) ? Math.floor(clockVal / 60) : 0;
-      const scorer =
-        p?.participants?.find((x) => /scorer/i.test(String(x?.type ?? '')))?.athlete?.displayName
-          ?? p?.participants?.[0]?.athlete?.displayName;
+
+   ⚠️ 처음엔 core API 의 `/plays` 로 받으려 했는데 실측해 보니 한 경기가
+   **1,404개** 플레이(패스·터치까지 전부)로 내려온다. `limit=400` 으로는
+   경기 앞 3분치만 들어와 골이 아예 안 잡힌다(worker 의 goals 라우트도
+   같은 한계를 안고 있다).
+
+   반면 **스코어보드는 그 날짜·그 대회의 모든 경기 득점 상세를 요청 한 번**에
+   준다 — `competitions[0].details[]` 안에 scoringPlay/ownGoal/penaltyKick/
+   athletesInvolved 가 그대로 들어 있다(2026-09-12 eng.1 로 확인).
+   그래서 경기 단위가 아니라 날짜 단위로 한 번씩만 받아서 나눠 붙인다. */
+function goalsFromDetailsRaw(details) {
+  if (!Array.isArray(details)) return [];
+  const minuteOf = (clock) => {
+    const dv = String(clock?.displayValue ?? '');
+    const m = dv.match(/(\d+)/);
+    if (m) return parseInt(m[1], 10);
+    const v = Number(clock?.value);
+    return Number.isFinite(v) ? Math.floor(v / 60) : 0;
+  };
+  return details
+    .filter((d) => d?.scoringPlay === true && d?.shootout !== true)
+    .map((d) => {
+      const people = Array.isArray(d?.athletesInvolved) ? d.athletesInvolved : [];
+      const minute = minuteOf(d?.clock);
       return {
         minute,
-        clock: String(p?.clock?.displayValue ?? `${minute}'`),
-        teamId: String(p?.team?.id ?? ''),
-        scorer: String(scorer ?? '—'),
-        assist: Number.isFinite(clockVal) ? assistsByClock.get(clockVal) : undefined,
-        ownGoal: p?.ownGoal === true,
-        penalty: p?.penaltyKick === true,
+        clock: String(d?.clock?.displayValue ?? `${minute}'`),
+        teamId: String(d?.team?.id ?? ''),
+        scorer: String(people[0]?.displayName ?? people[0]?.shortName ?? '—'),
+        // 스코어보드 details 는 보통 득점자만 준다 — 어시스트는 있으면 받는다
+        assist: people[1]?.displayName ? String(people[1].displayName) : undefined,
+        ownGoal: d?.ownGoal === true,
+        penalty: d?.penaltyKick === true,
       };
     })
     .sort((a, b) => a.minute - b.minute);
+}
+
+/** ISO 날짜 → 'YYYYMMDD' (스코어보드 dates 파라미터 형식) */
+const ymd = (iso) => String(iso ?? '').slice(0, 10).replace(/-/g, '');
+
+const shiftDay = (yyyymmdd, delta) => {
+  const d = new Date(Date.UTC(
+    Number(yyyymmdd.slice(0, 4)),
+    Number(yyyymmdd.slice(4, 6)) - 1,
+    Number(yyyymmdd.slice(6, 8)) + delta,
+  ));
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+};
+
+/** (대회, 날짜) 스코어보드 한 번 = 그 날 그 대회 모든 경기의 득점 상세 */
+const sbCache = new Map();
+async function scoreboardGoals(leagueSlug, yyyymmdd) {
+  const key = `${leagueSlug}|${yyyymmdd}`;
+  const hit = sbCache.get(key);
+  if (hit) return hit;
+
+  const j = await get(`${SITE}/apis/site/v2/sports/soccer/${leagueSlug}/scoreboard?dates=${yyyymmdd}`);
+  const map = new Map();
+  for (const ev of j?.events ?? []) {
+    map.set(String(ev?.id ?? ''), goalsFromDetailsRaw(ev?.competitions?.[0]?.details));
+  }
+  sbCache.set(key, map);
+  await sleep(150);
+  return map;
+}
+
+/* ── 선수 헤드샷 ──────────────────────────────────────────
+   ESPN 은 축구 선수 사진을 **일부 선수에게만** 준다. 그리고 그걸 알려 주는
+   응답은 팀 로스터(`/teams/{id}/roster`)의 `headshot.href` 하나뿐이다 —
+   경기별 로스터·선수 프로필(`/athletes/{id}`)·검색 응답에는 사진 필드
+   자체가 없다. 예전에 그 세 곳만 보고 "축구는 헤드샷이 아예 없다"고 잘못
+   결론 내렸었다. 실제로는 갈린다(실측: 353951 있음 / 296410·149945 404).
+   그래서 팀 단위로 한 번 받아 두고 선수별 실제 주소를 박아 준다. */
+const rosterPhotoCache = new Map();
+async function teamPhotos(leagueSlug, teamId) {
+  const key = `${leagueSlug}|${teamId}`;
+  const hit = rosterPhotoCache.get(key);
+  if (hit) return hit;
+
+  const j = await get(`${SITE}/apis/site/v2/sports/soccer/${leagueSlug}/teams/${teamId}/roster`);
+  const map = new Map();
+  // 응답이 평평한 athletes[] 일 수도, 포지션 그룹(items[]) 으로 묶여 올 수도 있다
+  const flat = [];
+  for (const a of j?.athletes ?? []) {
+    if (Array.isArray(a?.items)) flat.push(...a.items);
+    else flat.push(a);
+  }
+  for (const a of flat) {
+    const id = String(a?.id ?? '');
+    const href = a?.headshot?.href;
+    if (id && href) map.set(id, String(href));
+  }
+  rosterPhotoCache.set(key, map);
+  await sleep(150);
+  return map;
+}
+
+/* ── 위키백과 사진 (ESPN 에 없는 선수 보충) ────────────────
+   ESPN 의 축구 헤드샷 보유율이 아주 낮다 — 첼시·레알 로스터를 직접 확인해
+   보니 20명 남짓 중 1~3명뿐이고, 주전들도 대부분 404 다. 그래서 ESPN 에
+   사진이 없는 선수는 위키백과 대표 이미지로 보충한다.
+
+   ⚠️ 엉뚱한 사람 얼굴이 뜨는 것이 사진이 없는 것보다 나쁘므로 관문을 세 개
+   둔다: (1) 문서 설명에 footballer/soccer 가 있어야 하고, (2) 문서 제목이
+   선수 이름과 맞아야 하며, (3) SVG 는 버린다(문서에 사진이 없을 때 위키가
+   축구공 아이콘을 대표 이미지로 주는 경우가 있다). 셋 중 하나라도 어긋나면
+   사진 없이 배지로 둔다. */
+const WIKI_UA = 'k-stats-hub/1.0 (https://github.com/ghdqkfvy-sudo/Football_Stats_hub_MS)';
+const wikiCache = new Map();
+
+/** 발음기호·문장부호를 걷어낸 비교용 이름 (Vinícius → vinicius) */
+const normName = (s) => String(s ?? '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+async function wikipediaPhoto(name) {
+  const want = normName(name);
+  if (!want) return undefined;
+  if (wikiCache.has(want)) return wikiCache.get(want);
+
+  let out;
+  try {
+    const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json'
+      + '&generator=search&gsrlimit=3&gsrsearch=' + encodeURIComponent(`${name} footballer`)
+      + '&prop=pageimages|description&piprop=thumbnail&pithumbsize=250';
+    const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': WIKI_UA } });
+    if (res.ok) {
+      const j = await res.json();
+      for (const p of Object.values(j?.query?.pages ?? {})) {
+        const src = p?.thumbnail?.source;
+        if (!src || /\.svg(\?|$)/i.test(src)) continue;
+        if (!/footballer|football|soccer/i.test(String(p?.description ?? ''))) continue;
+        const title = normName(p?.title);
+        const sameName = title === want
+          || want.split(' ').filter((t) => t.length > 1).every((t) => title.includes(t));
+        if (!sameName) continue;
+        out = String(src);
+        break;
+      }
+    }
+  } catch { /* 실패해도 배지로 떨어질 뿐이라 조용히 넘어간다 */ }
+
+  wikiCache.set(want, out);
+  await sleep(200);
+  return out;
+}
+
+/** 이전 스냅샷에서 선수별 사진 주소를 이어받는다 (재조회를 줄인다) */
+async function prevPhotos(fileName) {
+  const map = new Map();
+  try {
+    const json = JSON.parse(await readFile(join(OUT, fileName), 'utf8'));
+    for (const [id, a] of Object.entries(json?.athletes ?? {})) {
+      if (a?.photo) map.set(String(id), String(a.photo));
+    }
+    for (const p of json?.players ?? []) {
+      if (p?.photo) map.set(String(p.id), String(p.photo));
+    }
+  } catch { /* 첫 실행 */ }
+  return map;
 }
 
 /* ── 선수 시즌 누적 출전 시간 ─────────────────────────────
@@ -158,14 +283,6 @@ async function athleteSeasonMinutes(leagueSlug, id) {
   return minutes > 0 ? minutes : null;
 }
 
-async function fetchGoalsFor(leagueSlug, eventId) {
-  const j = await get(
-    `${CORE}/v2/sports/soccer/leagues/${leagueSlug}/events/${eventId}/competitions/${eventId}/plays?limit=400`,
-  );
-  if (!j) return null; // 실패 — __goals 를 안 붙여서 다음 실행에서 재시도되게 둔다
-  return goalsFromPlaysRaw(j.items);
-}
-
 /** 이전 스냅샷에서 이벤트별 __goals 를 이어받는다 — 종료된 경기의 득점
     기록은 바뀌지 않으므로 한 번 뜬 경기는 다시 뜨지 않는다. */
 async function prevGoalsMap(fileName) {
@@ -181,21 +298,38 @@ async function prevGoalsMap(fileName) {
   return map;
 }
 
-/** 종료된 경기들에 득점 상세를 채운다(이어받거나, 없으면 새로 떠서). */
+/** 종료된 경기들에 득점 상세를 채운다(이어받거나, 없으면 스코어보드에서). */
 async function enrichGoals(events, defaultLeague, prevMap) {
   let fetched = 0;
+  let missed = 0;
   for (const ev of events) {
     const c = ev?.competitions?.[0];
     if (!c || c?.status?.type?.completed !== true) continue;
     const id = String(ev.id);
     const cached = prevMap.get(id);
     if (cached) { c.__goals = cached; continue; }
+
     const lg = ev?.league?.slug ?? ev?.season?.slug ?? defaultLeague;
-    const goals = await fetchGoalsFor(lg, id);
-    if (goals) { c.__goals = goals; fetched++; }
-    await sleep(150);
+    const base = ymd(ev?.date);
+    if (!lg || !base) continue;
+
+    /* 스코어보드의 날짜 구분은 UTC 와 한 칸 어긋날 수 있다(미국 기준).
+       그래서 당일 → 전날 → 다음날 순으로 찾아본다. 날짜별 응답은
+       캐시되므로 같은 날짜를 두 번 받지 않는다. */
+    let found = false;
+    for (const d of [base, shiftDay(base, -1), shiftDay(base, 1)]) {
+      const map = await scoreboardGoals(lg, d);
+      if (map.has(id)) {
+        c.__goals = map.get(id);
+        fetched++;
+        found = true;
+        break;
+      }
+    }
+    if (!found) missed++;
   }
   if (fetched) console.log(`    득점 상세 신규 ${fetched}경기`);
+  if (missed) console.log(`    득점 상세 못 찾음 ${missed}경기 (다음 실행에서 재시도)`);
 }
 
 /* ── 한국어 뉴스 ──────────────────────────────────────
@@ -252,7 +386,7 @@ async function googleNewsKo(q) {
 /* ── 코리안리거 한 명 ─────────────────────────────────
    core 는 athlete 를 $ref 로만 주므로 프로필 → 소속팀 → 대회별 기록 순으로
    따라가야 한다. 리그와 유럽대항전을 합쳐 주는 엔드포인트는 없다. */
-async function koreanPlayer(id, nameKo) {
+async function koreanPlayer(id, nameKo, carriedPhoto) {
   const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
   if (!prof) return null;
 
@@ -340,12 +474,21 @@ async function koreanPlayer(id, nameKo) {
     recent.push(...rows.slice(0, 3));
   }
 
+  /* 사진: ESPN 은 소속팀 로스터에만 갖고 있고 그마저 대부분 비어 있다.
+     없으면 위키백과로 보충한다(carried 는 호출하는 쪽에서 넘겨준다). */
+  let photo;
+  if (league && clubId !== '0') {
+    photo = (await teamPhotos(league, clubId)).get(String(id));
+  }
+  if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(String(prof?.displayName ?? nameKo));
+
   return {
     id, nameKo,
     name: String(prof?.displayName ?? nameKo),
     pos,
     age: Number(prof?.age ?? 0) || 0,
     clubId, club, league, leagueName,
+    photo,
     stats, recent,
   };
 }
@@ -511,6 +654,8 @@ async function main() {
           e?.subbedOutAtMinute ?? undefined,
           stat(e, 'totalGoals'),
           stat(e, 'goalAssists'),
+          // 'CD-L' · 'AM-R' 처럼 좌우까지 들어 있는 ESPN 자리 약어
+          String(e?.position?.abbreviation ?? '') || undefined,
         ]);
         const name = String(e?.athlete?.displayName ?? '').trim();
         if (name) {
@@ -533,8 +678,22 @@ async function main() {
     }
 
     if (Object.keys(lineups).length) {
+      const photos = await teamPhotos(t.league, t.id);
+      const carried = await prevPhotos(`squad-${t.slug}.json`);
+      let fromEspn = 0;
+      let fromWiki = 0;
       let gotMinutes = 0;
       for (const id of Object.keys(athletes)) {
+        // ESPN 사진이 있으면 1순위, 없으면 지난 스냅샷에서 이어받고,
+        // 그것도 없으면 위키백과에서 찾아본다.
+        const espnUrl = photos.get(id);
+        if (espnUrl) {
+          athletes[id].photo = espnUrl;
+          fromEspn++;
+        } else {
+          const url = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);
+          if (url) { athletes[id].photo = url; fromWiki++; }
+        }
         const mins = await athleteSeasonMinutes(t.league, id);
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
         await sleep(150);
@@ -544,7 +703,7 @@ async function main() {
       });
       console.log(
         `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
-          ` (실제 출전시간 확보 ${gotMinutes}명)`,
+          ` (출전시간 ${gotMinutes}명 · 사진 ESPN ${fromEspn} + 위키 ${fromWiki})`,
       );
     } else {
       console.error(`  ! ${t.slug}: 라인업 0경기 — 기존 파일 유지`);
@@ -553,9 +712,10 @@ async function main() {
 
   /* ── 코리안리거 (slow) ───────────────────────────────── */
   if (wants('slow')) {
+    const carried = await prevPhotos('koreans.json');
     const players = [];
     for (const [id, nameKo] of KOREANS) {
-      const p = await koreanPlayer(id, nameKo);
+      const p = await koreanPlayer(id, nameKo, carried.get(String(id)));
       if (p) players.push(p);
       await sleep(250);
     }

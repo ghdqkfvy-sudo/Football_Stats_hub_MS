@@ -129,6 +129,8 @@ export function lineupFrom(
         minuteOf(e?.subbedOutAtMinute ?? e?.subbedOut?.minute),
         statOf(e, 'totalGoals') ?? 0,
         statOf(e, 'goalAssists') ?? 0,
+        // 'CD-L' · 'AM-R' 처럼 좌우까지 들어 있는 ESPN 자리 약어 — 베스트 11 배치 근거
+        String(e?.position?.abbreviation ?? '') || undefined,
       ]);
       // 같은 응답에 이름·등번호·포지션이 들어 있어 따로 조회할 필요가 없다
       const name = String(e?.athlete?.displayName ?? '').trim();

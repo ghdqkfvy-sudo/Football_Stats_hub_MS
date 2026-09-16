@@ -9,7 +9,15 @@ import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 
 export function PlayersTab({ target, matches }: { target: Target; matches: Match[] }) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+  /*
+   * 강조 대상은 두 갈래다.
+   *  · hoverId  — 마우스를 올린 동안만 (치우면 사라진다)
+   *  · pinnedId — 포메이션에서 클릭해 고정한 선수 (다시 누르면 해제)
+   * 마우스가 우선이라, 올려 둔 동안에는 그쪽이 보인다.
+   */
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const activeId = hoverId ?? pinnedId;
 
   /* 라인업·선수 프로필은 전부 네트워크에서 온다.
      경기별 로스터에 골·도움까지 들어 있어 이름 매칭이 필요 없다. */
@@ -34,10 +42,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     [matches, squad, target.espnTeamId],
   );
 
-  const xi = useMemo(
-    () => bestEleven(players, formation, target.espnTeamId),
-    [players, formation, target.espnTeamId],
-  );
+  const xi = useMemo(() => bestEleven(players, formation), [players, formation]);
 
   /** 베스트 11(공격→골키퍼) 먼저, 나머지는 선발·출전·득점 순 */
   const ordered = useMemo(() => orderForList(players, xi.slots), [players, xi]);
@@ -98,9 +103,11 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             covered={covered}
             chem={teamCohesion(xi.slots, covered)}
             activeId={activeId}
-            onHover={setActiveId}
+            onHover={setHoverId}
+            selectedId={pinnedId}
+            onSelect={setPinnedId}
           />
-          <PlayerTable players={ordered} activeId={activeId} onHover={setActiveId} />
+          <PlayerTable players={ordered} activeId={activeId} onHover={setHoverId} />
         </div>
       </section>
 

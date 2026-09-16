@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { Headshot } from './Headshot';
@@ -21,7 +21,10 @@ interface Props {
 
 export function PlayerTable({ players, activeId, onHover }: Props) {
   const [filter, setFilter] = useState('ALL');
-  const rows = filter === 'ALL' ? players : players.filter((p) => p.pos === filter);
+  const rows = useMemo(
+    () => (filter === 'ALL' ? players : players.filter((p) => p.pos === filter)),
+    [players, filter],
+  );
 
   /* 골·도움 게이지의 기준은 스쿼드 최고 기록이다. 절대값이 아니라
      팀 안에서의 비중으로 읽혀야 한 줄만 봐도 누가 해결사인지 보인다. */
@@ -32,17 +35,42 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
      리스트에 overflow 를 걸면 카드가 잘리기 때문이다. */
   const [card, setCard] = useState<{ p: PlayerSeason; top: number; left: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const openCard = (p: PlayerSeason, el: HTMLElement) => {
+  /** 카드를 그 줄 옆에 놓는다 (호버 상태는 건드리지 않는다) */
+  const placeCard = (p: PlayerSeason, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     const lr = listRef.current?.getBoundingClientRect();
     setCard({ p, top: r.top + r.height / 2, left: (lr?.left ?? r.left) - 12 });
+  };
+
+  const openCard = (p: PlayerSeason, el: HTMLElement) => {
+    placeCard(p, el);
     onHover(p.id);
   };
   const closeCard = () => {
     setCard(null);
     onHover(null);
   };
+
+  /*
+   * 포메이션에서 선수를 고르면(또는 그 위에 마우스를 올리면) 목록도 같이
+   * 반응해야 한다 — 그 줄로 스크롤하고 호버 카드를 그대로 띄운다.
+   * 목록 자체의 호버로 이미 같은 선수가 열려 있으면 아무것도 하지 않는다.
+   */
+  useEffect(() => {
+    if (!activeId) {
+      setCard(null);
+      return;
+    }
+    const p = rows.find((x) => x.id === activeId);
+    const el = rowRefs.current.get(activeId);
+    if (!p || !el) return;
+    el.scrollIntoView({ block: 'nearest' });
+    // 스크롤이 끝난 뒤의 좌표로 카드를 놓는다
+    const id = requestAnimationFrame(() => placeCard(p, el));
+    return () => cancelAnimationFrame(id);
+  }, [activeId, rows]);
 
   return (
     <div className="pt">
@@ -73,6 +101,10 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
           <div
             className="pt__row"
             key={p.id}
+            ref={(el) => {
+              if (el) rowRefs.current.set(p.id, el);
+              else rowRefs.current.delete(p.id);
+            }}
             data-active={p.id === activeId}
             onMouseEnter={(e) => openCard(p, e.currentTarget)}
             onMouseLeave={closeCard}
@@ -81,9 +113,9 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
             onBlur={closeCard}
           >
             <span className="pt__who">
-              <Headshot id={p.id} jersey={p.jersey} size={30} />
+              <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={30} />
               <b>{p.name}</b>
-              <em>{POS_LABEL[p.pos]}</em>
+              <em data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
             </span>
             <span className="num">{p.apps}</span>
             <span className="num">{p.starts}</span>
@@ -126,10 +158,10 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
       style={{ top: y, left, transform: 'translate(-100%, -50%)' }}
     >
       <div className="pcard__top">
-        <Headshot id={p.id} jersey={p.jersey} size={40} className="pcard__hs" />
+        <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={40} className="pcard__hs" />
         <div>
           <b>{p.name}</b>
-          <span>{POS_LABEL[p.pos]} · 시즌 {p.apps}경기</span>
+          <span><em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em> · 시즌 {p.apps}경기</span>
         </div>
       </div>
 

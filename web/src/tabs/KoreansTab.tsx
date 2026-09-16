@@ -187,7 +187,7 @@ function KoreanCard({
       onBlur={() => onHover(false)}
     >
       <div className="krc__top">
-        <Headshot id={p.id} label={p.nameKo.slice(0, 1)} size={46} className="krc__hs" />
+        <Headshot id={p.id} src={p.photo} label={p.nameKo.slice(0, 1)} size={46} className="krc__hs" />
         <div className="krc__id">
           <b>
             {p.nameKo}

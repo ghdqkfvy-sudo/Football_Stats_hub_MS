@@ -48,6 +48,10 @@ export const LEAGUE_ORDER: Record<string, number> = {
   'den.1': 10, 'eng.2': 11, 'usa.1': 12,
 };
 
-/** ESPN 선수 헤드샷 */
+/**
+ * ESPN 선수 헤드샷의 관용 주소.
+ * 팀 로스터가 알려 준 실제 주소(`AthleteInfo.photo`)가 없을 때만 쓰는
+ * 추측값이다 — 사진이 없는 선수는 404 가 나고 배지로 떨어진다.
+ */
 export const headshot = (athleteId: string) =>
   `https://a.espncdn.com/i/headshots/soccer/players/full/${athleteId}.png`;

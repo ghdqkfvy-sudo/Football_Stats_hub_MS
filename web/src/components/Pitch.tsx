@@ -11,10 +11,15 @@ interface Props {
   chem: number;
   activeId: string | null;
   onHover: (id: string | null) => void;
+  /** 클릭으로 고정 선택된 선수 — 마우스를 치워도 하이라이트가 남는다 */
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
 }
 
 /** 세로 축구장 — 아래가 골키퍼, 위가 공격 */
-export function Pitch({ slots, formation, verified, covered, chem, activeId, onHover }: Props) {
+export function Pitch({
+  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect,
+}: Props) {
   const rowCount = Math.max(...slots.map((s) => s.row)) + 1;
 
   return (
@@ -51,7 +56,9 @@ export function Pitch({ slots, formation, verified, covered, chem, activeId, onH
                   tag={labels[i] ?? ''}
                   color={LINE_COLOR[kind]}
                   active={!!s.player && s.player.id === activeId}
+                  selected={!!s.player && s.player.id === selectedId}
                   onHover={onHover}
+                  onSelect={onSelect}
                 />
               ))}
             </div>
@@ -65,13 +72,15 @@ export function Pitch({ slots, formation, verified, covered, chem, activeId, onH
 }
 
 function PlayerChip({
-  p, tag, color, active, onHover,
+  p, tag, color, active, selected, onHover, onSelect,
 }: {
   p: PlayerSeason | null;
   tag: string;
   color: string;
   active: boolean;
+  selected: boolean;
   onHover: (id: string | null) => void;
+  onSelect?: (id: string | null) => void;
 }) {
   if (!p) return <div className="chipbox" aria-hidden="true" />;
 
@@ -80,17 +89,28 @@ function PlayerChip({
     <div
       className="chipbox"
       data-active={active}
+      data-selected={selected}
       style={{ ['--pc' as string]: color }}
       onMouseEnter={() => onHover(p.id)}
       onMouseLeave={() => onHover(null)}
       onFocus={() => onHover(p.id)}
       onBlur={() => onHover(null)}
+      // 클릭하면 선택이 고정된다 — 오른쪽 선수 목록도 그 선수로 따라간다
+      onClick={() => onSelect?.(selected ? null : p.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.(selected ? null : p.id);
+        }
+      }}
+      role="button"
+      aria-pressed={selected}
       tabIndex={0}
       title={`${p.name} · ${p.apps}경기 ${p.goals}골 ${p.assists}도움`}
     >
       {tag && <span className="chipbox__tag">{tag}</span>}
       <span className="chipbox__ring">
-        <Headshot id={p.id} jersey={p.jersey} size={44} className="chipbox__hs" />
+        <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={44} className="chipbox__hs" />
         {p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
       </span>
       <span className="chipbox__name">{last}</span>

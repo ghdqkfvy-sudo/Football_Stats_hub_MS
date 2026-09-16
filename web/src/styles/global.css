@@ -215,7 +215,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .hero__tag[data-live='true'] {
   border-color: color-mix(in srgb, var(--loss) 65%, transparent);
   color: var(--loss);
-  animation: barPulse 1.7s ease-in-out infinite;
+  animation: pulse 1.7s ease-in-out infinite;
 }
 .hero__comp {
   display: inline-flex; align-items: center; gap: 7px;
@@ -458,17 +458,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   box-shadow: 0 0 16px color-mix(in srgb, var(--c) 80%, transparent);
 }
 
-/* 선택된 날짜의 경기 막대 — 펄스닷과 같은 리듬으로 커졌다 작아졌다 */
+/* 선택된 날짜의 경기 막대 — 펄스닷과 같은 리듬으로 상하 + 좌우로 함께
+   커졌다 작아졌다 한다. 날짜 칸 밖으로 넘쳐도 자르지 않는다
+   (.cal 이 overflow: visible 이고 .day 계열에도 클리핑이 없다). */
 .bar[data-sel='true'] {
   animation: barPulse 1.9s cubic-bezier(.4,0,.6,1) infinite;
   transform-origin: center;
+  position: relative; z-index: 3;
 }
 @keyframes barPulse {
-  0%, 100% { transform: scaleY(1); box-shadow: 0 1px 10px color-mix(in srgb, var(--c) 45%, transparent); }
-  50% { transform: scaleY(2.1); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 85%, transparent); }
+  0%, 100% {
+    transform: scale(1, 1);
+    box-shadow: 0 1px 10px color-mix(in srgb, var(--c) 45%, transparent);
+  }
+  50% {
+    transform: scale(1.22, 2.2);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--c) 90%, transparent);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bar[data-sel='true'] { animation: none; transform: scaleY(1.4); }
+  .bar[data-sel='true'] { animation: none; transform: scale(1.1, 1.4); }
 }
 
 /* 범례 */
@@ -860,7 +869,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .lb3 {
   display: grid; gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
+  /* stretch — 세 표가 항상 같은 높이가 된다(내용이 짧은 표는 아래가 빈다) */
+  align-items: stretch;
 }
 
 .lbc {
@@ -879,6 +889,22 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .lbc__n { font-size: 11px; color: var(--text-lo); }
 .lbc__none { margin: 0; padding: 16px 14px; font-size: 11.5px; color: var(--text-lo); }
 .lb3__note { margin: 12px 2px 0; font-size: 11px; color: var(--text-lo); line-height: 1.6; }
+
+/* 더보기 — 세 표를 한꺼번에 8위 → 15위로 펼친다 */
+.lb3__more {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; margin-top: 10px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: rgba(6,16,38,.26); color: var(--text-mid);
+  font-size: 12px; font-weight: 700; letter-spacing: -.01em; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.lb3__more:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, rgba(6,16,38,.26));
+}
+
 
 .lbc__list { list-style: none; margin: 0; padding: 0; }
 .lbc__row {
@@ -1142,11 +1168,19 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chipbox__stat em { font-style: normal; font-weight: 800; }
 .chipbox__stat em.g { color: #FFD75E; }
 .chipbox__stat em.a { color: #7FE3FF; }
+.chipbox { cursor: pointer; }
 .chipbox[data-active='true'] .chipbox__ring {
   transform: scale(1.12);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 35%, transparent),
               0 0 22px color-mix(in srgb, var(--pc) 75%, transparent);
 }
+/* 클릭으로 고정 선택한 선수 — 마우스를 치워도 남는다 */
+.chipbox[data-selected='true'] .chipbox__ring {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px var(--pc),
+              0 0 26px color-mix(in srgb, var(--pc) 85%, transparent);
+}
+.chipbox[data-selected='true'] .chipbox__name { color: var(--pc); font-weight: 800; }
 
 /* ── 선수 목록 ────────────────────────────────────── */
 
@@ -1202,6 +1236,22 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .pt__who em {
   font-style: normal; font-size: 9.5px; letter-spacing: .08em; color: var(--text-lo);
   border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 4px; flex: none;
+}
+
+/* 포지션 배지 색 — 피치의 자리 색(LINE_COLOR)과 같은 체계로 맞춘다
+   FW 빨강 · MF 청록 · DF 파랑 · GK 금색 */
+.pt__who em[data-pos='F'], .pcard__pos[data-pos='F'] { --pos: #FF4D5E; }
+.pt__who em[data-pos='M'], .pcard__pos[data-pos='M'] { --pos: #3FD7C0; }
+.pt__who em[data-pos='D'], .pcard__pos[data-pos='D'] { --pos: #4C8DFF; }
+.pt__who em[data-pos='G'], .pcard__pos[data-pos='G'] { --pos: #F5A524; }
+.pt__who em[data-pos] {
+  color: var(--pos);
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+  background: color-mix(in srgb, var(--pos) 12%, transparent);
+  font-weight: 700;
+}
+.pcard__pos {
+  font-style: normal; font-weight: 700; color: var(--pos);
 }
 .pt__min { color: var(--text-lo); }
 

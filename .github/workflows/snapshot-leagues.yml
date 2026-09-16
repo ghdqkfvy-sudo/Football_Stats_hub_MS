@@ -3,6 +3,12 @@ name: 데이터 스냅샷 (리그·스쿼드·코리안리거)
 # 리그당 20팀 × 2요청이라 무겁다. 순위는 경기가 끝난 뒤에만 바뀌므로
 # 1시간 주기로 충분하다. 급할 때는 workflow_dispatch 로 직접 돌린다.
 on:
+  # 코드를 푸시하면 리그·스쿼드도 같이 한 번 떠 준다.
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'web/public/data/**'
+      - '**.md'
   schedule:
     - cron: '7 * * * *'
   workflow_dispatch:
@@ -34,7 +40,12 @@ jobs:
         run: |
           git config user.name  "stats-bot"
           git config user.email "stats-bot@users.noreply.github.com"
-                   git pull --rebase --autostash
+          # 원격을 먼저 당겨 온 다음에 스테이징한다.
+          # (예전 순서는 add → pull --rebase --autostash 였는데, autostash 는
+          #  되살릴 때 스테이징 상태를 잃어버린다. 그래서 바로 다음 commit 이
+          #  "no changes added to commit" 으로 죽고, 데이터가 배포에 한 번도
+          #  반영되지 않았다.)
+          git pull --rebase --autostash
           git add web/public/data
           if git diff --staged --quiet; then
             echo "변경 없음"

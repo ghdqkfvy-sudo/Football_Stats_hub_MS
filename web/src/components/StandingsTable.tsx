@@ -91,7 +91,9 @@ export function StandingsTable({ table, matches, focusTeamId, zones = [] }: Prop
 
 /** 홈/원정 경기 결과 */
 function TeamSplit({ matches, teamId }: { matches: Match[]; teamId: string }) {
-  const r = teamResults(matches, teamId);
+  // 이 어코디언은 "결과"를 보는 자리다 — 아직 안 치른 예정 경기는 빼고
+  // 실제로 끝난 경기만 남긴다(일정은 일정 탭에 있다).
+  const r = teamResults(matches.filter((m) => m.status === 'finished'), teamId);
 
   if (!r.home.length && !r.away.length) {
     return <p className="nogoal" style={{ padding: '4px 0 10px' }}>이 대회 경기 기록이 아직 없습니다.</p>;
