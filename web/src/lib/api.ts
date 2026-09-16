@@ -15,6 +15,7 @@
  */
 import type { Match, StandingTable } from './types';
 import { matchesFromSchedule, goalsFromPlays, standingsFrom } from './normalize';
+import { roleOf } from './squad';
 import { load, proxy, feed, HAS_PROXY, type Loaded, type Source } from './feed';
 import type {
   AthleteInfo, Article, KoreanPlayer, Lineup, LineupEntry,
@@ -92,13 +93,9 @@ function statOf(e: any, name: string): number | undefined {
   return Number.isFinite(v) ? v : undefined;
 }
 
-const POS_OF = (abbr: string): AthleteInfo['pos'] => {
-  const a = abbr.toUpperCase();
-  if (a.startsWith('G')) return 'G';
-  if (a.startsWith('D') || a.includes('B') || a.startsWith('C')) return 'D';
-  if (a.startsWith('F') || a.startsWith('S') || a.startsWith('W')) return 'F';
-  return 'M';
-};
+/* ⚠️ 예전에는 "약어가 C 로 시작하면 수비수" 라는 규칙을 썼다가 CM·CAM·CF 가
+   전부 수비수로 분류됐다. 분류는 squad.ts 의 표(roleOf)에 맡긴다. */
+const POS_OF = (abbr: string): AthleteInfo['pos'] => roleOf(abbr)?.pos ?? 'M';
 
 /**
  * 라인업 정규화.

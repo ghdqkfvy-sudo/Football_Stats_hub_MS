@@ -150,6 +150,7 @@ export function matchFrom(ev: any): Match | null {
     awayPens: num(awayRaw?.shootoutScore),
     goals,
     goalsLoaded: goals.length > 0,
+    timeTBD: c.timeValid === false,
   };
 }
 

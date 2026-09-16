@@ -26,6 +26,12 @@ export interface AthleteInfo {
    * 하나뿐이다(경기 로스터·선수 프로필에는 사진 필드 자체가 없다).
    */
   photo?: string;
+  /**
+   * 팀 로스터가 주는 시즌 포지션 약어(대개 G/D/M/F).
+   * 경기 요약이 자리 약어(CD-L 등)를 안 주는 팀·대회가 있어서, 그때
+   * 줄 배치라도 맞추기 위한 대비책이다.
+   */
+  posAbbr?: string;
 }
 
 export interface Lineup {

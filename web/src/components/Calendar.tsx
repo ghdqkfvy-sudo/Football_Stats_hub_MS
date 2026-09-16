@@ -165,7 +165,7 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                 const done = m.status === 'finished';
                 const label = done
                   ? `${m.home.abbr} ${m.homeScore}-${m.awayScore} ${m.away.abbr}`
-                  : `${m.home.abbr} vs ${m.away.abbr} ${kstTime(m.kickoffUtc)} KST`;
+                  : `${m.home.abbr} vs ${m.away.abbr} ${m.timeTBD ? '시각 미정' : `${kstTime(m.kickoffUtc)} KST`}`;
                 return (
                   <div key={m.id} className="barwrap">
                     <button
@@ -222,7 +222,9 @@ function MatchBlock({ m }: { m: Match }) {
     <>
       <div className="pop__h">
         <CompBadge k={m.competition} dot={false} />
-        <span className="eyebrow">{done ? '경기 종료' : kstTime(m.kickoffUtc) + ' KST'}</span>
+        <span className="eyebrow">
+          {done ? '경기 종료' : m.timeTBD ? '시각 미정 (TBD)' : kstTime(m.kickoffUtc) + ' KST'}
+        </span>
       </div>
 
       <div className="pop__row" data-lost={homeLost}>

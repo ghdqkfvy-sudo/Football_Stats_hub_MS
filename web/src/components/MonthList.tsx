@@ -117,9 +117,9 @@ export function MonthList({
                     )}
                   </span>
                 ) : (
-                  <span className="ml__ko num">
+                  <span className="ml__ko num" data-tbd={m.timeTBD}>
                     {CLOCK}
-                    {kstTime(m.kickoffUtc)}
+                    {m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc)}
                   </span>
                 )}
               </span>

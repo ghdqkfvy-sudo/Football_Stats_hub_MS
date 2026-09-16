@@ -51,6 +51,12 @@ export interface Match {
   goals: GoalEvent[];
   /** 득점 이벤트를 아직 못 불러온 상태 (지연 로딩용) */
   goalsLoaded: boolean;
+  /**
+   * 킥오프 시각이 아직 정해지지 않았다(ESPN `competitions[0].timeValid === false`).
+   * 이때 ESPN 은 날짜만 맞추고 시각은 임의값으로 채워 보내므로, 그대로
+   * 표시하면 "전부 오후 5시" 처럼 보인다. 이런 경기는 TBD 로 적는다.
+   */
+  timeTBD?: boolean;
 }
 
 export interface StandingRow {

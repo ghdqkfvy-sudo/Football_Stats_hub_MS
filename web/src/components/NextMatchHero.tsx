@@ -117,8 +117,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
         {!done && (
           <div className="when__time">
             <span className="when__ico">{ALARM}</span>
-            <b className="num">{kstTime(match.kickoffUtc)}</b>
-            <em>KST</em>
+            <b className="num">{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
+            {!match.timeTBD && <em>KST</em>}
           </div>
         )}
       </div>

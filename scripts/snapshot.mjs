@@ -94,6 +94,31 @@ async function save(name, data) {
   console.log(`  ✓ ${name}`);
 }
 
+/* ── 포지션 약어 → 큰 분류 ────────────────────────────────
+   ⚠️ 예전에는 "약어가 C 로 시작하면 수비수" 같은 난폭한 규칙이었다.
+   그래서 CM(중앙 미드필더)·CAM·CF(센터포워드)가 전부 수비수가 됐고,
+   벨링엄이 DF, 첼시 스쿼드 대부분이 DF 로 나왔다.
+   web/src/lib/squad.ts 의 ROLE_BY_CORE 와 같은 표를 쓴다. */
+const POS_BY_CORE = {
+  G: 'G', GK: 'G',
+  B: 'D', CB: 'D', CD: 'D', D: 'D', WB: 'D', SW: 'D', DEF: 'D',
+  DM: 'M', CDM: 'M', DMF: 'M',
+  M: 'M', CM: 'M', MF: 'M', MID: 'M', CMF: 'M', WM: 'M',
+  AM: 'M', CAM: 'M', AMF: 'M',
+  W: 'F', WF: 'F',
+  F: 'F', FW: 'F', S: 'F', ST: 'F', CF: 'F', SS: 'F',
+};
+
+function posFromAbbr(abbr) {
+  const a = String(abbr ?? '').toUpperCase().trim();
+  if (!a) return 'M';
+  let core = a;
+  const suffix = a.match(/-(L|R|C)$/);
+  if (suffix) core = a.slice(0, a.length - 2);
+  else if (a.length > 1 && (a[0] === 'L' || a[0] === 'R')) core = a.slice(1);
+  return POS_BY_CORE[core] ?? POS_BY_CORE[a] ?? 'M';
+}
+
 /* ── 득점 상세 (스코어보드 details[]) ──────────────────────
    팀/리그 일정(schedule) 응답에는 애초에 details[]가 없다(다른 엔드포인트
    전용 필드). 그래서 정적 피드만 보는 배포(Worker 프록시 없음)에서는
@@ -188,8 +213,12 @@ async function teamPhotos(leagueSlug, teamId) {
   }
   for (const a of flat) {
     const id = String(a?.id ?? '');
-    const href = a?.headshot?.href;
-    if (id && href) map.set(id, String(href));
+    if (!id) continue;
+    map.set(id, {
+      photo: a?.headshot?.href ? String(a.headshot.href) : undefined,
+      // 시즌 포지션(G/D/M/F) — 경기 요약이 자리 약어를 안 줄 때의 대비책이다
+      posAbbr: a?.position?.abbreviation ? String(a.position.abbreviation) : undefined,
+    });
   }
   rosterPhotoCache.set(key, map);
   await sleep(150);
@@ -499,7 +528,7 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
      없으면 위키백과로 보충한다(carried 는 호출하는 쪽에서 넘겨준다). */
   let photo;
   if (league && clubId !== '0') {
-    photo = (await teamPhotos(league, clubId)).get(String(id));
+    photo = (await teamPhotos(league, clubId)).get(String(id))?.photo;
   }
   if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(String(prof?.displayName ?? nameKo));
 
@@ -658,13 +687,7 @@ async function main() {
         const v = Number(hit?.value ?? hit?.displayValue);
         return Number.isFinite(v) ? v : 0;
       };
-      const pos = (abbr = 'M') => {
-        const a = String(abbr).toUpperCase();
-        if (a.startsWith('G')) return 'G';
-        if (a.startsWith('D') || a.includes('B') || a.startsWith('C')) return 'D';
-        if (a.startsWith('F') || a.startsWith('S') || a.startsWith('W')) return 'F';
-        return 'M';
-      };
+      const pos = (abbr) => posFromAbbr(abbr);
 
       const entries = [];
       for (const e of mine.roster) {
@@ -710,9 +733,11 @@ async function main() {
       for (const id of Object.keys(athletes)) {
         // ESPN 사진이 있으면 1순위, 없으면 지난 스냅샷에서 이어받고,
         // 그것도 없으면 위키백과에서 찾아본다.
-        const espnUrl = photos.get(id);
-        if (espnUrl) {
-          athletes[id].photo = espnUrl;
+        const meta = photos.get(id);
+        // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
+        if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
+        if (meta?.photo) {
+          athletes[id].photo = meta.photo;
           fromEspn++;
         } else {
           const url = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);

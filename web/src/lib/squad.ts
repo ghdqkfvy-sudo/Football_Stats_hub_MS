@@ -158,8 +158,18 @@ export function buildSquad(
     p.modalSlot = entries.length
       ? Number(entries.sort((x, y) => y[1] - x[1])[0][0])
       : 0;
+    /* 자리 약어는 경기 요약에 있을 때만 쌓인다 — 같은 팀이라도 대회에 따라
+       아예 안 주는 응답이 있다(첼시가 그랬다). 그럴 땐 팀 로스터가 주는
+       시즌 포지션(G/D/M/F)이라도 쓴다. 줄은 맞고 좌우만 모르는 상태다. */
     const posEntries = Object.entries(p.posPlaces);
-    p.modalPos = posEntries.length ? posEntries.sort((x, y) => y[1] - x[1])[0][0] : '';
+    p.modalPos = posEntries.length
+      ? posEntries.sort((x, y) => y[1] - x[1])[0][0]
+      : (athletes[p.id]?.posAbbr ?? '');
+
+    /* 화면에 쓰는 큰 분류는 약어에서 다시 뽑는다 — 스냅샷이 예전 규칙으로
+       잘못 저장해 둔 값(CM·CAM·CF 를 수비수로 본)을 여기서 바로잡는다. */
+    const role = roleOf(p.modalPos);
+    if (role) p.pos = role.pos;
     p.points = p.goals + p.assists;
     p.byComp.sort((x, y) => y.goals + y.assists - (x.goals + x.assists) || y.apps - x.apps);
     /*
@@ -235,19 +245,37 @@ interface PosRole {
   depth: number;
   /** 음수=왼쪽, 0=중앙, 양수=오른쪽. 절대값이 클수록 더 바깥이다. */
   lateral: number;
+  /** 화면에 쓰는 큰 분류 */
+  pos: PlayerSeason['pos'];
 }
 
-const DEPTH_BY_CORE: Record<string, number> = {
-  G: 0, GK: 0,
-  B: 1, CB: 1, CD: 1, D: 1, WB: 1, SW: 1, DEF: 1,
-  DM: 2, CDM: 2, DMF: 2,
-  M: 3, CM: 3, MF: 3, MID: 3, CMF: 3,
-  AM: 4, CAM: 4, AMF: 4, W: 4, WF: 4, WM: 4,
-  F: 5, FW: 5, S: 5, ST: 5, CF: 5, SS: 5,
+/**
+ * 약어의 "몸통"(좌우 표시를 뗀 부분) → 깊이와 큰 분류.
+ *
+ * ⚠️ 예전에는 `약어가 C 로 시작하면 수비수` 같은 난폭한 규칙을 썼다.
+ * 그래서 CM(중앙 미드필더)·CAM·CF(센터포워드)가 전부 수비수로 분류됐고,
+ * 벨링엄이 DF 로, 첼시 스쿼드 대부분이 DF 로 나왔다. 약어는 이렇게
+ * 표로 정확히 맞춰야 한다.
+ */
+const ROLE_BY_CORE: Record<string, { depth: number; pos: PlayerSeason['pos'] }> = {
+  G: { depth: 0, pos: 'G' }, GK: { depth: 0, pos: 'G' },
+  B: { depth: 1, pos: 'D' }, CB: { depth: 1, pos: 'D' }, CD: { depth: 1, pos: 'D' },
+  D: { depth: 1, pos: 'D' }, WB: { depth: 1, pos: 'D' }, SW: { depth: 1, pos: 'D' },
+  DEF: { depth: 1, pos: 'D' },
+  DM: { depth: 2, pos: 'M' }, CDM: { depth: 2, pos: 'M' }, DMF: { depth: 2, pos: 'M' },
+  M: { depth: 3, pos: 'M' }, CM: { depth: 3, pos: 'M' }, MF: { depth: 3, pos: 'M' },
+  MID: { depth: 3, pos: 'M' }, CMF: { depth: 3, pos: 'M' }, WM: { depth: 3, pos: 'M' },
+  AM: { depth: 4, pos: 'M' }, CAM: { depth: 4, pos: 'M' }, AMF: { depth: 4, pos: 'M' },
+  W: { depth: 4, pos: 'F' }, WF: { depth: 4, pos: 'F' },
+  F: { depth: 5, pos: 'F' }, FW: { depth: 5, pos: 'F' }, S: { depth: 5, pos: 'F' },
+  ST: { depth: 5, pos: 'F' }, CF: { depth: 5, pos: 'F' }, SS: { depth: 5, pos: 'F' },
 };
 
+/** 팀 로스터가 주는 큰 분류(G/D/M/F) — 줄은 맞지만 좌우는 알 수 없다 */
+const COARSE = new Set(['G', 'D', 'M', 'F']);
+
 /** 'CD-L' → {depth:1, lateral:-1} · 'LB' → {depth:1, lateral:-2} */
-function roleOf(abbr: string): PosRole | null {
+export function roleOf(abbr: string): PosRole | null {
   const a = String(abbr ?? '').toUpperCase().trim();
   if (!a) return null;
 
@@ -265,15 +293,15 @@ function roleOf(abbr: string): PosRole | null {
     core = a.slice(1);
   }
 
-  const depth = DEPTH_BY_CORE[core] ?? DEPTH_BY_CORE[a];
-  return depth === undefined ? null : { depth, lateral };
+  const hit = ROLE_BY_CORE[core] ?? ROLE_BY_CORE[a];
+  return hit ? { depth: hit.depth, lateral, pos: hit.pos } : null;
 }
 
 /** 약어가 없을 때의 폴백 — 좌우 정보가 없어 줄 안 순서는 정할 수 없다 */
 const DEPTH_BY_POS: Record<PlayerSeason['pos'], number> = { G: 0, D: 1, M: 3, F: 5 };
 
 const roleFor = (p: PlayerSeason): PosRole =>
-  roleOf(p.modalPos) ?? { depth: DEPTH_BY_POS[p.pos], lateral: 0 };
+  roleOf(p.modalPos) ?? { depth: DEPTH_BY_POS[p.pos], lateral: 0, pos: p.pos };
 
 export function bestEleven(players: PlayerSeason[], formation: string | null): {
   slots: Slot[];
@@ -338,10 +366,13 @@ export function bestEleven(players: PlayerSeason[], formation: string | null): {
     }
   });
 
-  /* ESPN 자리 약어를 실제로 가진 선수로만 채워졌는지 — 하나라도 비면
-     좌우 순서를 장담할 수 없으므로 화면에 "포지션 그룹 배치"라고 알린다. */
+  /* 좌우까지 아는 상세 약어(CD-L·AM-R…)로만 채워졌는지 확인한다.
+     팀 로스터의 큰 분류(G/D/M/F)로 메운 자리가 하나라도 있으면 줄은
+     맞아도 좌우는 장담할 수 없으므로 "포지션 그룹 배치"라고 알린다. */
   const filled = slots.map((s) => s.player).filter((p): p is PlayerSeason => !!p);
-  const verified = filled.length === 11 && filled.every((p) => !!roleOf(p.modalPos));
+  const verified =
+    filled.length === 11 &&
+    filled.every((p) => !!roleOf(p.modalPos) && !COARSE.has(p.modalPos.toUpperCase()));
 
   return { slots, formation: shape, verified };
 }
