@@ -8,7 +8,7 @@
  */
 import type { GoalEvent, Match, MatchStatus, StandingRow, StandingTable, TeamRef } from './types';
 import { teamName } from '../config/names';
-import { CREST } from '../config/targets';
+import { CREST, TEAM_OVERRIDE } from '../config/targets';
 
 const num = (v: unknown): number | undefined => {
   const n = typeof v === 'string' ? parseFloat(v) : typeof v === 'number' ? v : NaN;
@@ -24,12 +24,13 @@ export function teamFrom(raw: any, rank?: number): TeamRef {
   const id = String(pick(t.id, raw?.id, '') ?? '');
   const en = String(pick(t.displayName, t.name, t.shortDisplayName, 'Unknown'));
   const [full, short] = teamName(id, en, t.shortDisplayName ? String(t.shortDisplayName) : undefined);
+  const override = TEAM_OVERRIDE[id];
   return {
     id,
     name: full,
     shortName: short,
-    abbr: String(pick(t.abbreviation, t.shortDisplayName, short.slice(0, 3))),
-    logo: pick<string>(t.logos?.[0]?.href, t.logo) ?? (id ? CREST(id) : ''),
+    abbr: override?.abbr ?? String(pick(t.abbreviation, t.shortDisplayName, short.slice(0, 3))),
+    logo: override?.logo ?? pick<string>(t.logos?.[0]?.href, t.logo) ?? (id ? CREST(id) : ''),
     rank,
   };
 }

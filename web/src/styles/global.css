@@ -916,8 +916,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .lbc__list { list-style: none; margin: 0; padding: 0; }
 .lbc__row {
-  display: grid; grid-template-columns: 18px 18px minmax(0, 1fr) 46px;
-  align-items: center; gap: 4px 8px; padding: 9px 14px;
+  display: grid; grid-template-columns: 22px 18px minmax(0, 1fr) 48px;
+  align-items: center; gap: 8px; padding: 7px 14px;
   border-bottom: 1px solid rgba(150,180,230,.07);
 }
 .lbc__row:last-child { border-bottom: 0; }
@@ -930,24 +930,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-shadow: 0 1px 10px rgba(4,12,28,.9);
 }
 
-/* 게이지 — 이름 아래 전체 폭으로 깔린다 */
-.lbc__meter {
-  grid-column: 1 / 4; display: block; height: 7px; border-radius: 999px;
-  background: rgba(255,255,255,.07); overflow: hidden; margin-top: -2px;
-}
-.lbc__meter i {
-  display: block; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), var(--secondary));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent),
-              0 0 22px color-mix(in srgb, var(--accent) 28%, transparent);
-  transition: width .4s cubic-bezier(.22,.7,.3,1);
-}
-/* 도움은 보조 컬러에서 시작해 accent 로 끝난다 */
-.lbc[data-rev='true'] .lbc__meter i {
-  background: linear-gradient(90deg, var(--secondary), var(--accent));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--secondary) 60%, transparent),
-              0 0 22px color-mix(in srgb, var(--secondary) 28%, transparent);
-}
+/* 게이지는 쓰지 않는다 — 순위표는 숫자를 정확히 비교하는 자리라
+   막대가 시선을 흐린다. 줄 높이도 그만큼 낮췄다. */
 
 /* 기록 숫자 — 팀 컬러 */
 .lbc__v {
@@ -1014,8 +998,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 /* 대한민국: 흰 깃면을 뺀 태극·4괘만 남긴 아트워크 */
 .bgart[data-kind='flag'] .bgart__img {
-  background-size: min(1500px, 128%) auto;
-  background-position: 50% -2%;
+  /* 태극 문양이 화면 가운데에 오도록 — 예전 값은 위로 너무 끌어올려
+     깃발이 우상단에 몰린 것처럼 보였다. */
+  background-size: min(1400px, 118%) auto;
+  background-position: 50% 30%;
   filter: saturate(1) brightness(1);
 }
 /* 팀 그라데이션이 75% 를 덮어 사진은 25% 만 남는다 */
@@ -1057,7 +1043,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 @media (max-width: 640px) {
   .bgart__img { background-position: 50% 16%; }
-  .bgart[data-kind='flag'] .bgart__img { background-size: 210% auto; background-position: 58% -1%; }
+  .bgart[data-kind='flag'] .bgart__img { background-size: 175% auto; background-position: 50% 26%; }
   /* 좁은 화면은 글자 가독성을 위해 그라데이션을 조금 더 얹는다 */
   .bgart__veil { opacity: .80; }
   .day__bars { gap: 3px; }
@@ -1231,7 +1217,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* 베스트 11(11명)까지는 그대로 보이고 나머지는 스크롤로 내려 본다.
    호버 카드는 fixed 로 그려서 이 스크롤에 잘리지 않는다. */
-.pt__list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+/* 스크롤바가 생기면 본문만 왼쪽으로 밀려 머리글과 어긋난다.
+   자리를 항상 비워 두면 스크롤 여부와 무관하게 열이 맞는다. */
+.pt__list {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-gutter: stable;
+}
+.pt__head { scrollbar-gutter: stable; }
 .pt__list::-webkit-scrollbar { width: 8px; }
 .pt__list::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
 .pt__row {
@@ -1737,3 +1729,30 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* 피치 칩의 선발 출전 수 */
 .chipbox__stat em.s { color: var(--text-mid); font-weight: 700; }
+
+/* 팀 조직력 설명 툴팁 — 마우스를 올리면 산출식이 뜬다 */
+.pitch__chem { position: relative; }
+.pitch__chem .chem__tip {
+  position: absolute; left: 0; top: calc(100% + 8px); z-index: 30;
+  width: min(300px, 78vw); padding: 11px 13px;
+  border: 1px solid var(--line-2); border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--ink-950) 97%, transparent);
+  backdrop-filter: blur(18px); box-shadow: 0 18px 44px rgba(0,0,0,.7);
+  font-size: 11.5px; line-height: 1.65; color: var(--text-mid);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity .14s, transform .14s, visibility .14s;
+  pointer-events: none;
+}
+.pitch__chem:hover .chem__tip, .pitch__chem:focus-within .chem__tip {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+.chem__tip b { color: var(--text-hi); }
+.chem__tip code {
+  display: block; margin: 6px 0; padding: 6px 8px; border-radius: 6px;
+  background: rgba(255,255,255,.05); color: var(--accent);
+  font-size: 11px; letter-spacing: -.01em;
+}
+
+/* 이달의 경기 — 상대 팀 득점은 흰색으로 구분한다 */
+.gl__row[data-opp='true'] .gl__s { color: #fff; }
+.gl__row[data-opp='true'] .gl__t { color: rgba(255,255,255,.72); }

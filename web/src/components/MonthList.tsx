@@ -129,7 +129,7 @@ export function MonthList({
               <div className="ml__panel">
                 <div className="ml__panelIn">
                   <div className="ml__goals">
-                    <GoalSheet m={m} loading={loadingGoals.has(m.id)} />
+                    <GoalSheet m={m} loading={loadingGoals.has(m.id)} focusTeamId={focusTeamId} />
                   </div>
                 </div>
               </div>

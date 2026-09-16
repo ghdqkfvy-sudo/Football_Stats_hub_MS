@@ -37,12 +37,15 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     };
   }, [target.espnTeamId, matches]);
 
-  const { players, formation, covered, formationTally } = useMemo(
+  const { players, formation, covered, formationTally, slotShape } = useMemo(
     () => buildSquad(matches, squad?.lineups ?? {}, squad?.athletes ?? {}, target.espnTeamId),
     [matches, squad, target.espnTeamId],
   );
 
-  const xi = useMemo(() => bestEleven(players, formation), [players, formation]);
+  const xi = useMemo(
+    () => bestEleven(players, formation, slotShape),
+    [players, formation, slotShape],
+  );
 
   /** 베스트 11(공격→골키퍼) 먼저, 나머지는 선발·출전·득점 순 */
   const ordered = useMemo(() => orderForList(players, xi.slots), [players, xi]);

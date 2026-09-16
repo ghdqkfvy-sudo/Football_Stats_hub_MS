@@ -220,7 +220,13 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
             <span className="pcard__sc num">{g.scoreline}</span>
             <span className="pcard__when num">{kstShortDate(g.kickoffUtc)}</span>
             <span className="pcard__ga num">
-              {g.started ? '선발' : '교체'} {g.minutes}'
+              {/* 선발이면 "선발 90'", 교체면 "교체 60'(30)" —
+                  몇 분에 들어가 몇 분을 뛰었는지가 한눈에 보인다. */}
+              {g.started
+                ? `선발 ${g.minutes}'${g.subOut !== undefined ? ' 교체아웃' : ''}`
+                : g.subIn !== undefined
+                  ? `교체 ${g.subIn}'(${g.minutes})`
+                  : `교체 ${g.minutes}'`}
               {g.goals > 0 && <em className="pcard__gg">{g.goals}G</em>}
               {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
             </span>

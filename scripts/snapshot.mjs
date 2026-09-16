@@ -40,6 +40,14 @@ const seasonYear = (d = new Date()) => {
 };
 const SEASON = seasonYear();
 
+/**
+ * 스냅샷 코드 버전.
+ * 산출물(meta.json 과 각 파일)에 같이 적어 두면 "이 데이터가 어느 코드로
+ * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
+ * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
+ */
+const CODE_VERSION = 'snap-11';
+
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
 
@@ -928,7 +936,9 @@ async function main() {
         await sleep(150);
       }
       await save(`squad-${t.slug}.json`, {
-        team: t.id, lineups, athletes, fetchedAt: new Date().toISOString(),
+        team: t.id, lineups, athletes,
+        codeVersion: CODE_VERSION,
+        fetchedAt: new Date().toISOString(),
       });
       console.log(
         `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
@@ -959,6 +969,7 @@ async function main() {
   await save(ONLY === 'slow' ? 'meta-slow.json' : 'meta.json', {
     generatedAt: new Date().toISOString(),
     only: ONLY,
+    codeVersion: CODE_VERSION,
   });
   console.log('완료');
 }

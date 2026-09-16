@@ -57,6 +57,10 @@ export interface RecentGame {
   result: 'W' | 'D' | 'L';
   minutes: number;
   started: boolean;
+  /** 교체 투입 분 (선발이면 undefined) — "교체 60'(30)" 표기에 쓴다 */
+  subIn?: number;
+  /** 교체 아웃 분 (끝까지 뛰었으면 undefined) */
+  subOut?: number;
   goals: number;
   assists: number;
 }
@@ -96,6 +100,12 @@ export function buildSquad(
   covered: number;
   /** 포메이션별 채택 경기 수 (많은 순) — 화면에 근거로 보여 준다 */
   formationTally: { shape: string; n: number }[];
+  /**
+   * 최다 채택 포메이션에서 실제로 쓰인 자리 구성.
+   * 예: 3-4-2-1 → [{CD-L,1},{CD,1},{CD-R,1},{LM,1},{CM,2},{RM,1},{AM-L,1},{AM-R,1},{F,1},{G,1}]
+   * 베스트 11 은 이 자리들을 "그 자리에서 실제로 가장 많이 선발한 선수" 로 채운다.
+   */
+  slotShape: { abbr: string; n: number }[];
 } {
   const byId = new Map<string, PlayerSeason>();
   let covered = 0;
@@ -123,6 +133,36 @@ export function buildSquad(
     .sort((a, b) => b[1] - a[1])
     .map(([shape, n]) => ({ shape, n }));
   const formation = formationTally[0]?.shape ?? null;
+
+  /*
+   * 그 포메이션 경기들에서 자리 구성을 뽑는다.
+   * 경기마다 선발 자리 약어를 세고, 약어별 **최빈 등장 수**를 자리 수로 본다.
+   * (한 경기만 보면 부상·로테이션이 그대로 반영되므로 최빈값을 쓴다)
+   */
+  const perMatch: Record<string, number>[] = [];
+  for (const m of sorted) {
+    if (m.competition === 'club.friendly') continue;
+    const lu = lineups[m.id];
+    if (!lu || lu.teamId !== teamId || lu.formation !== formation) continue;
+    const c: Record<string, number> = {};
+    for (const e of lu.entries) {
+      const starter = e[2];
+      const abbr = e[7];
+      if (starter && abbr) c[abbr] = (c[abbr] ?? 0) + 1;
+    }
+    if (Object.keys(c).length) perMatch.push(c);
+  }
+
+  const slotShape: { abbr: string; n: number }[] = [];
+  for (const abbr of new Set(perMatch.flatMap((c) => Object.keys(c)))) {
+    const tally = new Map<number, number>();
+    for (const c of perMatch) {
+      const v = c[abbr] ?? 0;
+      tally.set(v, (tally.get(v) ?? 0) + 1);
+    }
+    const mode = [...tally.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+    if (mode > 0) slotShape.push({ abbr, n: mode });
+  }
 
   for (const m of sorted) {
     // 클럽 친선경기는 팀 컨디션 점검용이라 공식 기록에서 뺀다.
@@ -199,6 +239,8 @@ export function buildSquad(
         result,
         minutes: mins,
         started: starter,
+        subIn: !starter && inMin != null ? inMin : undefined,
+        subOut: outMin != null ? outMin : undefined,
         goals: g,
         assists: a,
       });
@@ -244,7 +286,7 @@ export function buildSquad(
 
   players.sort((a, b) => b.score - a.score);
 
-  return { players, formation, covered, formationTally };
+  return { players, formation, covered, formationTally, slotShape };
 }
 
 /**
@@ -355,35 +397,132 @@ const DEPTH_BY_POS: Record<PlayerSeason['pos'], number> = { G: 0, D: 1, M: 3, F:
 const roleFor = (p: PlayerSeason): PosRole =>
   roleOf(p.modalPos) ?? { depth: DEPTH_BY_POS[p.pos], lateral: 0, pos: p.pos };
 
-export function bestEleven(players: PlayerSeason[], formation: string | null): {
+export interface SlotSpec { abbr: string; n: number }
+
+/**
+ * 베스트 11 — **실제로 선 자리 기록**으로 채운다.
+ *
+ * 예전에는 "깊이(수비→공격) 가 비슷하고 시즌 점수가 높은 선수" 를 줄마다
+ * 잘라 넣었다. 그러면 그 자리에 한 번도 선 적 없는 선수가 들어간다 —
+ * 리그 28분만 뛴 선수가 베스트 11 에 올라오는 식이었다.
+ *
+ * 지금은 이렇게 한다.
+ *  1) 최다 채택 포메이션에서 실제로 쓰인 자리 구성(slotShape)을 받는다.
+ *     3-4-2-1 이면 CD-L·CD·CD-R·LM·CM×2·RM·AM-L·AM-R·F·G 같은 목록이다.
+ *  2) (선수, 자리) 쌍을 **그 자리 선발 횟수가 많은 순**으로 확정한다.
+ *     같은 횟수면 시즌 점수로 가른다.
+ *  3) 그래도 빈 자리는 같은 깊이대의 남은 선수로 메운다(마지막 수단).
+ *  4) 줄은 자리의 깊이로 묶고, 줄 안 순서는 좌우(-L/-R)로 세운다.
+ *
+ * 자리 기록이 아예 없으면(포지션 약어를 안 주는 대회) 포메이션 문자열로
+ * 줄을 만들고 깊이로 채우는 예전 방식으로 떨어진다.
+ */
+export function bestEleven(
+  players: PlayerSeason[],
+  formation: string | null,
+  slotShape?: SlotSpec[],
+): {
   slots: Slot[];
   formation: string;
   verified: boolean;
 } {
   const shape = formation ?? '4-3-3';
+
+  if (slotShape?.length) {
+    const byAbbr = fillByActualSlots(players, slotShape);
+    if (byAbbr) return { ...byAbbr, formation: shape };
+  }
+  return { ...fillByDepth(players, shape), formation: shape };
+}
+
+/** 실제 자리 기록으로 채우기 */
+function fillByActualSlots(
+  players: PlayerSeason[],
+  slotShape: SlotSpec[],
+): { slots: Slot[]; verified: boolean } | null {
+  // 자리 하나하나로 펼친다 (CM 2명이면 CM 자리 두 개)
+  const seats: { abbr: string; player: PlayerSeason | null }[] = [];
+  for (const { abbr, n } of slotShape) {
+    for (let k = 0; k < n; k++) seats.push({ abbr, player: null });
+  }
+  if (!seats.length) return null;
+
+  /* (선수, 자리) 주장 강도 = 그 자리에서의 선발 횟수.
+     강한 주장부터 확정해야 "그 자리 단골" 이 먼저 앉는다. */
+  type Claim = { abbr: string; p: PlayerSeason; n: number };
+  const claims: Claim[] = [];
+  const needed = new Set(slotShape.map((x) => x.abbr));
+  for (const p of players) {
+    for (const [abbr, n] of Object.entries(p.posPlaces)) {
+      if (needed.has(abbr) && n > 0) claims.push({ abbr, p, n });
+    }
+  }
+  claims.sort((a, b) => b.n - a.n || b.p.score - a.p.score);
+
+  const used = new Set<string>();
+  for (const c of claims) {
+    if (used.has(c.p.id)) continue;
+    const seat = seats.find((s) => s.abbr === c.abbr && !s.player);
+    if (!seat) continue;
+    seat.player = c.p;
+    used.add(c.p.id);
+  }
+
+  // 남은 빈 자리는 같은 깊이대의 남은 선수 중 점수 순으로 (마지막 수단)
+  for (const seat of seats) {
+    if (seat.player) continue;
+    const want = roleOf(seat.abbr)?.depth ?? 3;
+    const cand = players
+      .filter((p) => !used.has(p.id))
+      .sort(
+        (a, b) =>
+          Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||
+          b.score - a.score,
+      )[0];
+    if (cand) {
+      seat.player = cand;
+      used.add(cand.id);
+    }
+  }
+
+  /* 줄 묶기 — 자리의 깊이가 같으면 같은 줄이다.
+     3-4-2-1 이면 G(0) / CD·CD-L·CD-R(1) / LM·CM·RM(3) / AM-L·AM-R(4) / F(5) */
+  const depthOf = (abbr: string) => roleOf(abbr)?.depth ?? 3;
+  const lateralOf = (abbr: string) => roleOf(abbr)?.lateral ?? 0;
+  const depths = [...new Set(seats.map((s) => depthOf(s.abbr)))].sort((a, b) => a - b);
+
+  const slots: Slot[] = [];
+  depths.forEach((d, ri) => {
+    const row = seats
+      .filter((s) => depthOf(s.abbr) === d)
+      .sort((a, b) => lateralOf(a.abbr) - lateralOf(b.abbr));
+    row.forEach((s, ci) => {
+      slots.push({ row: ri, col: ci, rowCount: row.length, player: s.player, label: s.abbr });
+    });
+  });
+
+  const filled = slots.filter((s) => s.player).length;
+  // 좌우까지 아는 상세 약어로 채워졌는지 (G/D/M/F 만으로는 좌우를 장담 못 한다)
+  const verified =
+    filled === slots.length &&
+    slotShape.every((x) => !!roleOf(x.abbr) && !COARSE.has(x.abbr.toUpperCase()));
+
+  return { slots, verified };
+}
+
+/** 자리 기록이 없을 때 — 포메이션 문자열의 줄 수에 깊이로 맞춰 채운다 */
+function fillByDepth(players: PlayerSeason[], shape: string): { slots: Slot[]; verified: boolean } {
   const counts = shape.split('-').map(Number).filter((n) => Number.isFinite(n) && n > 0);
-  const lines = [1, ...counts]; // 골키퍼 한 줄 + 포메이션이 말하는 줄들
+  const lines = [1, ...counts];
 
   const used = new Set<string>();
   const slots: Slot[] = [];
-
-  /*
-   * 각 줄이 "어느 깊이의 선수를 원하는지"를 먼저 정한다.
-   * 맨 뒷줄은 수비(1), 맨 앞줄은 최전방(5), 사이는 고르게 나눈다.
-   *   4-2-3-1 → 줄별 목표 깊이 1 · 2.33 · 3.67 · 5
-   *
-   * ⚠️ 예전에는 "깊이 순으로 정렬해 앞에서부터 잘라 넣는" 방식이었는데,
-   * 스쿼드에 수비수가 8명이면 4명을 쓰고 남은 4명이 그다음 줄(중원)까지
-   * 밀고 들어와 11명이 죄다 수비수가 되는 사고가 났다. 줄마다 목표 깊이를
-   * 두고 "그 깊이에 가까운 선수"를 뽑아야 한다.
-   */
   const outfieldRows = lines.length - 1;
   const idealDepth = (ri: number) =>
     outfieldRows <= 1 ? 3 : 1 + ((ri - 1) * 4) / (outfieldRows - 1);
 
   lines.forEach((n, ri) => {
     const picked: PlayerSeason[] = [];
-
     if (ri === 0) {
       const gk =
         players.find((p) => roleFor(p).depth === 0 && !used.has(p.id)) ??
@@ -391,42 +530,33 @@ export function bestEleven(players: PlayerSeason[], formation: string | null): {
       if (gk) picked.push(gk);
     } else {
       const want = idealDepth(ri);
-      const cand = players
-        .filter((p) => !used.has(p.id) && roleFor(p).depth !== 0)
-        // 목표 깊이에 가까운 순 → 같으면 출전 기록이 좋은 순
-        .sort(
-          (a, b) =>
-            Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||
-            b.score - a.score,
-        );
-      picked.push(...cand.slice(0, n));
+      picked.push(
+        ...players
+          .filter((p) => !used.has(p.id) && roleFor(p).depth !== 0)
+          .sort(
+            (a, b) =>
+              Math.abs(roleFor(a).depth - want) - Math.abs(roleFor(b).depth - want) ||
+              b.score - a.score,
+          )
+          .slice(0, n),
+      );
     }
     for (const p of picked) used.add(p.id);
-
-    // 줄 안에서는 왼쪽 → 중앙 → 오른쪽 순으로 세운다
     picked.sort((a, b) => roleFor(a).lateral - roleFor(b).lateral || b.score - a.score);
-
     for (let ci = 0; ci < n; ci++) {
-      const player = picked[ci] ?? null;
       slots.push({
-        row: ri,
-        col: ci,
-        rowCount: n,
-        player,
-        label: player?.modalPos ?? '',
+        row: ri, col: ci, rowCount: n,
+        player: picked[ci] ?? null,
+        label: picked[ci]?.modalPos ?? '',
       });
     }
   });
 
-  /* 좌우까지 아는 상세 약어(CD-L·AM-R…)로만 채워졌는지 확인한다.
-     팀 로스터의 큰 분류(G/D/M/F)로 메운 자리가 하나라도 있으면 줄은
-     맞아도 좌우는 장담할 수 없으므로 "포지션 그룹 배치"라고 알린다. */
   const filled = slots.map((s) => s.player).filter((p): p is PlayerSeason => !!p);
   const verified =
     filled.length === 11 &&
     filled.every((p) => !!roleOf(p.modalPos) && !COARSE.has(p.modalPos.toUpperCase()));
-
-  return { slots, formation: shape, verified };
+  return { slots, verified };
 }
 
 

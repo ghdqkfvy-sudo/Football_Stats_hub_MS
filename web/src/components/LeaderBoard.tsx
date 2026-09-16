@@ -11,11 +11,8 @@ import { Crest } from './Crest';
  * 기본은 8등까지, "더보기" 를 누르면 15등까지 펼친다. 세 표는 그리드
  * stretch 로 항상 같은 높이가 된다.
  *
- * 게이지는 팀 컬러 그라데이션이다. 세 지표가 전부 accent 하나로 칠해지면
- * 막대만 봐서는 어떤 표인지 구분이 안 되므로, 도움만 방향을 뒤집는다.
- *   득점 · 공격포인트 : accent → secondary
- *   도움            : secondary → accent
- * 기준값(100%)은 각 표의 1위, 즉 그 선수단의 최고 기록이다.
+ * 막대(게이지)는 쓰지 않는다 — 순위표는 숫자를 정확히 비교하는 자리라
+ * 막대가 오히려 시선을 흐린다. 등수·엠블럼·이름·기록만 남긴 표다.
  */
 
 type Key = 'goals' | 'assists' | 'points';
@@ -98,9 +95,6 @@ function Column({
   col: (typeof COLS)[number];
   shown: Ranked[];
 }) {
-  // 기준값은 이 선수단의 최고 기록 — 절대값이 아니라 팀 안에서의 비중으로 읽힌다
-  const max = shown[0]?.r[col.key] ?? 1;
-
   return (
     <section className="lbc" data-rev={col.reverse}>
       <header className="lbc__h">
@@ -117,9 +111,6 @@ function Column({
               <span className="lbc__rank num">{rk}</span>
               {r.team ? <Crest team={r.team} size={18} /> : <span className="lbc__pad" />}
               <span className="lbc__name">{r.name}</span>
-              <span className="lbc__meter" aria-hidden="true">
-                <i style={{ width: `${Math.max(7, (r[col.key] / max) * 100)}%` }} />
-              </span>
               <span className="lbc__v num">
                 {r[col.key]}
                 <em>{col.suffix}</em>

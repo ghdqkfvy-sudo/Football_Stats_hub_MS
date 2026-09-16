@@ -6,7 +6,14 @@ import { assignAssists, leftoverAssists } from '../lib/assists';
  * `14'  RMA  Kylian Mbappé   A Brahim Díaz` 형태로, 분·팀·득점자·어시스트가
  * 같은 열에 정렬돼 여러 골이 있어도 눈이 한 줄로 흐른다.
  */
-export function GoalSheet({ m, loading }: { m: Match; loading?: boolean }) {
+export function GoalSheet({
+  m, loading, focusTeamId,
+}: {
+  m: Match;
+  loading?: boolean;
+  /** 우리가 보고 있는 팀 — 상대 팀 득점은 흰색으로 구분한다 */
+  focusTeamId?: string;
+}) {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -39,7 +46,11 @@ export function GoalSheet({ m, loading }: { m: Match; loading?: boolean }) {
     <>
     <ul className="gl">
       {m.goals.map((g, i) => (
-        <li className="gl__row" key={i}>
+        <li
+          className="gl__row"
+          key={i}
+          data-opp={focusTeamId && g.teamId ? g.teamId !== focusTeamId : undefined}
+        >
           <span className="gl__m num">{g.clock}</span>
           <span className="gl__t">{abbrOf(g.teamId)}</span>
           <span className="gl__s">

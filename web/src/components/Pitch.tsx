@@ -43,12 +43,20 @@ export function Pitch({
         </span>
       </div>
 
-      <div className="pitch__chem">
+      <div className="pitch__chem" tabIndex={0}>
         <span>팀 조직력</span>
         <i>
           <u style={{ width: `${chem}%` }} />
         </i>
         <b className="num">{chem}</b>
+
+        <div className="chem__tip" role="tooltip">
+          <b>같은 11명이 얼마나 꾸준히 함께 선발됐는지</b>를 0~100 으로 나타낸 값입니다.
+          <code>평균( 각 선수의 선발 횟수 ÷ 라인업 확보 경기 수 ) × 100</code>
+          베스트 11 열한 명 각각이 전체 경기 중 몇 번이나 선발로 나섰는지를
+          평균 낸 것이라, 주전이 고정된 팀일수록 100 에 가까워지고 로테이션이
+          잦으면 낮아집니다. (기준 경기 수 {covered}경기)
+        </div>
       </div>
 
       <div className="pitch__field">
@@ -121,7 +129,9 @@ function PlayerChip({
     >
       {tag && <span className="chipbox__tag">{tag}</span>}
       <span className="chipbox__ring">
-        <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={44} className="chipbox__hs" />
+        {/* 등번호는 칩 자체 배지(chipbox__no)로만 그린다 —
+            Headshot 에도 배지를 맡기면 같은 숫자가 두 번 찍힌다. */}
+        <Headshot id={p.id} src={p.photo} label={String(p.jersey)} size={44} className="chipbox__hs" />
         {p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
       </span>
       <span className="chipbox__name">{last}</span>

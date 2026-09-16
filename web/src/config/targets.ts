@@ -63,6 +63,15 @@ export const CREST = (id: string) => `https://a.espncdn.com/i/teamlogos/soccer/5
 export const COUNTRY_CREST = (code: string) =>
   `https://a.espncdn.com/i/teamlogos/countries/500/${code}.png`;
 
+/**
+ * ESPN 이 주는 값이 아쉬운 팀만 교정한다.
+ * 국가대표는 엠블럼 대신 **국기**가 알아보기 쉽고, 약어도 ESPN 은 'KR' 을
+ * 주지만 축구에서는 'KOR' 이 통용된다.
+ */
+export const TEAM_OVERRIDE: Record<string, { abbr?: string; logo?: string }> = {
+  '451': { abbr: 'KOR', logo: COUNTRY_CREST('kor') },
+};
+
 export const TARGETS: Target[] = [
   {
     id: 'real-madrid',
@@ -115,7 +124,8 @@ export const TARGETS: Target[] = [
       glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(59,130,246,.26), transparent 60%)',
     },
     league: 'eng.1',
-    competitions: ['eng.1', 'uefa.champions', 'eng.fa', 'eng.league_cup'],
+    // 이번 시즌 첼시는 챔피언스리그에 나가지 않는다
+    competitions: ['eng.1', 'eng.fa', 'eng.league_cup'],
     palette: {
       'eng.1': '#A855F7',            // Premier League 브랜드 퍼플
       'uefa.champions': '#4C8DFF',
