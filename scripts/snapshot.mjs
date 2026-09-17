@@ -46,7 +46,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-13';
+const CODE_VERSION = 'snap-15';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -56,12 +56,12 @@ const CORE = 'https://sports.core.api.espn.com';
 /* 앱의 web/src/config/targets.ts 와 같은 목록이어야 한다 —
    슬러그가 데이터 파일 이름이 된다(schedule-{slug}.json). */
 const TEAMS = [
-  { id: '86', slug: 'real-madrid', league: 'esp.1', koQuery: '레알 마드리드' },
-  { id: '363', slug: 'chelsea', league: 'eng.1', koQuery: '첼시 FC' },
-  { id: '360', slug: 'man-united', league: 'eng.1', koQuery: '맨체스터 유나이티드' },
-  { id: '367', slug: 'tottenham', league: 'eng.1', koQuery: '토트넘 홋스퍼' },
-  { id: '361', slug: 'newcastle', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
-  { id: '451', slug: 'korea', league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
+  { id: '86', slug: 'real-madrid', name: 'Real Madrid', league: 'esp.1', koQuery: '레알 마드리드' },
+  { id: '363', slug: 'chelsea', name: 'Chelsea', league: 'eng.1', koQuery: '첼시 FC' },
+  { id: '360', slug: 'man-united', name: 'Manchester United', league: 'eng.1', koQuery: '맨체스터 유나이티드' },
+  { id: '367', slug: 'tottenham', name: 'Tottenham Hotspur', league: 'eng.1', koQuery: '토트넘 홋스퍼' },
+  { id: '361', slug: 'newcastle', name: 'Newcastle United', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
+  { id: '451', slug: 'korea', name: 'South Korea', national: true, league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
 ];
 const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
 
@@ -81,6 +81,17 @@ const EURO = [
   ['uefa.champions', '챔스'],
   ['uefa.europa', '유로파'],
   ['uefa.europa.conf', '컨퍼런스'],
+];
+
+/* 퓨처 리소스 — 앱의 web/src/data/future.ts 와 같은 목록이어야 한다.
+   조항 종류는 화면 쪽에만 있으면 되고, 여기서는 기록을 받을 id·리그만 쓴다. */
+const FUTURE = [
+  // Real Madrid
+  ['337970', 'ita.1'], ['380318', 'ita.1'], ['297360', 'ita.1'],
+  ['87297', 'eng.1'], ['12172', 'eng.1'], ['213050', 'esp.1'], ['376473', 'ita.1'],
+  // Chelsea
+  ['314858', 'eng.1'], ['227784', 'ita.1'], ['325555', 'eng.1'],
+  ['299911', 'eng.1'], ['231718', 'eng.1'],
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -474,6 +485,54 @@ const normName = (s) => String(s ?? '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+/* ── TheSportsDB 헤드샷 ──────────────────────────────────
+ * ESPN 은 축구 선수 사진을 거의 안 준다(음바페조차 없다). TheSportsDB 는
+ * 배경을 딴 컷아웃(strCutout)과 인물 사진(strThumb)을 무료로 준다 —
+ * 2026-09-17 음바페로 확인:
+ *   strCutout .../player/cutout/cxrmkm1788114306.png
+ *   strThumb  .../player/thumb/v08cj31778816426.jpg
+ *
+ * 컷아웃이 없거나 404 인 선수가 많아 HEAD 로 확인하고, 실패하면 썸네일로
+ * 내려간다. 이름 검색이라 동명이인이 섞일 수 있어 **축구 선수만** 받는다.
+ */
+const TSDB = 'https://www.thesportsdb.com/api/v1/json/3';
+const tsdbCache = new Map();
+
+async function urlOk(url) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function sportsdbPhoto(name, club) {
+  const key = normName(name);
+  if (!key) return Promise.resolve(undefined);
+  if (tsdbCache.has(key)) return tsdbCache.get(key);
+
+  const p = (async () => {
+    const j = await get(`${TSDB}/searchplayers.php?p=${encodeURIComponent(name)}`, 2);
+    const list = (j?.player ?? []).filter((x) => String(x?.strSport ?? '') === 'Soccer');
+    if (!list.length) return undefined;
+    /* 같은 이름의 축구 선수가 여럿이면 현 소속팀이 맞는 쪽을 고른다 */
+    const wantClub = normName(club);
+    const hit =
+      (wantClub && list.find((x) => normName(x?.strTeam).includes(wantClub))) ||
+      (wantClub && list.find((x) => wantClub.includes(normName(x?.strTeam)))) ||
+      list[0];
+    const cut = String(hit?.strCutout ?? '');
+    if (cut && await urlOk(cut)) return cut;
+    const thumb = String(hit?.strThumb ?? '');
+    if (thumb && await urlOk(thumb)) return thumb;
+    return undefined;
+  })();
+  tsdbCache.set(key, p);
+  return p;
+}
+
 /* ── ESPN 헤드샷 ─────────────────────────────────────────
  * ESPN 은 축구 선수 사진을 **일부에게만** 준다. 2026-09-16 에 다시 확인했다:
  *  · 팀 로스터(/teams/{id}/roster) 의 headshot.href — 있는 선수만 나온다
@@ -815,17 +874,25 @@ function compactGame(ev, teamId) {
   };
 }
 
-/** 지난 시즌 일정 — 상대전적을 두 시즌 합산으로 보여 주기 위해서만 쓴다 */
-async function prevSeasonGames(teamId) {
-  const j = await get(
-    `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${teamId}/schedule?season=${SEASON - 1}`,
-  );
-  return (j?.events ?? [])
-    .map((ev) => compactGame(ev, teamId))
-    .filter((g) => g && g.done);
+/**
+ * 지난 시즌(들) 일정 — 상대전적에만 쓴다.
+ *
+ * 클럽은 한 시즌이면 충분하다(리그에서 해마다 두 번씩 만난다). 국가대표는
+ * 한 상대를 몇 년에 한 번 만나므로 지난 시즌만 보면 거의 항상 0경기다 —
+ * 그래서 여러 해를 거슬러 올라가 **역대 전적**으로 본다.
+ */
+async function prevSeasonGames(teamId, seasons = 1) {
+  const years = Array.from({ length: seasons }, (_, i) => SEASON - 1 - i);
+  const lists = await pool(years, 4, async (y) => {
+    const j = await get(
+      `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${teamId}/schedule?season=${y}`,
+    );
+    return (j?.events ?? []).map((ev) => compactGame(ev, teamId)).filter((g) => g && g.done);
+  });
+  return lists.flat().filter(Boolean);
 }
 
-async function nextMatchPreview(events, teamId) {
+async function nextMatchPreview(events, teamId, national = false) {
   const upcoming = events
     .filter((e) => e?.competitions?.[0]?.status?.type?.completed !== true)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)))[0];
@@ -838,7 +905,7 @@ async function nextMatchPreview(events, teamId) {
 
   const [sum, older] = await Promise.all([
     lg ? get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${upcoming.id}`) : null,
-    prevSeasonGames(teamId),
+    prevSeasonGames(teamId, national ? 12 : 1),
   ]);
 
   /* lastFiveGames 는 [{team:{id}, events:[…]}, …] 형태다 — 팀별로 나눠 담는다 */
@@ -867,7 +934,15 @@ async function nextMatchPreview(events, teamId) {
     .filter((g) => g.homeId === oppId || g.awayId === oppId)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  return { eventId: String(upcoming.id), opponentId: oppId, lastFive, h2h };
+  return {
+    eventId: String(upcoming.id),
+    opponentId: oppId,
+    lastFive,
+    h2h,
+    /* 화면이 "최근 두 시즌" 과 "역대" 를 구분해 적을 수 있게 */
+    h2hScope: national ? 'all' : 'recent',
+    h2hSeasons: national ? 13 : 2,
+  };
 }
 
 /* ── 한국어 뉴스 ──────────────────────────────────────
@@ -924,6 +999,73 @@ async function googleNewsKo(q) {
 /* ── 코리안리거 한 명 ─────────────────────────────────
    core 는 athlete 를 $ref 로만 주므로 프로필 → 소속팀 → 대회별 기록 순으로
    따라가야 한다. 리그와 유럽대항전을 합쳐 주는 엔드포인트는 없다. */
+/**
+ * gamelog 응답 → 경기 목록.
+ *
+ * ⚠️ ESPN 이 이 응답의 모양을 바꾼다. 예전에는 경기별 기록이
+ * `seasonTypes[].categories[].events[].stats[]` 에 있었는데, 지금은 그 갈래가
+ * 안 올 때가 있고 `events`(경기 id → 메타) 만 온다. 한쪽만 읽던 코드가
+ * 조용히 빈 배열을 만들어 **코리안리거 최근 3경기가 21명 모두 0건**이 됐다.
+ * 그래서 두 모양을 다 읽고, 기록이 없으면 그 자리는 비워 둔 채
+ * (goals/assists = undefined) 나중에 경기 요약에서 채운다.
+ */
+function gamelogRows(gl, league, iG, iA) {
+  const events = gl?.events ?? {};
+  const rows = [];
+  const base = (eventId) => {
+    const meta = events[String(eventId)] ?? {};
+    return {
+      eventId: String(eventId),
+      competition: league,
+      result: String(meta?.gameResult ?? 'D').toUpperCase().slice(0, 1) || 'D',
+      opponentId: String(meta?.opponent?.id ?? '0'),
+      opponent: String(meta?.opponent?.displayName ?? ''),
+      score: String(meta?.score ?? ''),
+      /* 선발 여부와 출전 시간은 gamelog 에 없다 — core 경기 로스터로 채운다.
+         못 채우면 undefined 로 두어 화면이 "기록 없음" 으로 처리한다. */
+      started: undefined,
+      minutes: undefined,
+      subIn: undefined,
+      date: String(meta?.gameDate ?? ''),
+    };
+  };
+
+  let seen = false;
+  for (const st of gl?.seasonTypes ?? []) {
+    for (const c of st?.categories ?? []) {
+      for (const ev of c?.events ?? []) {
+        seen = true;
+        const r = base(ev?.eventId ?? '');
+        r.goals = iG >= 0 ? Number(ev?.stats?.[iG] ?? 0) || 0 : undefined;
+        r.assists = iA >= 0 ? Number(ev?.stats?.[iA] ?? 0) || 0 : undefined;
+        rows.push(r);
+      }
+    }
+  }
+  if (seen) return rows;
+
+  // 새 모양 — 경기 메타만 있고 기록은 없다
+  for (const id of Object.keys(events)) rows.push(base(id));
+  return rows;
+}
+
+/** 경기 요약에서 그 선수의 골·도움을 읽는다 (gamelog 가 기록을 안 줄 때) */
+async function matchGA(leagueSlug, eventId, athleteId) {
+  const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`);
+  for (const r of sum?.rosters ?? []) {
+    for (const e of r?.roster ?? []) {
+      if (String(e?.athlete?.id ?? '') !== String(athleteId)) continue;
+      const val = (n) => {
+        const hit = (e?.stats ?? []).find((x) => x?.name === n);
+        const v = Number(hit?.value ?? hit?.displayValue);
+        return Number.isFinite(v) ? v : 0;
+      };
+      return { goals: val('totalGoals'), assists: val('goalAssists'), yellow: val('yellowCards') > 0 };
+    }
+  }
+  return { goals: 0, assists: 0, yellow: false };
+}
+
 /** 대회 참가팀 id 집합 — "나가는 팀인지" 를 판단하는 유일한 근거 */
 const teamsInCache = new Map();
 function teamsIn(slug) {
@@ -1031,34 +1173,7 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     const names = (gl?.names ?? gl?.labels ?? []).map(String);
     const iG = names.findIndex((n) => ['totalGoals', 'goals', 'G'].includes(n));
     const iA = names.findIndex((n) => ['goalAssists', 'assists', 'A'].includes(n));
-    const events = gl?.events ?? {};
-    const rows = [];
-    for (const st of gl?.seasonTypes ?? []) {
-      for (const c of st?.categories ?? []) {
-        for (const ev of c?.events ?? []) {
-          const meta = events[String(ev?.eventId ?? '')] ?? {};
-          rows.push({
-            eventId: String(ev?.eventId ?? ''),
-            competition: league,
-            result: String(meta?.gameResult ?? 'D').toUpperCase().slice(0, 1) || 'D',
-            opponentId: String(meta?.opponent?.id ?? '0'),
-            opponent: String(meta?.opponent?.displayName ?? ''),
-            score: String(meta?.score ?? ''),
-            /* 선발 여부와 출전 시간은 gamelog 에 **없다**(G/A/슈팅/파울/카드뿐).
-               예전에는 started:false, minutes:0 을 그냥 박아 넣어 화면에
-               "교체 0분" 처럼 거짓으로 보였다. 아래에서 core 경기 로스터로
-               실제 값을 채우고, 못 채우면 undefined 로 두어 화면이 "기록 없음"
-               으로 처리하게 한다. */
-            started: undefined,
-            minutes: undefined,
-            subIn: undefined,
-            goals: Number(ev?.stats?.[iG] ?? 0) || 0,
-            assists: Number(ev?.stats?.[iA] ?? 0) || 0,
-            date: String(meta?.gameDate ?? ''),
-          });
-        }
-      }
-    }
+    const rows = gamelogRows(gl, league, iG, iA);
     rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
     /* gamelog 에는 **명단에 든 경기**가 다 들어온다 — 한 번도 안 뛴 경기까지.
@@ -1089,16 +1204,28 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
        확인 자체를 못 한 경기(started === undefined)는 판단하지 않고 남긴다 —
        화면이 "기록 없음" 으로 처리한다. */
     const played = (r) => r.started !== false || r.subIn !== undefined;
-    recent.push(...pickFrom.filter(played).slice(0, 3));
+    const keep = pickFrom.filter(played).slice(0, 3);
+
+    /* gamelog 가 경기별 기록을 안 준 모양이면 요약에서 채운다 (최대 3경기) */
+    await Promise.all(keep.map(async (r) => {
+      if (r.goals !== undefined && r.assists !== undefined) return;
+      if (!r.eventId) { r.goals = 0; r.assists = 0; return; }
+      const ga = await matchGA(league, r.eventId, id);
+      r.goals = ga.goals;
+      r.assists = ga.assists;
+      if (ga.yellow) r.yellow = true;
+    }));
+    recent.push(...keep);
   }
 
-  /* 사진: 소속팀 로스터 → ESPN 관용 주소(HEAD 로 확인) → 이어받기 → 위키백과 */
-  let photo;
-  if (league && clubId !== '0') {
+  /* 사진: TheSportsDB → ESPN(로스터·관용 주소) → 이어받기 → 위키백과 */
+  const enName = String(prof?.displayName ?? nameKo);
+  let photo = await sportsdbPhoto(enName, club);
+  if (!photo && league && clubId !== '0') {
     photo = (await teamPhotos(league, clubId)).get(String(id))?.photo;
   }
   if (!photo) photo = await espnHeadshot(id);
-  if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(String(prof?.displayName ?? nameKo));
+  if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(enName);
 
   /* 대회 앰블럼도 API 에서 가져온다 — 리그 로고 id 를 코드에 적어 두면
      새 리그(그리스·덴마크·벨기에…)로 이적할 때마다 표가 비어 버린다.
@@ -1156,7 +1283,7 @@ async function main() {
       const rounds = {};
       for (const lg of comps.keys()) if (roundCal.has(lg)) rounds[lg] = roundCal.get(lg);
 
-      const preview = await nextMatchPreview(events, t.id);
+      const preview = await nextMatchPreview(events, t.id, t.national === true);
 
       await save(`schedule-${t.slug}.json`, {
         events, team: t.id, rounds, preview,
@@ -1367,6 +1494,7 @@ async function main() {
       const photos = await teamPhotos(t.league, t.id);
       const carried = await prevPhotos(`squad-${t.slug}.json`);
       let fromEspn = 0;
+      let fromTsdb = 0;
       let fromWiki = 0;
       let gotMinutes = 0;
       /* 선수 한 명당 (사진 + 시즌 출전시간) 이라 30명이면 왕복 60번이다.
@@ -1378,15 +1506,18 @@ async function main() {
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
         if (meta?.age) athletes[id].age = meta.age;
-        const [direct, mins] = await Promise.all([
+        /* 사진 우선순위: TheSportsDB 컷아웃/썸네일 → ESPN → 이어받기 → 위키백과.
+           TheSportsDB 가 커버가 가장 넓고 배경을 딴 컷아웃이라 칩에 잘 맞는다. */
+        const [tsdb, espn, mins] = await Promise.all([
+          sportsdbPhoto(athletes[id].name, t.name),
           meta?.photo ? meta.photo : espnHeadshot(id),
           athleteSeasonMinutes(t.league, id),
         ]);
+        const direct = tsdb || espn;
         if (direct) {
           athletes[id].photo = direct;
-          fromEspn++;
+          if (tsdb) fromTsdb++; else fromEspn++;
         } else {
-          // ESPN 에 없는 선수만 위키백과로 내려간다
           const wiki = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);
           if (wiki) { athletes[id].photo = wiki; fromWiki++; }
         }
@@ -1399,10 +1530,65 @@ async function main() {
       });
       console.log(
         `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
-          ` (출전시간 ${gotMinutes}명 · 사진 ESPN ${fromEspn} + 위키 ${fromWiki})`,
+          ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})`,
       );
     } else {
       console.error(`  ! ${t.slug}: 라인업 0경기 — 기존 파일 유지`);
+    }
+  }
+
+  /* ── 퓨처 리소스 (slow) ───────────────────────────────
+     조항 선수들의 시즌 기록. 앱은 프록시가 없으면 이 파일을 읽는데,
+     지금까지 아무도 만들지 않아 카드가 전부 "–" 로 비어 있었다. */
+  if (wants('slow')) {
+    const players = {};
+    await pool(FUTURE, 4, async ([id, lg]) => {
+      const j = await get(
+        `${SITE_WEB}/apis/common/v3/sports/soccer/${lg}/athletes/${id}/gamelog`,
+      );
+      const names = (j?.names ?? j?.labels ?? []).map(String);
+      const iG = names.findIndex((n) => ['totalGoals', 'goals', 'G'].includes(n));
+      const iA = names.findIndex((n) => ['goalAssists', 'assists', 'A'].includes(n));
+      const rows = gamelogRows(j, lg, iG, iA);
+      if (!rows.length) return;
+      rows.sort((x, y) => String(y.date).localeCompare(String(x.date)));
+
+      /* 기록 갈래가 없는 응답이면 최근 5경기만 요약에서 채운다 —
+         전 경기를 요약으로 채우면 선수 한 명에 수십 번 요청이 나간다. */
+      const head = rows.slice(0, 5);
+      await Promise.all(head.map(async (r) => {
+        if (r.goals !== undefined) return;
+        const ga = await matchGA(lg, r.eventId, id);
+        r.goals = ga.goals;
+        r.assists = ga.assists;
+      }));
+
+      const apps = rows.length;
+      const goals = rows.reduce((n, r) => n + (r.goals ?? 0), 0);
+      const assists = rows.reduce((n, r) => n + (r.assists ?? 0), 0);
+      const recent = head.map((r) => ({
+        date: r.date,
+        opponent: r.opponent,
+        score: r.score || undefined,
+        goals: r.goals ?? 0,
+        assists: r.assists ?? 0,
+      }));
+
+      /* 현 소속팀 — 선수가 옮겨도 화면이 따라가게 core 프로필에서 받는다 */
+      const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
+      const teamRef = prof?.defaultTeam?.$ref;
+      const team = teamRef ? await get(teamRef) : null;
+
+      players[id] = {
+        club: team?.displayName ? String(team.displayName) : undefined,
+        apps, goals, assists, recent,
+      };
+    });
+    if (Object.keys(players).length) {
+      await save('future.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
+      console.log(`    퓨처 리소스 ${Object.keys(players).length}명`);
+    } else {
+      console.error('  ! 퓨처 리소스 0명 — 기존 파일 유지');
     }
   }
 

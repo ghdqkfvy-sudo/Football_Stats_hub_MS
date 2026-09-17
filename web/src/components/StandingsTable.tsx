@@ -49,11 +49,14 @@ const zoneLabel = (text: string) => ZONE_KO[text.toLowerCase()] ?? text;
  * 모르는 구분은 ESPN 색을 그대로 쓴다.
  */
 const ZONE_COLOR: { match: RegExp; color: string }[] = [
-  // 챔스 조별리그 표 — 위에서 아래로 갈수록 어두워지는 한 계열로 단계를 보여 준다
-  { match: /round of 16/i, color: '#4CC9F0' },        // 16강 직행 — 밝은 하늘
-  { match: /seeded/i, color: '#5B8DEF' },             // 플레이오프 시드 — 파랑
-  { match: /knockout|play-?off/i, color: '#8B7BFF' }, // 플레이오프 비시드 — 보라
-  { match: /eliminated/i, color: '#FF5C6C' },
+  /* 챔스 조별리그 표 — 네 구간이 서로 확실히 갈려야 한다.
+     ⚠️ 순서가 중요하다: "unseeded" 를 "seeded" 보다 먼저 본다
+     (문자열 'unseeded' 안에 'seeded' 가 들어 있다). */
+  { match: /round of 16/i, color: '#2ED573' },          // 16강 직행 — 초록
+  { match: /un-?seeded/i, color: '#C46BFF' },           // PO 비시드 — 보라
+  { match: /seeded/i, color: '#4CC9F0' },               // PO 시드 — 하늘
+  { match: /knockout|play-?off/i, color: '#4CC9F0' },
+  { match: /eliminated/i, color: '#FF5C6C' },           // 탈락 — 빨강
   // 리그 표
   { match: /champions league/i, color: '#4CC9F0' },
   { match: /europa/i, color: '#FF9F2E' },

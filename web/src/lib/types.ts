@@ -28,6 +28,8 @@ export interface GoalEvent {
   teamId: string;
   scorer: string;
   assist?: string;
+  /** core /plays 가 준 도움 선수 id — 이름 표기가 달라도 장부를 정확히 맞춘다 */
+  assistId?: string;
   ownGoal: boolean;
   penalty: boolean;
 }

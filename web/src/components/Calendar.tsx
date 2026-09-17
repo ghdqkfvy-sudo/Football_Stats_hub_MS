@@ -190,7 +190,12 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
               </div>
 
               {hoverDay === cell.key && list.length > 0 && (
-                <DayPopover matches={list} col={dow} focusTeamId={focusTeamId} />
+                <DayPopover
+                  matches={list}
+                  col={dow}
+                  focusTeamId={focusTeamId}
+                  onClose={() => setHoverDay(null)}
+                />
               )}
             </div>
           );
@@ -201,10 +206,26 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
 }
 
 /** 날짜 칸 호버 미리보기 — 그 날 경기를 한 카드에 모아 보여준다. */
-function DayPopover({ matches, col, focusTeamId }: { matches: Match[]; col: number; focusTeamId?: string }) {
+function DayPopover({
+  matches, col, focusTeamId, onClose,
+}: {
+  matches: Match[];
+  col: number;
+  focusTeamId?: string;
+  onClose: () => void;
+}) {
   const shift = col <= 1 ? 'calc(-50% + 64px)' : col >= 5 ? 'calc(-50% - 64px)' : '-50%';
   return (
     <div className="pop" style={{ transform: `translateX(${shift})` }} role="tooltip">
+      {/* 손가락으로는 "마우스를 치우는" 동작이 없다 — 닫기 단추를 준다.
+          카드 자체는 pointer-events:none 이라 이 단추만 살려 둔다. */}
+      <button
+        className="pop__x"
+        aria-label="미리보기 닫기"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+      >
+        ✕
+      </button>
       {matches.map((m, i) => (
         <div className="pop__m" key={m.id} data-first={i === 0}>
           <MatchBlock m={m} focusTeamId={focusTeamId} />

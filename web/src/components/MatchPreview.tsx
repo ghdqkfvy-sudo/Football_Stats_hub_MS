@@ -18,6 +18,8 @@ interface Props {
   focusTeamId: string;
   lastFive: Record<string, LastFiveGame[]>;
   h2h: H2HGame[];
+  /** 'all' 이면 "역대 n경기", 아니면 "최근 두 시즌 n경기" */
+  h2hScope?: 'all' | 'recent';
 }
 
 function recordOf(games: { result?: string }[]) {
@@ -32,7 +34,7 @@ function recordOf(games: { result?: string }[]) {
   return { w, d, l };
 }
 
-export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
+export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Props) {
   const ourFive = lastFive[focusTeamId] ?? [];
   const oppId = match.home.id === focusTeamId ? match.away.id : match.home.id;
   const theirFive = lastFive[oppId] ?? [];
@@ -72,7 +74,9 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h }: Props) {
         <div className="mprev__h2h">
           <div className="mprev__h2hh">
             <span className="eyebrow">상대전적</span>
-            <span className="mprev__note num">최근 두 시즌 {meetings.length}경기</span>
+            <span className="mprev__note num">
+              {h2hScope === 'all' ? '역대' : '최근 두 시즌'} {meetings.length}경기
+            </span>
           </div>
 
           {/* 승·무·패 비율을 막대 하나로 — 숫자보다 먼저 눈에 들어온다 */}
@@ -133,6 +137,7 @@ function FormColumn({
   team: TeamRef;
   games: LastFiveGame[];
   side: 'HOME' | 'AWAY';
+  /** 우리 팀 칸은 배경을 팀 컬러로 살짝 깐다 (글자 배지는 쓰지 않는다) */
   mine: boolean;
 }) {
   const rec = recordOf(games);
@@ -142,7 +147,6 @@ function FormColumn({
         <span className="mprev__side" data-side={side}>{side}</span>
         <Crest team={team} size={22} />
         <b>{team.shortName}</b>
-        {mine && <em className="mprev__you">우리 팀</em>}
       </div>
 
       <div className="mprev__sum">
@@ -170,17 +174,20 @@ function FormColumn({
                 <span className="mprev__gh" data-side={g.atVs === 'vs' ? 'H' : 'A'}>
                   {g.atVs === 'vs' ? 'H' : 'A'}
                 </span>
-                <Crest
-                  team={{
-                    id: g.opponentId,
-                    name: g.opponentName || g.opponent,
-                    shortName: g.opponentName || g.opponent,
-                    abbr: g.opponent,
-                    logo: g.opponentLogo || '',
-                  }}
-                  size={17}
-                />
-                <span className="mprev__go">vs {g.opponentName || g.opponent}</span>
+                <span className="mprev__go">
+                  vs
+                  <Crest
+                    team={{
+                      id: g.opponentId,
+                      name: g.opponentName || g.opponent,
+                      shortName: g.opponentName || g.opponent,
+                      abbr: g.opponent,
+                      logo: g.opponentLogo || '',
+                    }}
+                    size={17}
+                  />
+                  <b>{g.opponentName || g.opponent}</b>
+                </span>
                 <Score a={num(ms)} b={num(ts)} res={res} />
               </div>
             );

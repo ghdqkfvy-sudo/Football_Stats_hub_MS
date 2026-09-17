@@ -184,7 +184,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
         {rows.length === 0 && <p className="nogoal" style={{ padding: 16 }}>해당 포지션 기록이 없습니다.</p>}
       </div>
 
-      {card && <PlayerCard p={card.p} top={card.top} left={card.left} />}
+      {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={closeCard} />}
     </div>
   );
 }
@@ -240,7 +240,14 @@ function SortHead({
  * 한 장에 세로로 쌓으면 카드가 화면 높이를 넘겨 최근 경기가 잘렸다.
  * 리스트 스크롤 밖에 fixed 로 뜬다.
  */
-function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: number }) {
+function PlayerCard({
+  p, top, left, onClose,
+}: {
+  p: PlayerSeason;
+  top: number;
+  left: number;
+  onClose: () => void;
+}) {
   const palette = usePalette();
   const recent = p.recent.slice(0, 3);
   const ref = useRef<HTMLDivElement>(null);
@@ -266,6 +273,8 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
       ref={ref}
       style={{ top: pos.y, left: pos.x, transform: 'translateY(-50%)' }}
     >
+      {/* 손가락으로는 마우스를 치울 수가 없다 — 닫기 단추를 준다 */}
+      <button className="pcard__x" aria-label="닫기" onClick={onClose}>✕</button>
       <div className="pcard__main">
         <div className="pcard__top">
           <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={46} className="pcard__hs" />
@@ -346,6 +355,12 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
               <span className="pcard__when num">{kstShortDate(g.kickoffUtc)}</span>
 
               <span className="pcard__opp">
+                {/* 상대 표기는 항상 "vs" 로 통일하고 홈/원정은 배지로 —
+                    일정 탭의 최근 경기 폼과 같은 규칙이다. */}
+                <i className="hachip" data-side={g.homeAway === '홈' ? 'H' : 'A'}>
+                  {g.homeAway === '홈' ? 'H' : 'A'}
+                </i>
+                vs
                 <Crest
                   team={{
                     id: g.opponentId,
@@ -356,7 +371,7 @@ function PlayerCard({ p, top, left }: { p: PlayerSeason; top: number; left: numb
                   }}
                   size={16}
                 />
-                {g.homeAway === '홈' ? 'vs' : '@'} {g.opponentName}
+                <b>{g.opponentName}</b>
               </span>
               <span className="pcard__sc num">{g.scoreline}</span>
 

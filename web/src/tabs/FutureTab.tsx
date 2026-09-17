@@ -7,6 +7,13 @@ import { kstShortDate } from '../lib/kst';
 
 const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
+/** 조항이 무슨 뜻인지 — 종류만 보여 주기로 했으니 설명은 여기 한 줄로 */
+const CLAUSE_DESC: Record<ClauseKind, string> = {
+  buyback: '원 소속 구단이 정해진 조건으로 다시 데려올 수 있다',
+  sellon: '이 선수가 다시 팔릴 때 원 소속 구단이 이익을 나눠 받는다',
+  loan: '임대로 나가 있고 계약은 원 소속 구단에 남아 있다',
+};
+
 const LEAGUE_LABEL: Record<string, string> = {
   'esp.1': 'La Liga', 'eng.1': 'Premier League', 'ita.1': 'Serie A',
   'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'por.1': 'Primeira Liga',
@@ -81,11 +88,29 @@ export function FutureTab({ target }: { target: Target }) {
           <span className="nf__count num">{list.length}명</span>
         </nav>
 
-        <div className="fgrid">
-          {list.map((p) => (
-            <FutureCard key={p.id} p={p} stat={stats[p.id]} />
-          ))}
-        </div>
+        {/* 조항 종류별로 영역을 갈라 놓는다 — 배지 색만으로는 카드가 섞여
+            "누가 바이백이고 누가 임대인지" 를 매번 다시 읽어야 했다. */}
+        {(['buyback', 'sellon', 'loan'] as const)
+          .filter((k) => filter === 'ALL' || filter === k)
+          .map((k) => {
+            const group = list.filter((p) => p.kind === k);
+            if (!group.length) return null;
+            return (
+              <section className="fgroup" key={k} style={{ ['--c' as string]: CLAUSE_COLOR[k] }}>
+                <header className="fgroup__h">
+                  <i aria-hidden="true" />
+                  <h3>{CLAUSE_LABEL[k]}</h3>
+                  <span className="num">{group.length}명</span>
+                  <p>{CLAUSE_DESC[k]}</p>
+                </header>
+                <div className="fgrid">
+                  {group.map((p) => (
+                    <FutureCard key={p.id} p={p} stat={stats[p.id]} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
 
         <p className="fnote">
           이적 조항은 ESPN 을 포함한 어떤 무료 API 에도 없습니다. 그래서 여기서는

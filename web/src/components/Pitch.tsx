@@ -125,7 +125,7 @@ function PlayerChip({
       role="button"
       aria-pressed={selected}
       tabIndex={0}
-      title={`${p.name} · ${p.apps}경기 ${p.goals}골 ${p.assists}도움`}
+      title={`${p.name} · ${p.apps}경기(선발 ${p.starts}) ${p.goals}골 ${p.assists}도움`}
     >
       {tag && <span className="chipbox__tag">{tag}</span>}
       <span className="chipbox__ring">
@@ -135,9 +135,15 @@ function PlayerChip({
         {p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
       </span>
       <span className="chipbox__name">{last}</span>
+      {/*
+        칩의 기록은 **한 줄을 넘지 않는다.**
+        예전에는 "출전 6 선발 5 ⚽4 A1" 을 다 넣어서 줄이 갈라졌고, 그 줄바꿈
+        때문에 칩 높이가 제각각이라 배치가 어수선했다. 선발 수는 오른쪽
+        선수 목록과 호버 카드에 이미 있으므로 칩에서는 뺀다.
+        칩에 남기는 건 "몇 경기 뛰었고, 얼마나 해결했나" 두 가지뿐이다.
+      */}
       <span className="chipbox__stat num">
-        출전 {p.apps}
-        <em className="s">선발 {p.starts}</em>
+        <em className="p">{p.apps}경기</em>
         {p.goals > 0 && <em className="g">⚽{p.goals}</em>}
         {p.assists > 0 && <em className="a">A{p.assists}</em>}
       </span>

@@ -66,6 +66,9 @@ export interface ScheduleExtras {
     opponentId: string;
     lastFive: Record<string, LastFiveGame[]>;
     h2h: H2HGame[];
+    /** 'all' = 역대 (국가대표) · 'recent' = 최근 두 시즌 (클럽) */
+    h2hScope?: 'all' | 'recent';
+    h2hSeasons?: number;
   };
 }
 

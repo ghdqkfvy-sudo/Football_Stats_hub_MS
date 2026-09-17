@@ -1,5 +1,5 @@
 import type { Match } from '../lib/types';
-import { assignAssists, leftoverAssists } from '../lib/assists';
+import { resolveAssists } from '../lib/assists';
 
 /**
  * 종료 경기의 득점 기록 — 시간순 한 줄씩.
@@ -38,22 +38,11 @@ export function GoalSheet({
 
   /* 1순위는 API 가 직접 준 도움이다 — core /plays 의 득점 play 가
      participants 에 type:"assister" 를 같이 준다(스냅샷이 미리 붙여 둔다).
-     아직 안 받은 경기만 시간 추론으로 메우고(lib/assists.ts), 그것도
-     애매하면 아래 "도움" 줄에 따로 적는다. */
-  const guessed = assignAssists(
-    m.goals.map((g) => (g.assist ? { ...g, ownGoal: true } : g)), // 이미 붙은 골은 후보에서 뺀다
-    m.playerStats,
-  );
+     아직 안 받은 경기만 lib/assists.ts 가 메우고, 배정과 잔여 계산을
+     한 곳에서 처리해 같은 도움이 두 번 나오지 않게 한다. */
+  const { inferred, leftover: assisters } = resolveAssists(m.goals, m.playerStats);
   /** i번째 골의 도움 이름 — API 값이 있으면 그것, 없으면 추론값 */
-  const assistOf = (i: number) => m.goals[i].assist ?? guessed.get(i);
-
-  // 남은 도움 줄을 셀 때는 API 값도 "이미 쓴 도움" 으로 세야 중복이 안 생긴다
-  const used = new Map<number, string>();
-  m.goals.forEach((_, i) => {
-    const a = assistOf(i);
-    if (a) used.set(i, a);
-  });
-  const assisters = leftoverAssists(m.playerStats, used);
+  const assistOf = (i: number) => m.goals[i].assist ?? inferred.get(i)?.name;
 
   return (
     <>
@@ -88,7 +77,9 @@ export function GoalSheet({
 
     {assisters.length > 0 && (
       <div className="gl__assists">
-        <span className="gl__alabel">도움</span>
+        {/* 어느 골에 붙는지까지는 알 수 없는 도움 — 도움 수가 골 수보다
+            적으면(= 도움 없이 들어간 골이 있으면) 전부 여기로 온다. */}
+        <span className="gl__alabel" title="어느 골인지까지는 확인되지 않은 도움">도움</span>
         {assisters.map((s, i) => (
           <span className="gl__aname" key={`${s.name}-${i}`}>
             <i>{abbrOf(s.teamId)}</i>

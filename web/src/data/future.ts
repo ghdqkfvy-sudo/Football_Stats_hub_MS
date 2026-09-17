@@ -1,6 +1,9 @@
 /**
  * Future Resources — 임대·바이백·셀온 조항으로 "미래에 돌아올 수 있는" 선수들.
  *
+ * 화면에는 **조항의 종류만** 나온다. 금액·비율·기한처럼 출처를 댈 수 없는
+ * 값은 적지 않기로 했다.
+ *
  * ⚠️ 왜 손으로 관리하는가.
  * 이적 조항(바이백 금액, 셀온 비율, 임대 의무구매 조건)은 어떤 무료 API 에도
  * 없다. ESPN 은 물론이고 유료 API 도 대부분 안 준다. 그래서 **조항 정보만**
@@ -10,8 +13,10 @@
  *
  * 고치는 법
  *   1. 아래 배열에 한 줄 추가한다.
- *   2. athleteId 를 모르면 `/api/v1/find?q=이름` 으로 찾는다
- *      (응답의 uid `s:600~a:337970` 에서 뒤 숫자가 athleteId).
+ *   2. athleteId 는 ESPN 검색으로 찾는다 —
+ *      https://site.web.api.espn.com/apis/search/v2?query=Fran%20Garcia
+ *      결과의 uid `s:600~a:213050` 에서 뒤 숫자가 athleteId 이고,
+ *      subtitle 이 현 소속팀이라 동명이인을 가려낼 수 있다.
  *   3. league 는 그 선수가 지금 뛰는 리그 slug (esp.1 / eng.1 / ita.1 / ger.1 …).
  *
  * 조항 문구는 확인된 사실만 적는다. 금액·비율을 모르면 비워 두는 게 낫다 —
@@ -59,60 +64,55 @@ export const FUTURE: FuturePlayer[] = [
   {
     id: '337970', name: 'Nico Paz', parentTeamId: '86', kind: 'buyback',
     club: 'Como', league: 'ita.1', pos: 'M',
-    note: '레알 마드리드 유스 출신. 이적 당시 단계별 바이백 조항이 보도됐다. 정확한 금액은 공식 확인된 바 없다.',
-    checked: '2026-09-16',
   },
   {
-    /* ESPN 검색으로 확인: uid s:600~a:380318 · 현 소속 Serie A */
     id: '380318', name: 'Jacobo Ramón', parentTeamId: '86', kind: 'buyback',
     club: 'Como', league: 'ita.1', pos: 'D',
-    note: '카스티야 출신 센터백. 이적 시 바이백 조항이 보도됐다.',
-    checked: '2026-09-16',
   },
   {
-    id: '297360', name: 'Rafa Marín', parentTeamId: '86', kind: 'sellon',
+    id: '297360', name: 'Rafa Marín', parentTeamId: '86', kind: 'buyback',
     club: 'Napoli', league: 'ita.1', pos: 'D',
-    note: '레알 마드리드 카스티야 출신 센터백. 매각 시 재판매 이익 배분 조항이 있는 것으로 보도됐다.',
-    checked: '2026-09-16',
+  },
+  {
+    id: '87297', name: 'Gonzalo García', parentTeamId: '86', kind: 'sellon',
+    club: 'Fulham', league: 'eng.1', pos: 'F',
+  },
+  {
+    id: '12172', name: 'César Palacios', parentTeamId: '86', kind: 'sellon',
+    club: 'Fulham', league: 'eng.1', pos: 'M',
+  },
+  {
+    id: '213050', name: 'Fran García', parentTeamId: '86', kind: 'sellon',
+    club: 'Real Betis', league: 'esp.1', pos: 'D',
+  },
+  {
+    id: '376473', name: 'Franco Mastantuono', parentTeamId: '86', kind: 'loan',
+    club: 'Fiorentina', league: 'ita.1', pos: 'M',
   },
 
   /* ── Chelsea ────────────────────────────────────── */
   {
     id: '314858', name: 'Andrey Santos', parentTeamId: '363', kind: 'sellon',
     club: 'Manchester United', league: 'eng.1', pos: 'M',
-    note: '첼시에서 이적. 재판매 조항 보유 여부는 구단 공시가 없어 확인 필요.',
-    checked: '2026-09-16',
   },
   {
-    id: '363038', name: 'Marc Guiu', parentTeamId: '363', kind: 'buyback',
-    club: 'RB Leipzig', league: 'ger.1', pos: 'F',
-    note: '첼시가 바르셀로나 바이백 조항을 지불하고 영입했던 공격수. 현재 소속과 조항은 실시간 조회로 확인한다.',
-    checked: '2026-09-16',
+    id: '227784', name: 'Trevoh Chalobah', parentTeamId: '363', kind: 'sellon',
+    club: 'Como', league: 'ita.1', pos: 'D',
   },
   {
-    id: '336394', name: 'Cesare Casadei', parentTeamId: '363', kind: 'sellon',
-    club: 'Torino', league: 'ita.1', pos: 'M',
-    note: '첼시 유스 이후 세리에A 로 이적. 재판매 조항 보도 있음.',
-    checked: '2026-09-16',
+    id: '325555', name: 'Alejandro Garnacho', parentTeamId: '363', kind: 'loan',
+    club: 'Aston Villa', league: 'eng.1', pos: 'F',
   },
   {
-    id: '363218', name: 'Aarón Anselmino', parentTeamId: '363', kind: 'loan',
-    club: 'Chelsea', league: 'eng.1', pos: 'D',
-    note: '보카 주니어스에서 영입한 센터백. 임대로 경험을 쌓는 단계.',
-    checked: '2026-09-16',
+    id: '299911', name: 'Mykhailo Mudryk', parentTeamId: '363', kind: 'loan',
+    club: 'Tottenham Hotspur', league: 'eng.1', pos: 'F',
   },
   {
-    id: '332343', name: 'Mike Penders', parentTeamId: '363', kind: 'loan',
-    club: 'Chelsea', league: 'eng.1', pos: 'G',
-    note: '헹크에서 영입한 골키퍼. 임대 출전으로 성장 중.',
-    checked: '2026-09-16',
-  },
-  {
-    id: '358746', name: 'Kendry Páez', parentTeamId: '363', kind: 'loan',
-    club: 'Chelsea U21', league: 'eng.1', pos: 'M',
-    note: '인디펜디엔테 델 바예에서 영입한 공격형 미드필더.',
-    checked: '2026-09-16',
+    id: '231718', name: 'Axel Disasi', parentTeamId: '363', kind: 'loan',
+    club: 'Crystal Palace', league: 'eng.1', pos: 'D',
   },
 ];
 
-export const futureFor = (teamId: string) => FUTURE.filter((p) => p.parentTeamId === teamId);
+/** 그 팀의 조항 선수들 (등록 순서 그대로) */
+export const futureFor = (parentTeamId: string): FuturePlayer[] =>
+  FUTURE.filter((p) => p.parentTeamId === parentTeamId);
