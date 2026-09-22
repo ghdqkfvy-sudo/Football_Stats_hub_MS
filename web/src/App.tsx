@@ -12,6 +12,7 @@ import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
 import { Crest } from './components/Crest';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans';
 
@@ -49,8 +50,14 @@ function ago(iso: string): string {
 
 export default function App() {
   const [targetId, setTargetId] = useState<TargetId>('real-madrid');
-  const [season, setSeason] = useState(SEASONS[0].label);
   const target = getTarget(targetId);
+  /*
+   * ⚠️ 예전에는 시즌을 고르는 단추가 두 개 있었다. 그런데 그 값은 헤더
+   * 글자에만 쓰여서, 다음 시즌을 눌러도 라벨만 바뀌고 일정·순위는 그대로였다
+   * — 사용자를 속이는 UI 다. 시즌별 조회는 아직 없으므로, 지금 시즌을
+   * 그냥 적는다. (스냅샷·앱 모두 오늘 날짜로 시즌을 계산한다 — lib/kst.ts)
+   */
+  const season = SEASONS[0].label;
 
   const tabs = target.kind === 'club' ? CLUB_TABS : NATIONAL_TABS;
   const [tab, setTab] = useState<TabId>(tabs[0].id);
@@ -139,7 +146,7 @@ export default function App() {
             />
             <div>
               <h1 className="hdr__name">{target.nameEn}</h1>
-              <div className="hdr__sub">K STATS HUB · {target.subtitle} · {season}</div>
+              <div className="hdr__sub">MS STATS HUB · {target.subtitle} · {season}</div>
             </div>
           </div>
 
@@ -202,13 +209,9 @@ export default function App() {
               )}
             </span>
 
-            <div className="season">
-              {SEASONS.map((s) => (
-                <button key={s.year} aria-pressed={s.label === season} onClick={() => setSeason(s.label)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            <span className="season season--static num" title="표시 중인 시즌">
+              {season}
+            </span>
           </div>
 
           <nav className="tabs" role="tablist">
@@ -228,61 +231,24 @@ export default function App() {
       </header>
 
       <main className="shell">
-        {/* key: 팀을 바꾸면 선택 날짜·펼친 행 상태를 초기화한다 */}
-        {tab === 'schedule' && (
-          <ScheduleTab
-            key={target.id}
-            target={target}
-            matches={matches}
-            loading={loading}
-            onGoalsLoaded={onGoalsLoaded}
-          />
-        )}
-        {tab === 'standings' && <StandingsTab key={target.id} target={target} teamMatches={matches} />}
-        {tab === 'players' && <PlayersTab key={target.id} target={target} matches={matches} />}
-        {tab === 'koreans' && <KoreansTab />}
-        {tab === 'news' && <NewsTab key={target.id} target={target} />}
-        {tab === 'future' && <FutureTab key={target.id} target={target} />}
-        {tab !== 'schedule' && tab !== 'standings' && tab !== 'players' && tab !== 'koreans' && tab !== 'news' && tab !== 'future' && (
-          <Placeholder tab={tab} />
-        )}
+        {/* key: 팀을 바꾸면 선택 날짜·펼친 행 상태와 함께 오류 상태도 초기화된다 */}
+        <ErrorBoundary key={`${target.id}-${tab}`} label={tabs.find((t) => t.id === tab)?.label}>
+          {tab === 'schedule' && (
+            <ScheduleTab
+              target={target}
+              matches={matches}
+              loading={loading}
+              onGoalsLoaded={onGoalsLoaded}
+            />
+          )}
+          {tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
+          {tab === 'players' && <PlayersTab target={target} matches={matches} />}
+          {tab === 'koreans' && <KoreansTab />}
+          {tab === 'news' && <NewsTab target={target} />}
+          {tab === 'future' && <FutureTab target={target} />}
+        </ErrorBoundary>
       </main>
     </div>
     </PaletteProvider>
-  );
-}
-
-const PLACEHOLDER: Record<string, { h: string; p: string }> = {
-  standings: {
-    h: '팀 순위 — 2단계에서 구현',
-    p: '리그 → 챔피언스리그 순으로 참가 대회를 나열하고, 팀을 누르면 홈/원정 경기 결과가 아코디언으로 펼쳐집니다. 그 아래에 해당 대회의 득점·도움·공격포인트 순위가 붙습니다.',
-  },
-  players: {
-    h: '선수 스탯 — 3단계에서 구현',
-    p: '왼쪽에는 실제 출전 포지션 기록(formationPlace)으로 자동 선정한 베스트 11을 팀이 실제로 쓰는 포메이션에 배치하고, 오른쪽 선수 목록에 커서를 올리면 시즌 스탯과 최근 3경기가 뜹니다.',
-  },
-  future: {
-    h: 'Future Resources — 4단계에서 구현',
-    p: '임대·바이백·셀온 조항은 어떤 무료 API에도 없는 계약 정보라, 선수 명단과 조항만 수동 큐레이션 파일로 관리하고 시즌 성적·최근 3경기는 ESPN에서 실시간으로 붙입니다.',
-  },
-  news: {
-    h: '뉴스 — 4단계에서 구현',
-    p: 'ESPN 팀 뉴스 피드와 구글 뉴스 RSS(한국어)를 Worker에서 합쳐 제공합니다.',
-  },
-  koreans: {
-    h: '코리안리거 — 3단계에서 구현',
-    p: '유럽·MLS에서 뛰는 주요 한국 선수들의 시즌 기록과 최근 3경기를 리그별로 묶어 보여줍니다. ESPN athlete statistics 스키마 하나로 여러 리그를 동시에 커버합니다.',
-  },
-};
-
-function Placeholder({ tab }: { tab: string }) {
-  const c = PLACEHOLDER[tab];
-  return (
-    <div className="page">
-      <div className="empty">
-        <h3>{c?.h ?? '준비 중'}</h3>
-        <p>{c?.p ?? ''}</p>
-      </div>
-    </div>
   );
 }

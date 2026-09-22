@@ -164,7 +164,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
             onBlur={closeCard}
           >
             <span className="pt__who">
-              <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={30} />
+              <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={30} />
               <b>{p.name}</b>
               <em data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
             </span>
@@ -277,7 +277,7 @@ function PlayerCard({
       <button className="pcard__x" aria-label="닫기" onClick={onClose}>✕</button>
       <div className="pcard__main">
         <div className="pcard__top">
-          <Headshot id={p.id} src={p.photo} jersey={p.jersey} size={46} className="pcard__hs" />
+          <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={46} className="pcard__hs" />
           <div>
             <b>{p.name}</b>
             <span>

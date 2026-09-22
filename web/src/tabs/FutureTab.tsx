@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Target } from '../config/targets';
 import { CLAUSE_COLOR, CLAUSE_LABEL, futureFor, type ClauseKind, type FuturePlayer } from '../data/future';
-import { HAS_PROXY, loadFutureStat, type FutureStat } from '../lib/api';
+import { loadFutureStat, type FutureStat } from '../lib/api';
 import { Headshot } from '../components/Headshot';
 import { kstShortDate } from '../lib/kst';
 
@@ -142,8 +142,10 @@ function FutureCard({ p, stat }: { p: FuturePlayer; stat?: FutureStat | null }) 
       </header>
 
       <div className="fcard__league">
-        {LEAGUE_LABEL[p.league] ?? p.league}
-        {stat ? '' : HAS_PROXY ? ' · 불러오는 중' : ' · 실시간 모드에서 집계'}
+        {/* 지금 뛰는 리그는 조회 결과가 알려 준다 — 큐레이션 파일의 값이
+            낡아도(이적) 화면은 따라간다. */}
+        {LEAGUE_LABEL[stat?.league ?? p.league] ?? stat?.league ?? p.league}
+        {stat === undefined ? ' · 불러오는 중' : stat === null ? ' · 이번 시즌 기록 없음' : ''}
       </div>
 
       <div className="fcard__stats">

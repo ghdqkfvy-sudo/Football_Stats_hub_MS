@@ -9,7 +9,11 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "snapshot": "node ../scripts/snapshot.mjs public/data",
-    "snapshot:fast": "node ../scripts/snapshot.mjs public/data --only=fast"
+    "snapshot:fast": "node ../scripts/snapshot.mjs public/data --only=fast",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b",
+    "test:snapshot": "node --test ../scripts/lib/*.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -24,6 +28,7 @@
     "playwright": "^1.63.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vite-plugin-singlefile": "^2.3.3"
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^3.2.7"
   }
 }

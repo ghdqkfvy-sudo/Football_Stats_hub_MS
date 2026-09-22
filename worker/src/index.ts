@@ -1,5 +1,5 @@
 /**
- * K Stats Hub — Cloudflare Worker 프록시
+ * MS Stats Hub — Cloudflare Worker 프록시
  *
  * 역할
  *  1) 브라우저와 ESPN 사이에 서서 CORS를 보장한다.
@@ -22,6 +22,10 @@ const TTL = {
   season: 21600,     // 선수 시즌 스탯 (6시간)
   immutable: 604800, // 종료 경기의 득점 기록 — 변하지 않음 (7일)
 } as const;
+
+/** 유럽 시즌은 8월 시작 — ESPN 의 season 파라미터와 같은 규칙 */
+const seasonYear = (d = new Date()) =>
+  (d.getUTCMonth() + 1 >= 8 ? d.getUTCFullYear() : d.getUTCFullYear() - 1);
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -289,16 +293,73 @@ export default {
           );
           break;
         }
-        case 'gamelog': {
-          /* /api/v1/gamelog/:league/:athleteId
-             선수 한 명의 경기별 기록. Future Resources 탭에서
-             임대·바이백 선수의 "지금 어느 팀에서 어떻게 하고 있는지"를
-             그 선수가 뛰는 리그 기준으로 그대로 받아 온다. */
+        case 'playerlog': {
+          /* /api/v1/playerlog/:league/:athleteId?season=2026
+             선수 한 명의 시즌 합계 + 실제로 뛴 최근 경기.
+
+             ⚠️ 예전 `gamelog` 라우트는 `common/v3/.../athletes/{id}/gamelog` 을
+             그대로 중계했다. 그 upstream 은 **죽었다** — 어떤 리그·선수로
+             불러도 HTTP 500 {"code":2400} 이다(2026-09-17 확인). 그래서
+             Future Resources 카드가 프록시를 켜 놔도 빈칸이었다.
+             살아 있는 경로는 core 의 eventlog 다. 응답 모양은 앱의
+             FutureStat 과 같게 맞춰서 돌려준다. */
           if (!a || !b) return fail(400, 'league and athlete required');
-          res = json(
-            await espn(`${SITE_WEB}/apis/common/v3/sports/soccer/${a}/athletes/${b}/gamelog`),
-            TTL.schedule,
-          );
+          const season = url.searchParams.get('season') ?? String(seasonYear());
+
+          const flat = (j: any): Record<string, number> => {
+            const out: Record<string, number> = {};
+            for (const c of j?.splits?.categories ?? []) {
+              for (const s of c?.stats ?? []) {
+                const v = Number(s?.value);
+                if (s?.name) out[String(s.name)] = Number.isFinite(v) ? v : 0;
+              }
+            }
+            return out;
+          };
+
+          const [seasonStats, log] = await Promise.allSettled([
+            espn(`${CORE}/v2/sports/soccer/leagues/${a}/seasons/${season}/types/1/athletes/${b}/statistics`),
+            espn(`${CORE}/v2/sports/soccer/leagues/${a}/seasons/${season}/athletes/${b}/eventlog?limit=100`),
+          ]);
+          const tot = seasonStats.status === 'fulfilled' ? flat(seasonStats.value) : {};
+
+          /* 최근 경기 — `played` 는 **명단에 든 것까지** true 라서
+             경기별 statistics 의 appearances/minutes 로 실제 출전을 가른다. */
+          const items: any[] =
+            log.status === 'fulfilled' ? (log.value?.events?.items ?? []) : [];
+          const recent: unknown[] = [];
+          for (const it of [...items].reverse()) {
+            if (recent.length >= 3) break;
+            if (it?.played !== true) continue;
+            const eventId = String(it?.event?.$ref ?? '').match(/events\/(\d+)/)?.[1];
+            const teamId = String(it?.teamId ?? '');
+            if (!eventId || !teamId) continue;
+            const s = await espn(
+              `${CORE}/v2/sports/soccer/leagues/${a}/events/${eventId}/competitions/${eventId}`
+              + `/competitors/${teamId}/roster/${b}/statistics/0`,
+            ).catch(() => null);
+            const f = flat(s);
+            if (!((f.appearances ?? 0) >= 1 || (f.minutes ?? 0) > 0)) continue;
+            const ev: any = await espn(`${CORE}/v2/sports/soccer/leagues/${a}/events/${eventId}`)
+              .catch(() => null);
+            const cs: any[] = ev?.competitions?.[0]?.competitors ?? [];
+            const opp = cs.find((x: any) => String(x?.id ?? x?.team?.id ?? '') !== teamId);
+            recent.push({
+              date: String(ev?.date ?? ''),
+              opponent: String(opp?.team?.displayName ?? ev?.shortName ?? ''),
+              goals: f.totalGoals ?? 0,
+              assists: f.goalAssists ?? 0,
+            });
+          }
+
+          res = json({
+            league: a,
+            apps: tot.appearances ?? 0,
+            goals: tot.totalGoals ?? 0,
+            assists: tot.goalAssists ?? 0,
+            minutes: tot.minutes ?? 0,
+            recent,
+          }, TTL.schedule);
           break;
         }
         case 'find': {

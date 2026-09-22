@@ -16,7 +16,10 @@ on:
       - 'web/public/data/**'
       - '**.md'
   schedule:
-    - cron: '3,13,23,33,43,53 * * * *'
+    # ⚠️ 10분(3,13,23,…)이었는데 한 회차가 그보다 오래 걸려 서로를 취소했다.
+    # 실제 소요에 맞춰 20분으로 두는 편이 "10분이라 적어 두고 시간당 3번
+    # 갱신되는" 상태보다 정직하고, 결과적으로 더 자주 갱신된다.
+    - cron: '3,23,43 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -25,11 +28,18 @@ permissions:
 
 concurrency:
   group: snapshot
-  cancel-in-progress: true
+  # ⚠️ 예전에는 cancel-in-progress: true 였다. 그런데 이 잡은 실제로 10분을
+  # 넘게 돈다(리그 잡은 실측 15분). 그러면 **다음 회차가 지금 회차를 죽이고,
+  # 죽은 자리를 또 다음 회차가 죽이는** 상태가 되어 끝까지 도는 회차가 드물었다.
+  # (커밋 기록을 보면 10분 주기인데 실제 갱신은 시간당 3번뿐이었다.)
+  # 겹치면 기다리게 하고, 정말 매달린 회차는 timeout 이 끊는다.
+  cancel-in-progress: false
 
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    # 매달린 회차가 러너를 붙잡고 있지 않게 한다 (기본값은 6시간이다)
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 

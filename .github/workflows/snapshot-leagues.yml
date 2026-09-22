@@ -19,11 +19,18 @@ permissions:
 
 concurrency:
   group: snapshot-leagues
-  cancel-in-progress: true
+  # ⚠️ 예전에는 cancel-in-progress: true 였다. 그런데 이 잡은 실제로 10분을
+  # 넘게 돈다(리그 잡은 실측 15분). 그러면 **다음 회차가 지금 회차를 죽이고,
+  # 죽은 자리를 또 다음 회차가 죽이는** 상태가 되어 끝까지 도는 회차가 드물었다.
+  # (커밋 기록을 보면 10분 주기인데 실제 갱신은 시간당 3번뿐이었다.)
+  # 겹치면 기다리게 하고, 정말 매달린 회차는 timeout 이 끊는다.
+  cancel-in-progress: false
 
 jobs:
   leagues:
     runs-on: ubuntu-latest
+    # 실측 15분 — 여유를 두되 무한정 붙잡지는 않게 한다
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

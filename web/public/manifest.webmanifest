@@ -1,6 +1,6 @@
 {
-  "name": "K Stats Hub",
-  "short_name": "K Stats",
+  "name": "MS Stats Hub",
+  "short_name": "MS Stats",
   "description": "레알 마드리드 · 첼시 · 대한민국 축구 통계 허브 (한국시간 기준)",
   "start_url": "./",
   "scope": "./",

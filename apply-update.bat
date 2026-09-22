@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
 echo ====================================
-echo   K Stats Hub - apply update
+echo   MS Stats Hub - apply update
 echo ====================================
 echo.
 

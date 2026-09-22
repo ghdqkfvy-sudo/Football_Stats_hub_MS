@@ -42,7 +42,8 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
     for (const m of matches) {
       const k = dayKey(m.kickoffUtc);
       const arr = map.get(k);
-      arr ? arr.push(m) : map.set(k, [m]);
+      if (arr) arr.push(m);
+      else map.set(k, [m]);
     }
     return map;
   }, [matches]);

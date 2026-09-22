@@ -32,6 +32,10 @@ jobs:
 
       - name: 의존성 설치
         working-directory: web
+        env:
+          # playwright 는 로컬 스크린샷용 개발 의존성이다 — CI 에서 브라우저
+          # 바이너리(100MB+)까지 내려받을 이유가 없다.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci
 
       - name: 빌드

@@ -25,6 +25,8 @@ export interface PlayerSeason {
   pos: 'G' | 'D' | 'M' | 'F';
   /** 팀 로스터가 알려 준 실제 헤드샷 주소 — 없으면 배지로 그린다 */
   photo?: string;
+  /** 그 사진의 출처 — 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 */
+  photoKind?: AthleteInfo['photoKind'];
   apps: number;
   starts: number;
   minutes: number;
@@ -202,6 +204,7 @@ export function buildSquad(
       if (!p) {
         p = {
           id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
+          photoKind: info.photoKind,
           age: info.age,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
           yellow: 0, red: 0,

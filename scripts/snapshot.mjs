@@ -25,8 +25,33 @@
  *  · slow — 리그 전 팀(리그당 20팀 × 2요청)·스쿼드·코리안리거 → 1시간
  * 한 워크플로에서 다 돌리면 10분마다 수백 요청이 나가 ESPN 에 과하다.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  athleteRecent, scheduleMeta, seasonStatsUrl, seasonTotals, teamScheduleUrl,
+} from './lib/athlete.mjs';
+import {
+  betterPhoto, kindFromUrl, pickSportsdbPlayer, rankOf, rateLimiter, urlVerdict,
+} from './lib/photos.mjs';
+
+/** 지금 고른 사진의 등급 (없으면 0) */
+const rankOfBest = (b) => rankOf(b?.kind);
+
+/**
+ * 팀 일정 → eventId 별 경기 메타. 선수마다 다시 받지 않도록 팀 단위로 캐시한다.
+ * (코리안리거·Future 의 "최근 경기" 는 eventlog 가 경기 id 만 주므로
+ *  날짜·상대·스코어는 이 일정에서 온다)
+ */
+const clubMetaCache = new Map();
+function clubMeta(clubId) {
+  const key = String(clubId ?? '');
+  if (!key || key === '0') return Promise.resolve(new Map());
+  const hit = clubMetaCache.get(key);
+  if (hit) return hit;
+  const p = (async () => scheduleMeta(await get(teamScheduleUrl(key)), key))();
+  clubMetaCache.set(key, p);
+  return p;
+}
 
 const args = process.argv.slice(2);
 const OUT = args.find((a) => !a.startsWith('--')) ?? 'web/public/data';
@@ -46,7 +71,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-15';
+const CODE_VERSION = 'snap-16';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -144,9 +169,34 @@ async function get(url, tries = 3) {
   }
 }
 
+/*
+ * 원자적 쓰기.
+ *
+ * ⚠️ 예전에는 목적지 파일에 곧바로 썼다. 스냅샷 워크플로는
+ * `cancel-in-progress: true` 로 다음 회차에 취소될 수 있는데, 그 순간이
+ * writeFile 중간이면 **잘린 JSON** 이 남고 바로 다음 스텝의 git add 가
+ * 그걸 커밋한다. 임시 파일에 다 쓴 뒤 이름만 바꾸면 그럴 일이 없다.
+ */
 async function save(name, data) {
-  await writeFile(join(OUT, name), JSON.stringify(data), 'utf8');
+  const dest = join(OUT, name);
+  const tmp = `${dest}.tmp`;
+  await writeFile(tmp, JSON.stringify(data), 'utf8');
+  await rename(tmp, dest);
   console.log(`  ✓ ${name}`);
+}
+
+/*
+ * 조용한 실패를 막는 장부.
+ *
+ * ⚠️ 실제로 당했다: Future Resources 가 `future.json` 을 한 번도 만들지
+ * 못했는데(gamelog 엔드포인트가 죽어서) 워크플로는 매번 초록색이었다.
+ * 화면만 전부 "–" 였다. 그래서 "만들어야 하는데 못 만들었고, 대신 쓸
+ * 예전 파일도 없다" 면 워크플로를 빨갛게 만든다.
+ */
+const problems = [];
+const note = (what, why) => { problems.push(`${what} — ${why}`); console.error(`  ! ${what}: ${why}`); };
+const fileExists = async (name) => {
+  try { await readFile(join(OUT, name), 'utf8'); return true; } catch { return false; }
 }
 
 /* ── 포지션 약어 → 큰 분류 ────────────────────────────────
@@ -219,6 +269,40 @@ function goalsFromDetailsRaw(details) {
       };
     })
     .sort((a, b) => a.minute - b.minute);
+}
+
+/**
+ * 순위 계산에 필요한 만큼만 남긴 경기 하나.
+ *
+ * ⚠️ 왜 필요한가: 일정 탭은 히어로의 "4위 · 3승1무0패" 한 줄을 그리려고
+ * `league-eng.1.json` 을 받는데 그게 **3.2MB** 다(380경기 전체 + 선수별
+ * 기록). 앱이 기본으로 여는 탭에서 그걸 내려받을 이유가 없다.
+ * 같은 계산(web/src/lib/league.ts 의 buildTable)을 그대로 돌릴 수 있는
+ * 최소 필드만 담으면 70KB 대로 떨어진다.
+ */
+function slimEvent(ev) {
+  const c = ev?.competitions?.[0];
+  if (!c) return null;
+  const cs = Array.isArray(c.competitors) ? c.competitors : [];
+  const team = (x) => ({
+    team: {
+      id: String(x?.team?.id ?? ''),
+      displayName: String(x?.team?.displayName ?? x?.team?.name ?? ''),
+      shortDisplayName: String(x?.team?.shortDisplayName ?? ''),
+      abbreviation: String(x?.team?.abbreviation ?? ''),
+    },
+    homeAway: x?.homeAway,
+    score: { displayValue: String(x?.score?.displayValue ?? x?.score ?? '') },
+  });
+  return {
+    id: String(ev.id),
+    date: String(ev.date ?? ''),
+    league: { slug: String(ev?.league?.slug ?? ev?.season?.slug ?? '') },
+    competitions: [{
+      status: { type: { completed: c?.status?.type?.completed === true, state: c?.status?.type?.state } },
+      competitors: cs.map(team),
+    }],
+  };
 }
 
 /** ISO 날짜 → 'YYYYMMDD' (스코어보드 dates 파라미터 형식) */
@@ -498,35 +582,58 @@ const normName = (s) => String(s ?? '')
 const TSDB = 'https://www.thesportsdb.com/api/v1/json/3';
 const tsdbCache = new Map();
 
+/**
+ * 이 주소에 파일이 실제로 있는가.
+ *
+ * ⚠️ 예전에는 `res.ok` 가 아니면 주소를 버렸다. 그런데 CDN 은 HEAD 를
+ * 405/403 으로 막기도 하고 러너에서 네트워크가 한 번 튀기도 한다 —
+ * 그때마다 **완벽한 컷아웃 주소를 버리고** 위키 경기 사진으로 내려갔다.
+ * 파일이 없다는 확실한 신호(404/410)일 때만 버린다.
+ */
 async function urlOk(url) {
   if (!url) return false;
   try {
     const res = await fetch(url, { method: 'HEAD' });
-    return res.ok;
+    return urlVerdict(res.status) === 'keep';
   } catch {
-    return false;
+    return true;   // 확인 못 했다 ≠ 없다
   }
 }
 
+/*
+ * ⚠️ 무료 키(`3`)에는 요청 한도가 있다. 예전에는 선수 6명씩 동시에
+ * 160번을 몰아쳤고, 그래서 **처음 처리한 레알 마드리드만 사진이 붙고
+ * 그 뒤 다섯 팀은 전부 실패**했다(배포된 파일로 확인:
+ * real-madrid 25건 / chelsea 6건 / 나머지 0건).
+ * 그래서 이 소스만은 한 줄로 세워 간격을 두고 부른다. 계속 막히면
+ * 이번 회차는 포기하고 지난 회차 값을 이어받는다 — 회차를 거듭하며
+ * 채워지므로 한 번에 다 못 받아도 결국 다 붙는다.
+ */
+const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8 });
+
+/** @returns {Promise<{url:string, kind:'cutout'|'thumb'}|undefined>} */
 function sportsdbPhoto(name, club) {
   const key = normName(name);
   if (!key) return Promise.resolve(undefined);
   if (tsdbCache.has(key)) return tsdbCache.get(key);
 
   const p = (async () => {
-    const j = await get(`${TSDB}/searchplayers.php?p=${encodeURIComponent(name)}`, 2);
-    const list = (j?.player ?? []).filter((x) => String(x?.strSport ?? '') === 'Soccer');
-    if (!list.length) return undefined;
-    /* 같은 이름의 축구 선수가 여럿이면 현 소속팀이 맞는 쪽을 고른다 */
-    const wantClub = normName(club);
-    const hit =
-      (wantClub && list.find((x) => normName(x?.strTeam).includes(wantClub))) ||
-      (wantClub && list.find((x) => wantClub.includes(normName(x?.strTeam)))) ||
-      list[0];
+    const j = await tsdbLimit.run(async () => {
+      const res = await fetch(`${TSDB}/searchplayers.php?p=${encodeURIComponent(name)}`, {
+        headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
+      }).catch(() => null);
+      if (!res || !res.ok) return { ok: false, value: undefined };   // 429 도 여기로
+      const body = await res.json().catch(() => null);
+      return { ok: true, value: body };
+    });
+    if (!j) return undefined;                 // 한도에 걸렸거나 회로가 열렸다
+
+    const hit = pickSportsdbPlayer(j?.player, club, normName);
+    if (!hit) return undefined;
     const cut = String(hit?.strCutout ?? '');
-    if (cut && await urlOk(cut)) return cut;
+    if (cut && await urlOk(cut)) return { url: cut, kind: 'cutout' };
     const thumb = String(hit?.strThumb ?? '');
-    if (thumb && await urlOk(thumb)) return thumb;
+    if (thumb && await urlOk(thumb)) return { url: thumb, kind: 'thumb' };
     return undefined;
   })();
   tsdbCache.set(key, p);
@@ -594,17 +701,23 @@ async function wikipediaPhoto(name) {
   return out;
 }
 
-/** 이전 스냅샷에서 선수별 사진 주소를 이어받는다 (재조회를 줄인다) */
+/**
+ * 이전 스냅샷에서 선수별 사진을 이어받는다.
+ *
+ * 주소만이 아니라 **출처 등급**(photoKind)도 같이 들고 온다. 등급이 없으면
+ * 주소로 되짚는다. 이게 있어야 "위키 경기 사진이 한 번 박히면 영원히
+ * 남는" 문제를 끊을 수 있다 — 나중에 컷아웃을 받으면 올라간다.
+ */
 async function prevPhotos(fileName) {
   const map = new Map();
+  const put = (id, url, kind) => {
+    if (!url) return;
+    map.set(String(id), { url: String(url), kind: kind ?? kindFromUrl(url) });
+  };
   try {
     const json = JSON.parse(await readFile(join(OUT, fileName), 'utf8'));
-    for (const [id, a] of Object.entries(json?.athletes ?? {})) {
-      if (a?.photo) map.set(String(id), String(a.photo));
-    }
-    for (const p of json?.players ?? []) {
-      if (p?.photo) map.set(String(p.id), String(p.photo));
-    }
+    for (const [id, a] of Object.entries(json?.athletes ?? {})) put(id, a?.photo, a?.photoKind);
+    for (const p of json?.players ?? []) put(p?.id, p?.photo, p?.photoKind);
   } catch { /* 첫 실행 */ }
   return map;
 }
@@ -999,73 +1112,6 @@ async function googleNewsKo(q) {
 /* ── 코리안리거 한 명 ─────────────────────────────────
    core 는 athlete 를 $ref 로만 주므로 프로필 → 소속팀 → 대회별 기록 순으로
    따라가야 한다. 리그와 유럽대항전을 합쳐 주는 엔드포인트는 없다. */
-/**
- * gamelog 응답 → 경기 목록.
- *
- * ⚠️ ESPN 이 이 응답의 모양을 바꾼다. 예전에는 경기별 기록이
- * `seasonTypes[].categories[].events[].stats[]` 에 있었는데, 지금은 그 갈래가
- * 안 올 때가 있고 `events`(경기 id → 메타) 만 온다. 한쪽만 읽던 코드가
- * 조용히 빈 배열을 만들어 **코리안리거 최근 3경기가 21명 모두 0건**이 됐다.
- * 그래서 두 모양을 다 읽고, 기록이 없으면 그 자리는 비워 둔 채
- * (goals/assists = undefined) 나중에 경기 요약에서 채운다.
- */
-function gamelogRows(gl, league, iG, iA) {
-  const events = gl?.events ?? {};
-  const rows = [];
-  const base = (eventId) => {
-    const meta = events[String(eventId)] ?? {};
-    return {
-      eventId: String(eventId),
-      competition: league,
-      result: String(meta?.gameResult ?? 'D').toUpperCase().slice(0, 1) || 'D',
-      opponentId: String(meta?.opponent?.id ?? '0'),
-      opponent: String(meta?.opponent?.displayName ?? ''),
-      score: String(meta?.score ?? ''),
-      /* 선발 여부와 출전 시간은 gamelog 에 없다 — core 경기 로스터로 채운다.
-         못 채우면 undefined 로 두어 화면이 "기록 없음" 으로 처리한다. */
-      started: undefined,
-      minutes: undefined,
-      subIn: undefined,
-      date: String(meta?.gameDate ?? ''),
-    };
-  };
-
-  let seen = false;
-  for (const st of gl?.seasonTypes ?? []) {
-    for (const c of st?.categories ?? []) {
-      for (const ev of c?.events ?? []) {
-        seen = true;
-        const r = base(ev?.eventId ?? '');
-        r.goals = iG >= 0 ? Number(ev?.stats?.[iG] ?? 0) || 0 : undefined;
-        r.assists = iA >= 0 ? Number(ev?.stats?.[iA] ?? 0) || 0 : undefined;
-        rows.push(r);
-      }
-    }
-  }
-  if (seen) return rows;
-
-  // 새 모양 — 경기 메타만 있고 기록은 없다
-  for (const id of Object.keys(events)) rows.push(base(id));
-  return rows;
-}
-
-/** 경기 요약에서 그 선수의 골·도움을 읽는다 (gamelog 가 기록을 안 줄 때) */
-async function matchGA(leagueSlug, eventId, athleteId) {
-  const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`);
-  for (const r of sum?.rosters ?? []) {
-    for (const e of r?.roster ?? []) {
-      if (String(e?.athlete?.id ?? '') !== String(athleteId)) continue;
-      const val = (n) => {
-        const hit = (e?.stats ?? []).find((x) => x?.name === n);
-        const v = Number(hit?.value ?? hit?.displayValue);
-        return Number.isFinite(v) ? v : 0;
-      };
-      return { goals: val('totalGoals'), assists: val('goalAssists'), yellow: val('yellowCards') > 0 };
-    }
-  }
-  return { goals: 0, assists: 0, yellow: false };
-}
-
 /** 대회 참가팀 id 집합 — "나가는 팀인지" 를 판단하는 유일한 근거 */
 const teamsInCache = new Map();
 function teamsIn(slug) {
@@ -1166,66 +1212,43 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     }
   }
 
-  // 최근 3경기 — 소속 리그 gamelog 에서
-  const recent = [];
-  if (league) {
-    const gl = await get(`${SITE_WEB}/apis/common/v3/sports/soccer/${league}/athletes/${id}/gamelog`);
-    const names = (gl?.names ?? gl?.labels ?? []).map(String);
-    const iG = names.findIndex((n) => ['totalGoals', 'goals', 'G'].includes(n));
-    const iA = names.findIndex((n) => ['goalAssists', 'assists', 'A'].includes(n));
-    const rows = gamelogRows(gl, league, iG, iA);
-    rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  /*
+   * 최근 3경기.
+   *
+   * ⚠️ 예전에는 `common/v3/.../athletes/{id}/gamelog` 을 썼다. 그 엔드포인트는
+   * **죽었다** — 지금은 어떤 리그·선수로 불러도 HTTP 500 {"code":2400} 이다
+   * (2026-09-17 확인, ?season 을 붙여도 같다). 그래서 21명 전원 최근 경기가
+   * 0건이었고 호버 패널이 통째로 비어 있었다.
+   * core eventlog 로 옮겼다 — 모든 리그에서 살아 있고, 경기별 statistics 가
+   * 출전 여부·출전 시간·골·도움을 한 번에 준다(scripts/lib/athlete.mjs).
+   */
+  const recent = league
+    ? await athleteRecent({
+      get, league, season: SEASON, athleteId: String(id),
+      meta: await clubMeta(clubId), take: 3,
+    })
+    : [];
+  if (league && !recent.length) note(`${nameKo}(${id}) 최근 경기`, 'eventlog 에서 출전 경기를 못 찾음');
 
-    /* gamelog 에는 **명단에 든 경기**가 다 들어온다 — 한 번도 안 뛴 경기까지.
-       그대로 실으면 화면에 "교체" 로 잡힌다(김민재 샬케전이 그랬다).
-       그래서 후보를 넉넉히 두고, 실제 출전이 확인된 경기만 3개 채운다. */
-    const pickFrom = rows.slice(0, 8);
-
-    /* 실제 선발/교체 시각을 core 경기 로스터에서 채운다.
-       (요약 로스터는 subbedIn/subbedOut 이 불리언뿐이라 시각이 없다) */
-    for (const r of pickFrom) {
-      if (!r.eventId || clubId === '0') continue;
-      const info = await coreLineupInfo(league, r.eventId, clubId);
-      const it = info.get(String(id));
-      if (!it) continue;
-      r.started = it.starter;
-      r.subIn = it.starter ? undefined : (it.inMin ?? undefined);
-      r.minutes = it.starter
-        ? Math.min(90, it.outMin ?? 90)
-        : it.inMin != null
-          ? Math.max(0, Math.min(90, (it.outMin ?? 90) - it.inMin))
-          : 0;
-    }
-
-    /* 실제로 그라운드를 밟은 경기만 남긴다.
-       · 선발      → 출전
-       · 교체 투입 → 출전
-       · 선발 아님 + 투입 시각 없음 → **미출전**(명단에만 있었다)
-       확인 자체를 못 한 경기(started === undefined)는 판단하지 않고 남긴다 —
-       화면이 "기록 없음" 으로 처리한다. */
-    const played = (r) => r.started !== false || r.subIn !== undefined;
-    const keep = pickFrom.filter(played).slice(0, 3);
-
-    /* gamelog 가 경기별 기록을 안 준 모양이면 요약에서 채운다 (최대 3경기) */
-    await Promise.all(keep.map(async (r) => {
-      if (r.goals !== undefined && r.assists !== undefined) return;
-      if (!r.eventId) { r.goals = 0; r.assists = 0; return; }
-      const ga = await matchGA(league, r.eventId, id);
-      r.goals = ga.goals;
-      r.assists = ga.assists;
-      if (ga.yellow) r.yellow = true;
-    }));
-    recent.push(...keep);
-  }
-
-  /* 사진: TheSportsDB → ESPN(로스터·관용 주소) → 이어받기 → 위키백과 */
+  /* 사진은 등급으로 고른다 (컷아웃 > 썸네일 > ESPN > 위키).
+     지난 회차 값도 후보다 — 그래야 한도에 걸린 회차에 사진이 사라지지 않고,
+     예전에 박힌 위키 경기 사진이 컷아웃으로 올라간다. */
   const enName = String(prof?.displayName ?? nameKo);
-  let photo = await sportsdbPhoto(enName, club);
-  if (!photo && league && clubId !== '0') {
-    photo = (await teamPhotos(league, clubId)).get(String(id))?.photo;
+  let best = betterPhoto(carriedPhoto ?? null, await sportsdbPhoto(enName, club));
+  if (rankOfBest(best) < 2 && league && clubId !== '0') {
+    const rosterPhoto = (await teamPhotos(league, clubId)).get(String(id))?.photo;
+    if (rosterPhoto) best = betterPhoto(best, { url: rosterPhoto, kind: 'espn' });
   }
-  if (!photo) photo = await espnHeadshot(id);
-  if (!photo) photo = carriedPhoto ?? await wikipediaPhoto(enName);
+  if (rankOfBest(best) < 2) {
+    const direct = await espnHeadshot(id);
+    if (direct) best = betterPhoto(best, { url: direct, kind: 'espn' });
+  }
+  if (!best) {
+    const wiki = await wikipediaPhoto(enName);
+    if (wiki) best = { url: wiki, kind: 'wiki' };
+  }
+  const photo = best?.url;
+  const photoKind = best?.kind;
 
   /* 대회 앰블럼도 API 에서 가져온다 — 리그 로고 id 를 코드에 적어 두면
      새 리그(그리스·덴마크·벨기에…)로 이적할 때마다 표가 비어 버린다.
@@ -1239,7 +1262,7 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     pos,
     age: Number(prof?.age ?? 0) || 0,
     clubId, club, league, leagueName, leagueLogo,
-    photo,
+    photo, photoKind,
     stats, recent,
   };
 }
@@ -1299,6 +1322,11 @@ async function main() {
   if (wants('slow')) for (const lg of LEAGUES) {
     // soccer 순위는 반드시 /apis/v2/ 경로 (site/v2 는 빈 객체를 반환한다)
     const standings = await get(`${SITE}/apis/v2/sports/soccer/${lg}/standings`);
+    if (!standings) note(`${lg} 순위표`, 'ESPN standings 응답 없음');
+    /* ⚠️ 이 파일은 앱이 읽지 않는다 — league-{lg}.json 과 table-{lg}.json 이
+       standings 를 이미 품고 있다. 그래도 계속 쓴다: 10분마다 도는 봇이
+       (아직 옛 코드로) 이 파일을 다시 만드는 동안 지우면 리베이스가 매번
+       충돌한다. 제거는 새 코드가 배포된 뒤 별도 커밋에서 한다. */
     if (standings) await save(`standings-${lg}.json`, standings);
     await sleep(400);
 
@@ -1348,6 +1376,7 @@ async function main() {
          합계만 있으면 되고, 출전 구간(withWindows)은 필요 없다.
          true 로 두면 도움이 있는 경기마다 요청이 2건 넘게 더 붙는다. */
       await enrichPlayerStats(events, lg, await prevStatsMap(`league-${lg}.json`), 120, false);
+      const now = new Date().toISOString();
       await save(`league-${lg}.json`, {
         league: lg,
         events,
@@ -1355,7 +1384,16 @@ async function main() {
         teams: ids.length,
         goalsSource: GOALS_SOURCE,
         statsSource: STATS_SOURCE,
-        fetchedAt: new Date().toISOString(),
+        fetchedAt: now,
+      });
+      /* 순위·승무패만 필요한 화면(일정 탭 히어로)을 위한 경량본.
+         같은 buildTable 을 돌릴 수 있게 모양을 맞춰 둔다. */
+      await save(`table-${lg}.json`, {
+        league: lg,
+        events: events.map(slimEvent).filter(Boolean),
+        standings,
+        teams: ids.length,
+        fetchedAt: now,
       });
       const done = events.filter((e) => e?.competitions?.[0]?.status?.type?.completed).length;
       console.log(`    ${lg}: ${ids.length}팀 · ${events.length}경기 (종료 ${done})`);
@@ -1500,26 +1538,39 @@ async function main() {
       /* 선수 한 명당 (사진 + 시즌 출전시간) 이라 30명이면 왕복 60번이다.
          여기도 줄 세울 이유가 없다. */
       await pool(Object.keys(athletes), 6, async (id) => {
-        // ESPN 사진이 있으면 1순위, 없으면 지난 스냅샷에서 이어받고,
-        // 그것도 없으면 위키백과에서 찾아본다.
         const meta = photos.get(id);
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
         if (meta?.age) athletes[id].age = meta.age;
-        /* 사진 우선순위: TheSportsDB 컷아웃/썸네일 → ESPN → 이어받기 → 위키백과.
-           TheSportsDB 가 커버가 가장 넓고 배경을 딴 컷아웃이라 칩에 잘 맞는다. */
+
+        /*
+         * 사진은 **등급으로** 고른다 — 컷아웃 > 썸네일 > ESPN > 위키.
+         * 지난 회차 값을 후보에 같이 넣어 두는 것이 핵심이다:
+         *  · TheSportsDB 가 한도에 걸린 회차에도 지난 컷아웃을 유지하고
+         *  · 예전에 위키 사진이 박혔던 선수는 컷아웃이 잡히는 회차에 올라간다
+         * (예전 코드는 "직접 받은 게 있으면 그걸, 없으면 이어받기" 라서
+         *  한 번 박힌 위키 경기 사진이 영원히 남았다.)
+         */
         const [tsdb, espn, mins] = await Promise.all([
           sportsdbPhoto(athletes[id].name, t.name),
-          meta?.photo ? meta.photo : espnHeadshot(id),
+          meta?.photo
+            ? Promise.resolve({ url: meta.photo, kind: 'espn' })
+            : espnHeadshot(id).then((u) => (u ? { url: u, kind: 'espn' } : undefined)),
           athleteSeasonMinutes(t.league, id),
         ]);
-        const direct = tsdb || espn;
-        if (direct) {
-          athletes[id].photo = direct;
-          if (tsdb) fromTsdb++; else fromEspn++;
-        } else {
-          const wiki = carried.get(id) ?? await wikipediaPhoto(athletes[id].name);
-          if (wiki) { athletes[id].photo = wiki; fromWiki++; }
+
+        let best = betterPhoto(carried.get(id) ?? null, tsdb);
+        best = betterPhoto(best, espn);
+        if (!best) {
+          const wiki = await wikipediaPhoto(athletes[id].name);
+          if (wiki) best = { url: wiki, kind: 'wiki' };
+        }
+        if (best) {
+          athletes[id].photo = best.url;
+          athletes[id].photoKind = best.kind;
+          if (best.kind === 'cutout' || best.kind === 'thumb') fromTsdb++;
+          else if (best.kind === 'espn') fromEspn++;
+          else fromWiki++;
         }
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
       });
@@ -1530,7 +1581,8 @@ async function main() {
       });
       console.log(
         `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
-          ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})`,
+          ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})` +
+          (tsdbLimit.broken ? ' · ⚠ SportsDB 한도 — 다음 회차에 이어 채움' : ''),
       );
     } else {
       console.error(`  ! ${t.slug}: 라인업 0경기 — 기존 파일 유지`);
@@ -1541,54 +1593,62 @@ async function main() {
      조항 선수들의 시즌 기록. 앱은 프록시가 없으면 이 파일을 읽는데,
      지금까지 아무도 만들지 않아 카드가 전부 "–" 로 비어 있었다. */
   if (wants('slow')) {
+    /*
+     * ⚠️ 이 블록은 **한 번도 파일을 만든 적이 없었다.** 원인은 위 코리안리거와
+     * 같다 — `common/v3/.../athletes/{id}/gamelog` 이 죽어서(HTTP 500
+     * {"code":2400}) `rows` 가 늘 비었고, `if (!rows.length) return` 으로
+     * 전원 탈락했다. 그래서 `/data/future.json` 이 404 였고, 프록시가 없는
+     * 배포에서는 Future Resources 카드가 전부 "–" 였다.
+     *
+     * 시즌 합계는 core 시즌 통계에서, 최근 경기는 eventlog 에서 받는다.
+     * 덤으로 출전수가 정확해진다 — 예전 `apps = rows.length` 는 **명단에만
+     * 든 경기까지** 세서 과대 집계였다(코리안리거에서 이미 고친 문제인데
+     * 이 경로에는 반영되지 않았다).
+     */
     const players = {};
-    await pool(FUTURE, 4, async ([id, lg]) => {
-      const j = await get(
-        `${SITE_WEB}/apis/common/v3/sports/soccer/${lg}/athletes/${id}/gamelog`,
-      );
-      const names = (j?.names ?? j?.labels ?? []).map(String);
-      const iG = names.findIndex((n) => ['totalGoals', 'goals', 'G'].includes(n));
-      const iA = names.findIndex((n) => ['goalAssists', 'assists', 'A'].includes(n));
-      const rows = gamelogRows(j, lg, iG, iA);
-      if (!rows.length) return;
-      rows.sort((x, y) => String(y.date).localeCompare(String(x.date)));
-
-      /* 기록 갈래가 없는 응답이면 최근 5경기만 요약에서 채운다 —
-         전 경기를 요약으로 채우면 선수 한 명에 수십 번 요청이 나간다. */
-      const head = rows.slice(0, 5);
-      await Promise.all(head.map(async (r) => {
-        if (r.goals !== undefined) return;
-        const ga = await matchGA(lg, r.eventId, id);
-        r.goals = ga.goals;
-        r.assists = ga.assists;
-      }));
-
-      const apps = rows.length;
-      const goals = rows.reduce((n, r) => n + (r.goals ?? 0), 0);
-      const assists = rows.reduce((n, r) => n + (r.assists ?? 0), 0);
-      const recent = head.map((r) => ({
-        date: r.date,
-        opponent: r.opponent,
-        score: r.score || undefined,
-        goals: r.goals ?? 0,
-        assists: r.assists ?? 0,
-      }));
-
+    await pool(FUTURE, 3, async ([id, lg]) => {
       /* 현 소속팀 — 선수가 옮겨도 화면이 따라가게 core 프로필에서 받는다 */
       const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
-      const teamRef = prof?.defaultTeam?.$ref;
+      const teamRef = prof?.defaultTeam?.$ref ?? prof?.team?.$ref;
       const team = teamRef ? await get(teamRef) : null;
+      const clubId = String(team?.id ?? '0');
+
+      /* 지금 뛰는 리그는 프로필이 알려 준다 — 큐레이션 파일의 리그가
+         낡아도(이적) 화면이 따라간다. 없으면 적어 둔 값을 쓴다. */
+      const league =
+        String(prof?.defaultLeague?.$ref ?? '').match(/leagues\/([\w.]+)/)?.[1] ?? lg;
+
+      const totals = seasonTotals(await get(seasonStatsUrl(league, SEASON, id)));
+      const recent = await athleteRecent({
+        get, league, season: SEASON, athleteId: String(id),
+        meta: await clubMeta(clubId), take: 3,
+      });
+
+      if (!totals.apps && !recent.length) return;   // 이번 시즌 기록이 아직 없다
 
       players[id] = {
         club: team?.displayName ? String(team.displayName) : undefined,
-        apps, goals, assists, recent,
+        league,
+        apps: totals.apps,
+        goals: totals.goals,
+        assists: totals.assists,
+        minutes: totals.minutes,
+        recent: recent.map((r) => ({
+          date: r.date,
+          opponent: r.opponent,
+          score: r.score || undefined,
+          goals: r.goals,
+          assists: r.assists,
+        })),
       };
     });
     if (Object.keys(players).length) {
       await save('future.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
-      console.log(`    퓨처 리소스 ${Object.keys(players).length}명`);
+      console.log(`    퓨처 리소스 ${Object.keys(players).length}/${FUTURE.length}명`);
+    } else if (await fileExists('future.json')) {
+      note('퓨처 리소스', '0명 — 기존 파일 유지');
     } else {
-      console.error('  ! 퓨처 리소스 0명 — 기존 파일 유지');
+      note('퓨처 리소스', '0명이고 기존 파일도 없음 — 화면이 빈칸이 된다');
     }
   }
 
@@ -1603,8 +1663,10 @@ async function main() {
     if (players.length) {
       await save('koreans.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
       console.log(`    코리안리거 ${players.length}명`);
+    } else if (await fileExists('koreans.json')) {
+      note('코리안리거', '0명 — 기존 파일 유지');
     } else {
-      console.error('  ! 코리안리거 0명 — 기존 파일 유지');
+      note('코리안리거', '0명이고 기존 파일도 없음');
     }
   }
 
@@ -1613,6 +1675,18 @@ async function main() {
     only: ONLY,
     codeVersion: CODE_VERSION,
   });
+
+  if (problems.length) {
+    console.error(`\n⚠ 문제 ${problems.length}건`);
+    for (const p of problems) console.error(`  · ${p}`);
+    /* 산출물이 아예 없는 경우만 실패로 본다 — 한 선수가 빠진 것으로
+       워크플로를 빨갛게 만들면 아무도 안 보게 된다. */
+    const fatal = problems.filter((p) => p.includes('기존 파일도 없음') || p.includes('빈칸'));
+    if (fatal.length) {
+      console.error('\n✗ 필수 산출물이 없다 — 실패로 처리한다');
+      process.exitCode = 1;
+    }
+  }
   console.log('완료');
 }
 

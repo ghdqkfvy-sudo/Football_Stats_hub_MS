@@ -7,6 +7,7 @@
  * 어떤 필드도 필수로 가정하지 않는다.
  */
 import type { GoalEvent, Match, MatchStatus, StandingRow, StandingTable, TeamRef } from './types';
+
 import { teamName } from '../config/names';
 import { CREST, TEAM_OVERRIDE } from '../config/targets';
 
@@ -233,50 +234,9 @@ export function standingsFrom(json: any, competition: string, competitionName: s
     .filter((t) => t.rows.length > 0);
 }
 
-/**
- * ESPN standings 응답이 시즌 초반에 낡은 값을 주는 사례를 실제로 확인했다
- * (레알 마드리드가 5경기를 치렀는데 gamesPlayed=0). 그래서 경기 결과로
- * 순위를 직접 계산하는 경로를 항상 갖춰 두고, 불일치가 감지되면 이쪽을 쓴다.
+/*
+ * 순위를 경기 결과로 다시 계산하는 경로는 `lib/league.ts` 의 buildTable 에
+ * 있다. 예전에 여기에도 `deriveStandings`/`standingsLookStale` 이 있었는데
+ * 아무도 부르지 않는 두 번째 구현이라, 다음 사람이 어느 쪽을 고쳐야 할지
+ * 알 수 없게 만들 뿐이었다 — 지웠다.
  */
-export function deriveStandings(
-  matches: Match[],
-  competition: string,
-  competitionName: string,
-): StandingTable {
-  type Acc = Omit<StandingRow, 'rank'>;
-  const acc = new Map<string, Acc>();
-  const ensure = (t: TeamRef): Acc => {
-    let a = acc.get(t.id);
-    if (!a) {
-      a = { team: t, played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, gd: 0, points: 0, form: [] };
-      acc.set(t.id, a);
-    }
-    return a;
-  };
-
-  for (const m of matches) {
-    if (m.status !== 'finished' || m.homeScore === undefined || m.awayScore === undefined) continue;
-    const h = ensure(m.home);
-    const a = ensure(m.away);
-    h.played++; a.played++;
-    h.gf += m.homeScore; h.ga += m.awayScore;
-    a.gf += m.awayScore; a.ga += m.homeScore;
-    if (m.homeScore > m.awayScore) { h.win++; h.points += 3; a.loss++; h.form.push('W'); a.form.push('L'); }
-    else if (m.homeScore < m.awayScore) { a.win++; a.points += 3; h.loss++; a.form.push('W'); h.form.push('L'); }
-    else { h.draw++; a.draw++; h.points++; a.points++; h.form.push('D'); a.form.push('D'); }
-  }
-
-  const rows = [...acc.values()]
-    .map((a) => ({ ...a, gd: a.gf - a.ga, form: a.form.slice(-5) }))
-    .sort((x, y) => y.points - x.points || y.gd - x.gd || y.gf - x.gf)
-    .map((r, i) => ({ ...r, rank: i + 1 }));
-
-  return { competition, competitionName, rows, derived: true, updatedAt: new Date().toISOString() };
-}
-
-/** ESPN 원본이 신뢰할 만한지 판단 — 아니면 derive 로 대체한다. */
-export function standingsLookStale(table: StandingTable, playedHint: number): boolean {
-  if (!table.rows.length) return true;
-  const maxPlayed = Math.max(...table.rows.map((r) => r.played));
-  return maxPlayed + 1 < playedHint;
-}

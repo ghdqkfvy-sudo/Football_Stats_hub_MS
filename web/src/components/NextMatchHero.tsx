@@ -41,6 +41,37 @@ const ALARM = (
   </svg>
 );
 
+/**
+ * "3위 · 3W 0D 1L" — 레퍼런스와 같은 한 줄 요약.
+ *
+ * ⚠️ 모듈 바깥에 있어야 한다. 예전에는 NextMatchHero 안에서 만들었는데,
+ * 렌더마다 새 컴포넌트 타입이 되어 React 가 매번 통째로 다시 마운트했다
+ * (이 화면은 1초마다 카운트다운으로 리렌더된다 — 매초 두 번씩 버린 셈이다).
+ */
+function TeamTile({
+  t, focus, standing,
+}: {
+  t: Match['home'];
+  focus: boolean;
+  standing?: TeamStanding;
+}) {
+  return (
+    <div className="fxt" data-focus={focus}>
+      <span className="fxt__tile">
+        <Crest team={t} size={58} />
+      </span>
+      <div className="fxt__name">{t.name}</div>
+      {standing && (
+        <div className="fxt__rec num">
+          {standing.rank !== undefined && <b>{standing.rank}위</b>}
+          {standing.rank !== undefined && ' · '}
+          {standing.win}W {standing.draw}D {standing.loss}L
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
   const palette = usePalette();
   const [now, setNow] = useState(() => Date.now());
@@ -53,27 +84,6 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
   const live = match.status === 'live';
   const cd = done ? null : countdown(match.kickoffUtc, now);
   const tagText = done ? '경기 결과' : live ? '진행 중' : '다음 경기';
-
-  /** "3위 · 3W 0D 1L" — 레퍼런스와 같은 한 줄 요약 */
-  const Team = ({ t }: { t: Match['home'] }) => {
-    const st = standingOf?.(t.id);
-    const focus = t.id === focusTeamId;
-    return (
-      <div className="fxt" data-focus={focus}>
-        <span className="fxt__tile">
-          <Crest team={t} size={58} />
-        </span>
-        <div className="fxt__name">{t.name}</div>
-        {st && (
-          <div className="fxt__rec num">
-            {st.rank !== undefined && <b>{st.rank}위</b>}
-            {st.rank !== undefined && ' · '}
-            {st.win}W {st.draw}D {st.loss}L
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <section className="hero" aria-label={tagText}>
@@ -97,7 +107,7 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
       </div>
 
       <div className="hero__fx">
-        <Team t={match.home} />
+        <TeamTile t={match.home} focus={match.home.id === focusTeamId} standing={standingOf?.(match.home.id)} />
         <div className="fxvs">
           {done || live ? (
             <span className="num">
@@ -109,7 +119,7 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
             'VS'
           )}
         </div>
-        <Team t={match.away} />
+        <TeamTile t={match.away} focus={match.away.id === focusTeamId} standing={standingOf?.(match.away.id)} />
       </div>
 
       <div className="hero__when">

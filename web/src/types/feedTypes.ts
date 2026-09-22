@@ -38,6 +38,16 @@ export interface AthleteInfo {
    */
   photo?: string;
   /**
+   * 그 사진이 어디서 온 것인지.
+   *
+   * ⚠️ 이게 필요한 이유: 위키백과 대표 이미지는 **헤드샷이 아니다**.
+   * 250px 경기 사진이라 44px 원형 칩에 `object-fit: cover` 로 넣으면
+   * 얼굴이 아니라 잔디와 유니폼이 보인다(뉴캐슬·맨유가 그랬다).
+   * TheSportsDB 컷아웃은 배경을 딴 상반신이라 가운데 정렬이 맞고,
+   * 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 — 화면이 그걸 구분해야 한다.
+   */
+  photoKind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
+  /**
    * 팀 로스터가 주는 시즌 포지션 약어(대개 G/D/M/F).
    * 경기 요약이 자리 약어(CD-L 등)를 안 주는 팀·대회가 있어서, 그때
    * 줄 배치라도 맞추기 위한 대비책이다.
@@ -118,6 +128,8 @@ export interface KoreanPlayer {
   leagueName: string;
   /** 소속팀 로스터가 알려 준 실제 헤드샷 주소 (없는 선수도 많다) */
   photo?: string;
+  /** 사진 출처 — 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 (AthleteInfo 참고) */
+  photoKind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
   /** 소속 리그 앰블럼 — core 리그 객체의 logos(dark) 에서 받아 온다 */
   leagueLogo?: string;
   stats: KoreanStat[];

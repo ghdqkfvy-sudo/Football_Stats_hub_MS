@@ -32,7 +32,9 @@ export function NewsTab({ target }: { target: Target }) {
   const [rows, setRows] = useState<Article[] | null>(null);
   const [source, setSource] = useState<Source>('none');
   const [filter, setFilter] = useState<Filter>('ALL');
-  const now = useMemo(() => Date.now(), [rows]);
+  /* "3시간 전" 의 기준 시각. 렌더 중에 Date.now() 를 부르면 같은 렌더가
+     매번 다른 값을 내므로(순수하지 않다), 목록을 받은 그 순간으로 고정한다. */
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let alive = true;
@@ -42,6 +44,7 @@ export function NewsTab({ target }: { target: Target }) {
       if (!alive) return;
       setRows(r.data);
       setSource(r.source);
+      setNow(Date.now());
     });
     return () => {
       alive = false;

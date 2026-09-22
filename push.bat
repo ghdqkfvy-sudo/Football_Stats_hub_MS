@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
 echo ====================================
-echo   K Stats Hub - push to GitHub
+echo   MS Stats Hub - push to GitHub
 echo ====================================
 echo.
 
@@ -119,6 +119,12 @@ echo        To undo, type these two lines here:
 echo            git rebase --abort
 echo            git checkout -- web/public/data
 echo        Then run push.bat again.
+echo.
+echo        [CAUTION] If the conflict is NOT in web/public/data, you have real
+echo                  source changes in the rebase - do not abort blindly.
+echo                  Run "git status" and resolve those files, then:
+echo                      git add ^<files^>
+echo                      git rebase --continue
 goto end
 
 :commit_failed
@@ -127,8 +133,28 @@ echo [ERROR] commit failed - see the message above.
 goto end
 
 :nothing
-echo No local changes to push. Checking remote for new commits...
+rem A clean working tree does NOT mean there is nothing to push.
+rem Commits made elsewhere (another tool, a previous aborted run) are still
+rem sitting here unpushed. The old version pulled and then stopped, so those
+rem commits never reached GitHub - it looked like success but nothing shipped.
+echo No changed files. Checking for commits that were never pushed...
 git pull --rebase
+if errorlevel 1 goto conflict
+
+set "AHEAD="
+for /f %%i in ('git rev-list --count @{u}..HEAD 2^>nul') do set "AHEAD=%%i"
+if not defined AHEAD goto up_to_date
+if "!AHEAD!"=="0" goto up_to_date
+
+echo.
+echo !AHEAD! commit^(s^) here are not on GitHub yet:
+git log --oneline @{u}..HEAD
+echo.
+set /a TRY=0
+goto retry
+
+:up_to_date
+echo Already up to date with origin - nothing to push.
 goto end
 
 :no_repo

@@ -120,6 +120,37 @@ export async function loadLeague(slug: string, name: string): Promise<Loaded<Lea
   });
 }
 
+/**
+ * 순위·승무패만 필요할 때 쓰는 **경량** 대회 로더.
+ *
+ * ⚠️ 왜 따로 두는가: 일정 탭은 히어로의 "4위 · 3승1무0패" 한 줄을 그리려고
+ * `loadLeague` 를 불렀는데, 그 파일(`league-eng.1.json`)이 **3.2MB** 다
+ * (380경기 전체 + 경기별 선수 기록). 앱이 기본으로 여는 탭에서 그걸
+ * 내려받을 이유가 없다. 스냅샷이 같은 계산을 돌릴 수 있는 최소 필드만
+ * 담은 `table-{slug}.json` (70KB대)을 따로 떠 둔다.
+ *
+ * 공격포인트 순위처럼 경기별 선수 기록이 필요한 화면은 `loadLeague` 를 쓴다.
+ */
+export async function loadLeagueTable(slug: string, name: string): Promise<Loaded<LeagueData>> {
+  const pick = (json: any): LeagueData => ({
+    matches: matchesFromSchedule(json),
+    table: json?.standings ? standingsFrom(json.standings, slug, name)[0] : undefined,
+  });
+  const empty = (v: LeagueData) => !v.matches.length && !v.table;
+
+  const slim = await load<LeagueData>({
+    feedFile: `table-${slug}.json`,
+    pick,
+    empty,
+    fallback: { matches: [] },
+  });
+  if (slim.source !== 'none') return slim;
+
+  /* 경량본이 아직 없는 배포(스냅샷이 한 번도 안 돌았거나 예전 코드)에서는
+     기존 경로로 떨어진다 — 느리지만 화면이 비는 것보다 낫다. */
+  return loadLeague(slug, name);
+}
+
 /* ── 라인업 · 선수 ──────────────────────────────────── */
 
 const minuteOf = (v: unknown): number | undefined => {
@@ -361,66 +392,44 @@ export async function loadNews(
 
 export interface FutureStat {
   club?: string;
+  /** 지금 뛰는 리그 — 선수가 옮기면 큐레이션 파일보다 이 값이 맞다 */
+  league?: string;
   apps: number;
   goals: number;
   assists: number;
+  minutes?: number;
   recent: { date: string; opponent: string; score?: string; goals: number; assists: number }[];
-}
-
-/** gamelog 응답은 라벨 배열 + 경기별 값 배열이라 이름으로 인덱스를 찾아야 한다 */
-function gamelogStats(j: any): FutureStat | null {
-  const names: string[] = (j?.names ?? j?.labels ?? []).map((x: any) => String(x));
-  const idx = (want: string[]) => names.findIndex((n) => want.includes(n));
-  const iG = idx(['totalGoals', 'goals', 'G']);
-  const iA = idx(['goalAssists', 'assists', 'A']);
-
-  const events: Record<string, any> = j?.events ?? {};
-  const rows: FutureStat['recent'] = [];
-  let goals = 0, assists = 0, apps = 0;
-
-  for (const season of j?.seasonTypes ?? []) {
-    for (const cat of season?.categories ?? []) {
-      for (const ev of cat?.events ?? []) {
-        const stats: string[] = ev?.stats ?? [];
-        const g = Number(stats[iG] ?? 0) || 0;
-        const a = Number(stats[iA] ?? 0) || 0;
-        const meta = events[String(ev?.eventId ?? '')] ?? {};
-        apps += 1;
-        goals += g;
-        assists += a;
-        rows.push({
-          date: String(meta?.gameDate ?? ''),
-          opponent: String(meta?.opponent?.displayName ?? meta?.opponent?.abbreviation ?? ''),
-          score: meta?.score ? String(meta.score) : undefined,
-          goals: g,
-          assists: a,
-        });
-      }
-    }
-  }
-  if (!apps) return null;
-  rows.sort((x, y) => y.date.localeCompare(x.date));
-  return {
-    club: j?.team?.displayName ? String(j.team.displayName) : undefined,
-    apps, goals, assists,
-    recent: rows.slice(0, 3),
-  };
 }
 
 /**
  * 조항 선수 한 명의 현재 기록.
+ *
  * 조항 자체(바이백·셀온)는 어떤 API 에도 없어 큐레이션 파일에서 오고,
  * "지금 어디서 어떻게 하고 있는지" 만 여기서 붙인다.
+ *
+ * ⚠️ 예전에는 프록시의 `/api/v1/gamelog` 을 먼저 봤다. 그 upstream
+ * (`common/v3/.../athletes/{id}/gamelog`)은 **죽었다** — 어떤 선수로 불러도
+ * HTTP 500 을 준다(2026-09-17 확인). 그래서 프록시가 켜진 배포에서도
+ * 값이 안 붙었고, 프록시가 없는 배포에서는 `future.json` 자체가 만들어지지
+ * 않아 카드가 전부 "–" 였다. 이제 스냅샷이 core eventlog 로 만든 정적 피드가
+ * 1순위다(프록시 경로는 같은 모양을 주는 새 라우트로 남겨 둔다).
  */
 export async function loadFutureStat(league: string, athleteId: string): Promise<FutureStat | null> {
-  try {
-    return gamelogStats(await proxy(`/api/v1/gamelog/${encodeURIComponent(league)}/${athleteId}`));
-  } catch { /* 피드로 */ }
-  try {
-    const j = await feed('future.json');
-    const hit = (j?.players ?? {})[athleteId];
-    return hit ? (hit as FutureStat) : null;
-  } catch {
-    return null;
+  const fromFeed = async (): Promise<FutureStat | null> => {
+    try {
+      const j = await feed('future.json');
+      const hit = (j?.players ?? {})[athleteId];
+      return hit ? (hit as FutureStat) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  if (HAS_PROXY) {
+    try {
+      const j = await proxy(`/api/v1/playerlog/${encodeURIComponent(league)}/${athleteId}`);
+      if (j && Number.isFinite(Number(j.apps))) return j as FutureStat;
+    } catch { /* 피드로 */ }
   }
+  return fromFeed();
 }

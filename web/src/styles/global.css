@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   K STATS HUB — 디자인 토큰
+   MS STATS HUB — 디자인 토큰
    다크 단일 테마로 확정(사용자 요구). 팀 컬러는 --accent 계열만
    교체되며 나머지 뉴트럴은 고정이다. 뉴트럴은 순수 회색이 아니라
    파랑 쪽으로 살짝 기운 값을 쓴다(경기장 야간 조명의 색온도).
@@ -1152,6 +1152,31 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border: 1.5px solid var(--line-2);
 }
 .hs img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+/*
+ * 사진 출처에 따라 잘라 보여 줄 위치가 다르다.
+ *
+ * · TheSportsDB 컷아웃(cutout)은 배경을 딴 상반신이라 정수리가 맨 위에 있다 →
+ *   위를 살짝 띄워야 머리가 잘리지 않는다.
+ * · 위키백과 대표 이미지(wiki)는 **헤드샷이 아니라 경기 사진**이다. 맨 위
+ *   (top = 0%)는 하늘·관중석이라 얼굴이 아예 안 걸린다. 얼굴은 대개 위쪽
+ *   1/5 지점에 있어서 그쪽을 보여 준다.
+ *   (근본 해결은 이 소스를 안 쓰는 것이다 — 스냅샷이 회차를 거듭하며
+ *    컷아웃으로 올려 준다. scripts/lib/photos.mjs 참고)
+ */
+/* 시즌은 이제 고르는 값이 아니라 적는 값이다 (App.tsx 주석 참고) */
+.season--static {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-mid);
+  font-family: var(--font-display);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.hs img[data-kind='cutout'] { object-position: 50% 4%; }
+.hs img[data-kind='wiki'],
+.hs img[data-kind='thumb'] { object-position: 50% 18%; }
 .hs__n {
   position: absolute; right: -1px; bottom: -1px;
   min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px;

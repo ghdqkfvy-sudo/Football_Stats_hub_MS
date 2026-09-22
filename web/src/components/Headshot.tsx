@@ -16,11 +16,16 @@ import { headshot } from '../config/koreans';
  * 떨어진다. 사진이 없는 선수가 섞여 있는 게 정상이다.
  */
 export function Headshot({
-  id, src, jersey, label, size = 34, className = '',
+  id, src, kind, jersey, label, size = 34, className = '',
 }: {
   id: string;
   /** 스냅샷이 확인한 실제 사진 주소 — 없으면 관용 주소를 시도한다 */
   src?: string;
+  /**
+   * 사진 출처. 위키백과 사진은 경기 중 전신 컷이라 가운데를 잘라내면
+   * 얼굴이 안 걸린다 — `data-kind` 로 넘겨 CSS 가 위쪽을 보여 준다.
+   */
+  kind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
   /** 등번호 배지 (없으면 배지를 그리지 않는다) */
   jersey?: number;
   /** 이미지 실패 시 원 안에 넣을 글자 — 없으면 등번호를 쓴다 */
@@ -45,7 +50,13 @@ export function Headshot({
   }
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
-      <img src={url} alt="" loading="lazy" onError={() => setFailed(true)} />
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        data-kind={kind ?? undefined}
+        onError={() => setFailed(true)}
+      />
       {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
     </span>
   );

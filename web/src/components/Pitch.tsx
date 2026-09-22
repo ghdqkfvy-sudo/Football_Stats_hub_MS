@@ -131,7 +131,14 @@ function PlayerChip({
       <span className="chipbox__ring">
         {/* 등번호는 칩 자체 배지(chipbox__no)로만 그린다 —
             Headshot 에도 배지를 맡기면 같은 숫자가 두 번 찍힌다. */}
-        <Headshot id={p.id} src={p.photo} label={String(p.jersey)} size={44} className="chipbox__hs" />
+        <Headshot
+          id={p.id}
+          src={p.photo}
+          kind={p.photoKind}
+          label={String(p.jersey)}
+          size={44}
+          className="chipbox__hs"
+        />
         {p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
       </span>
       <span className="chipbox__name">{last}</span>

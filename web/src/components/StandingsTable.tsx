@@ -217,7 +217,30 @@ function TeamSplit({ matches, teamId }: { matches: Match[]; teamId: string }) {
     return <p className="nogoal" style={{ padding: '4px 0 10px' }}>이 대회 경기 기록이 아직 없습니다.</p>;
   }
 
-  const Col = ({ title, list, rec }: { title: string; list: Match[]; rec: { w: number; d: number; l: number } }) => (
+  return (
+    <div className="split">
+      <SplitCol title="홈" list={r.home} rec={r.homeRecord} teamId={teamId} />
+      <div className="split__div" />
+      <SplitCol title="원정" list={r.away} rec={r.awayRecord} teamId={teamId} />
+    </div>
+  );
+}
+
+/**
+ * 홈 또는 원정 한 칸.
+ *
+ * ⚠️ 모듈 바깥에 있어야 한다 — TeamSplit 안에서 만들면 렌더마다 새
+ * 컴포넌트 타입이 되어 펼칠 때마다 통째로 다시 마운트된다.
+ */
+function SplitCol({
+  title, list, rec, teamId,
+}: {
+  title: string;
+  list: Match[];
+  rec: { w: number; d: number; l: number };
+  teamId: string;
+}) {
+  return (
     <div className="split__col">
       <div className="split__h">
         <span>{title}</span>
@@ -249,14 +272,6 @@ function TeamSplit({ matches, teamId }: { matches: Match[]; teamId: string }) {
           );
         })
       )}
-    </div>
-  );
-
-  return (
-    <div className="split">
-      <Col title="홈" list={r.home} rec={r.homeRecord} />
-      <div className="split__div" />
-      <Col title="원정" list={r.away} rec={r.awayRecord} />
     </div>
   );
 }

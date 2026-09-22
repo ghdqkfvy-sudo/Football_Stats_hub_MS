@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Match, StandingTable } from '../lib/types';
 import type { Target } from '../config/targets';
 import { dayKey, monthKey } from '../lib/kst';
-import { loadGoals, loadLeague, loadScheduleExtras, type ScheduleExtras } from '../lib/api';
+import { loadGoals, loadLeagueTable, loadScheduleExtras, type ScheduleExtras } from '../lib/api';
 import { buildTable } from '../lib/league';
 import { usePalette } from '../lib/palette';
 import { NextMatchHero, type TeamStanding } from '../components/NextMatchHero';
@@ -76,7 +76,9 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
     for (const k of want) {
       if (k in tables) continue;
       setTables((t) => ({ ...t, [k]: null }));
-      loadLeague(k, palette.name(k)).then((r) => {
+      /* 히어로에 필요한 건 순위·승무패뿐이다 — 3.2MB 리그 파일이 아니라
+         순위표 전용 경량본을 읽는다(api.ts 의 loadLeagueTable 주석 참고). */
+      loadLeagueTable(k, palette.name(k)).then((r) => {
         if (!alive) return;
         setTables((t) => ({ ...t, [k]: buildTable(r.data.table, r.data.matches, k, palette.name(k)) }));
       });
