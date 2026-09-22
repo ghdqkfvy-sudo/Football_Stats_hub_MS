@@ -1,42 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LEAGUE_ORDER, PINNED } from '../config/koreans';
-import type { KoreanPlayer, KoreanStat } from '../types/feedTypes';
+import type { KoreanPlayer } from '../types/feedTypes';
 import { loadKoreans, type Source } from '../lib/api';
-import { CREST } from '../config/targets';
+import { visibleComps } from '../lib/comps';
 import { usePalette } from '../lib/palette';
-import { Headshot } from '../components/Headshot';
-import { Crest } from '../components/Crest';
-import { tintOf } from '../config/crestTint';
+import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
-/** 리그 + 유럽대항전만 노출한다 (컵대회·친선은 뺀다) */
-const SHOWN = new Set(['uefa.champions', 'uefa.europa', 'uefa.europa.conf']);
-const visibleStats = (p: KoreanPlayer) =>
-  p.stats.filter((s) => (s.competition === p.league || SHOWN.has(s.competition)) && s.apps > 0);
-
-const sum = (rows: KoreanStat[], k: 'goals' | 'assists' | 'apps' | 'minutes') =>
-  rows.reduce((a, r) => a + r[k], 0);
-
 /**
- * 대회 앰블럼 — 스냅샷이 core 리그 객체에서 받아 둔 주소를 쓴다.
- * 주소가 없거나(오래된 피드) 이미지가 막힌 환경이면 대회 색 점으로 떨어진다.
+ * 보여 줄 대회 줄.
+ * 유럽대항전은 0경기라도 남긴다 — 스냅샷이 "이 클럽은 그 대회 출전 팀" 을
+ * 확인해 넣어 둔 줄이라, 지우면 "안 나가는 팀" 과 구분이 사라진다.
+ * (규칙과 근거는 lib/comps.ts)
  */
-function LeagueMark({ src, color }: { src?: string; color: string }) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) return <i className="krcc__dot" style={{ background: color }} aria-hidden="true" />;
-  return (
-    <img
-      className="krcc__logo"
-      src={src}
-      alt=""
-      width={15}
-      height={15}
-      loading="lazy"
-      onError={() => setFailed(true)}
-    />
-  );
-}
+const shownStats = (p: KoreanPlayer) => visibleComps(p.stats, p.league);
+
+const sum = (rows: { goals: number; assists: number; apps: number }[], k: 'goals' | 'assists' | 'apps') =>
+  rows.reduce((a, r) => a + r[k], 0);
 
 export function KoreansTab() {
   const palette = usePalette();
@@ -81,23 +62,23 @@ export function KoreansTab() {
    * 같은 리그 안에서는 공격포인트, 출전시간 순.
    */
   const list = useMemo(() => {
-    const list = league === 'ALL' ? all : all.filter((p) => p.league === league);
+    const rows = league === 'ALL' ? all : all.filter((p) => p.league === league);
     const pinIndex = (p: KoreanPlayer) => {
       const i = PINNED.indexOf(p.id);
       return i === -1 ? Infinity : i;
     };
-    return [...list].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       const pa = pinIndex(a);
       const pb = pinIndex(b);
       if (pa !== pb) return pa - pb;
       const la = LEAGUE_ORDER[a.league] ?? 99;
       const lb = LEAGUE_ORDER[b.league] ?? 99;
       if (la !== lb) return la - lb;
-      const sa = visibleStats(a);
-      const sb = visibleStats(b);
+      const sa = shownStats(a);
+      const sb = shownStats(b);
       const pts = sum(sb, 'goals') + sum(sb, 'assists') - (sum(sa, 'goals') + sum(sa, 'assists'));
       if (pts !== 0) return pts;
-      return sum(sb, 'minutes') - sum(sa, 'minutes');
+      return sum(sb, 'apps') - sum(sa, 'apps');
     });
   }, [league, all]);
 
@@ -106,7 +87,7 @@ export function KoreansTab() {
     let assists = 0;
     let apps = 0;
     for (const p of list) {
-      const s = visibleStats(p);
+      const s = shownStats(p);
       goals += sum(s, 'goals');
       assists += sum(s, 'assists');
       apps += sum(s, 'apps');
@@ -181,159 +162,49 @@ export function KoreansTab() {
 
         <div className="kr__grid">
           {list.map((p) => (
-            <KoreanCard
-              p={p}
+            <StatCard
               key={p.id}
+              id={p.id}
+              name={p.nameKo}
+              posLabel={POS_LABEL[p.pos]}
+              photo={p.photo}
+              photoKind={p.photoKind}
+              fallbackLabel={p.nameKo.slice(0, 1)}
+              clubId={p.clubId}
+              club={p.club}
+              age={p.age}
+              league={p.league}
+              leagueName={p.leagueName}
+              leagueLogo={p.leagueLogo}
+              comps={shownStats(p).map((s): CompLine => ({
+                competition: s.competition,
+                label: s.label,
+                logo: s.logo,
+                apps: s.apps,
+                starts: s.starts,
+                goals: s.goals,
+                assists: s.assists,
+              }))}
+              recent={p.recent.map((gm): RecentLine => ({
+                competition: gm.competition,
+                result: gm.result,
+                opponent: gm.opponent,
+                score: gm.score,
+                started: gm.started,
+                minutes: gm.minutes,
+                subIn: gm.subIn,
+                goals: gm.goals,
+                assists: gm.assists,
+                yellow: gm.yellow,
+              }))}
+              emptyNote="이번 시즌 리그 출전 기록이 아직 없습니다."
+              recentNote="경기별 기록은 소속 클럽의 경기 라인업에서 가져옵니다. 다음 갱신 회차에 채워집니다."
               open={openId === p.id}
               onHover={(v) => setOpenId(v ? p.id : null)}
             />
           ))}
         </div>
       </section>
-    </div>
-  );
-}
-
-function KoreanCard({
-  p, open, onHover,
-}: { p: KoreanPlayer; open: boolean; onHover: (v: boolean) => void }) {
-  const palette = usePalette();
-  const [bg, fg] = tintOf(p.clubId);
-  const shown = visibleStats(p);
-  const g = sum(shown, 'goals');
-  const a = sum(shown, 'assists');
-  const max = Math.max(1, ...shown.map((r) => r.goals + r.assists));
-
-  return (
-    <article
-      className="krc"
-      style={{ ['--club' as string]: bg, ['--clubfg' as string]: fg }}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
-      tabIndex={0}
-      onFocus={() => onHover(true)}
-      onBlur={() => onHover(false)}
-    >
-      <div className="krc__top">
-        <Headshot
-          id={p.id}
-          src={p.photo}
-          kind={p.photoKind}
-          label={p.nameKo.slice(0, 1)}
-          size={46}
-          className="krc__hs"
-        />
-        <div className="krc__id">
-          <b>
-            {p.nameKo}
-            <em>{POS_LABEL[p.pos]}</em>
-          </b>
-          <span className="krc__club">
-            <Crest
-              team={{ id: p.clubId, name: p.club, shortName: p.club, abbr: p.club.slice(0, 3).toUpperCase(), logo: p.clubId === '0' ? '' : CREST(p.clubId) }}
-              size={15}
-            />
-            {p.club} · {p.age}세
-          </span>
-          <span className="krc__lg">
-            {/* 리그 앰블럼도 API 가 준 주소다 — 리그 로고 id 를 코드에 적어
-                두면 선수가 새 리그로 옮길 때마다 빈칸이 된다. */}
-            <LeagueMark src={p.leagueLogo} color={palette.color(p.league)} />
-            {/* 피드의 leagueName 은 비어 오면 슬러그(ger.1)가 된다 —
-                아는 대회면 사람이 읽는 이름으로 바꿔 준다. */}
-            {palette.name(p.league) === p.league ? p.leagueName : palette.name(p.league)}
-          </span>
-        </div>
-      </div>
-
-      {shown.length === 0 ? (
-        <p className="krc__none">이번 시즌 리그 출전 기록이 아직 없습니다.</p>
-      ) : (
-        <>
-          <div className="krc__label">대회별 공격포인트</div>
-          <div className="krc__comps">
-            {shown.map((s) => (
-              <div className="krcc" key={s.competition} style={{ ['--c' as string]: palette.color(s.competition) }}>
-                <LeagueMark src={s.logo} color={palette.color(s.competition)} />
-                <span className="krcc__n">{s.label}</span>
-                <span className="krcc__bar">
-                  <b style={{ width: `${((s.goals + s.assists) / max) * 100}%` }} />
-                </span>
-                <span className="krcc__a num">
-                  {s.apps}경기 <em>(선발 {s.starts})</em>
-                </span>
-                <span className="krcc__ga num">
-                  <b data-k="g" data-on={s.goals > 0}>{s.goals}</b>
-                  <b data-k="a" data-on={s.assists > 0}>{s.assists}</b>
-                </span>
-                <span className="krcc__p num">{s.goals + s.assists}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="krc__foot">
-            <span className="eyebrow">합계</span>
-            <span className="krc__sum num">
-              <b data-k="g" data-on={g > 0}><i>G</i>{g}</b>
-              <b data-k="a" data-on={a > 0}><i>A</i>{a}</b>
-              <b data-k="p" data-on={g + a > 0}><i>AP</i>{g + a}</b>
-            </span>
-          </div>
-        </>
-      )}
-
-      <RecentPanel p={p} open={open} />
-    </article>
-  );
-}
-
-/** 호버 — 최근 3경기 기록 */
-function RecentPanel({ p, open }: { p: KoreanPlayer; open: boolean }) {
-  const palette = usePalette();
-
-  /* 넓은 화면에서는 카드 위에 떠오르는 호버 패널이고, 좁은 화면에서는
-     카드 아래에 그대로 붙는다(모바일에는 호버가 없어 안 보였다).
-     둘 다 CSS 가 정한다 — 항상 그려 두고 data-open 만 넘긴다. */
-  return (
-    <div className="krr" role="tooltip" data-open={open}>
-      <div className="krr__h">
-        <span className="eyebrow">최근 3경기 기록</span>
-        <b>{p.nameKo}</b>
-      </div>
-
-      {p.recent.length === 0 ? (
-        <p className="krr__none">
-          경기별 기록은 소속 클럽의 경기 라인업에서 가져옵니다. 실시간 모드(Worker 연결)에서
-          자동으로 채워지며, 스냅샷 프리뷰에는 일부 선수만 담겨 있습니다.
-        </p>
-      ) : (
-        p.recent
-          /* 명단에만 있었던 경기는 "교체" 로 잡히면 안 된다 — 스냅샷에서
-             이미 걸러 내지만, 예전 피드가 남아 있을 수 있어 화면에서도 막는다. */
-          .filter((gm) => gm.started !== false || gm.subIn !== undefined)
-          .map((gm, i) => (
-          <div className="krr__g" key={i}>
-            <i className="fchip" data-r={gm.result}>{gm.result}</i>
-            <i className="krr__c" style={{ background: palette.color(gm.competition) }} />
-            <span className="krr__opp">vs {gm.opponent}</span>
-            <span className="krr__sc num">{gm.score}</span>
-            <span className="krr__m num">
-              {/* 선발/교체·출전시간은 경기 로스터에서 온 실제 값일 때만 적는다.
-                  없으면 "-" — 예전처럼 0분으로 꾸미지 않는다. */}
-              {gm.started === undefined
-                ? '-'
-                : gm.started
-                  ? `선발 ${gm.minutes ?? 90}'`
-                  : gm.subIn !== undefined
-                    ? `교체 ${gm.subIn}'(${gm.minutes ?? 0})`
-                    : '교체'}
-              {gm.goals > 0 && <em className="krr__gg">{gm.goals}G</em>}
-              {gm.assists > 0 && <em className="krr__aa">A{gm.assists}</em>}
-              {gm.yellow && <em className="krr__y" />}
-            </span>
-          </div>
-        ))
-      )}
     </div>
   );
 }

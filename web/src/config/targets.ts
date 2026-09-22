@@ -19,7 +19,8 @@ import crestKor from '../assets/crest-kor.png';
    ────────────────────────────────────────────────────────────── */
 
 export type TargetId =
-  | 'real-madrid' | 'chelsea' | 'man-united' | 'tottenham' | 'newcastle' | 'korea';
+  | 'real-madrid' | 'chelsea' | 'man-united' | 'tottenham' | 'newcastle' | 'liverpool'
+  | 'korea';
 export type TargetKind = 'club' | 'national';
 
 export interface TargetTheme {
@@ -57,8 +58,11 @@ export interface Target {
   abbr: string;
   subtitle: string;
   crest: string;
-  /** 배경 아트워크 */
-  bg: string;
+  /**
+   * 배경 아트워크. 없으면 팀 컬러 그라디언트로 떨어진다 —
+   * 사진을 구하지 못한 팀 때문에 팀 추가가 막히지 않게 한다.
+   */
+  bg?: string;
   /** photo = 꽉 채움 / flag = 가운데 정렬해 위쪽에 배치 */
   bgKind: 'photo' | 'flag';
   theme: TargetTheme;
@@ -243,6 +247,41 @@ export const TARGETS: Target[] = [
       'uefa.europa': '#FF8A3D',
       'eng.fa': '#2ED3B7',
       'eng.league_cup': '#FFA53D',
+      'club.friendly': '#6B7789',
+    },
+  },
+  {
+    /* ESPN team id 364 — 검색 응답의 uid `s:600~t:364` 로 확인(2026-09-22).
+       참가 대회도 이 팀 일정 응답에서 확인했다: eng.1 / uefa.champions /
+       eng.league_cup. FA컵은 1월에 들어가므로 미리 넣어 둔다. */
+    id: 'liverpool',
+    kind: 'club',
+    espnTeamId: '364',
+    newsQuery: '리버풀 FC',
+    name: 'Liverpool',
+    nameEn: 'Liverpool',
+    abbr: 'LIV',
+    subtitle: 'Premier League · Champions League',
+    crest: CREST('364'),
+    /* 배경 사진은 아직 없다 — 팀 컬러 그라디언트로 떨어진다.
+       web/src/assets/bg-liv.jpg 를 넣고 여기 bg 를 채우면 된다. */
+    bgKind: 'photo',
+    theme: {
+      brand: '#C8102E',
+      accent: '#FF5B6E',
+      secondary: '#00B2A9',   // 리버풀의 보조색 — 엠블럼의 청록
+      onAccent: '#2A0006',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(200,16,46,.26), transparent 60%)',
+    },
+    league: 'eng.1',
+    competitions: ['eng.1', 'uefa.champions', 'eng.fa', 'eng.league_cup'],
+    palette: {
+      'eng.1': '#A855F7',            // Premier League 브랜드 퍼플
+      'uefa.champions': '#4C8DFF',
+      'eng.fa': '#2ED3B7',
+      'eng.league_cup': '#FFA53D',
+      'fifa.cwc': '#E879A6',
+      'uefa.super_cup': '#A78BFA',
       'club.friendly': '#6B7789',
     },
   },

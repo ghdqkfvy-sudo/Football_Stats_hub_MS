@@ -97,8 +97,16 @@ export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8 } = {}) {
 }
 
 /**
- * 같은 이름의 축구 선수가 여럿이면 현 소속팀이 맞는 쪽을 고른다.
- * (동명이인에게 엉뚱한 얼굴을 박는 것이 사진이 없는 것보다 나쁘다)
+ * 이름 검색 결과에서 그 선수를 고른다 — **소속팀이 맞아야 한다.**
+ *
+ * ⚠️ 예전에는 소속팀이 안 맞으면 `players[0]` 로 떨어졌다. 그래서 리스
+ * 제임스(첼시) 자리에 **셰필드 웬즈데이의 동명이인**(1993년생) 얼굴이
+ * 박혔다. 이름만 같은 다른 사람이라 이름 검사로는 절대 걸러지지 않는다.
+ *
+ * 이 프로젝트의 원칙 그대로다 — 엉뚱한 얼굴이 뜨는 것이 사진이 없는 것보다
+ * 나쁘다. 소속팀을 확인할 수 없으면 사진을 포기한다(등번호 배지로 떨어진다).
+ * 이적 직후라 TheSportsDB 의 소속팀이 낡은 경우는 팀 로스터 조회
+ * (sportsdbRoster)가 먼저 잡아 준다.
  */
 export function pickSportsdbPlayer(list, club, normName) {
   const players = (Array.isArray(list) ? list : []).filter(
@@ -106,12 +114,56 @@ export function pickSportsdbPlayer(list, club, normName) {
   );
   if (!players.length) return null;
   const want = normName(club);
-  if (!want) return players[0];
+  if (!want) return null;                 // 소속팀을 모르면 고르지 않는다
   return (
     players.find((x) => normName(x?.strTeam).includes(want)) ??
     players.find((x) => want.includes(normName(x?.strTeam))) ??
-    players[0]
+    null
   );
+}
+
+/**
+ * 팀 로스터 응답에서 이름으로 선수를 찾는다.
+ *
+ * 팀이 확정된 목록 안에서 찾으므로 동명이인 위험이 없고, 표기 차이에
+ * 관대해도 안전하다 — ESPN 은 "João Pedro" 를 그대로 주지만 이름 검색은
+ * 발음기호 때문에 못 찾는 경우가 있다(실측: 검색은 포르투갈 3부 선수만
+ * 돌려주고, 첼시 로스터에는 컷아웃까지 있는 João Pedro 가 들어 있었다).
+ */
+export function matchInRoster(list, name, normName) {
+  const want = normName(name);
+  if (!want) return null;
+  const players = Array.isArray(list) ? list : [];
+  const byNorm = (x) => normName(x?.strPlayer);
+
+  const exact = players.filter((x) => byNorm(x) === want);
+  if (exact.length === 1) return exact[0];
+
+  /* 한쪽이 다른 쪽을 포함하는 경우 (ESPN "Hato" ↔ TSDB "Jorrel Hato").
+     후보가 둘 이상이면 포기한다 — 같은 팀에도 형제·동명이인이 있다. */
+  const loose = players.filter((x) => {
+    const n = byNorm(x);
+    return n && (n.includes(want) || want.includes(n));
+  });
+  if (loose.length === 1) return loose[0];
+
+  /* 마지막으로 성(姓)만 비교 — 단 **찾는 이름이 두 토큰 이상일 때만** 한다.
+     한 단어로 물어보면 그게 이름인지 성인지 알 수 없다: "Pedro" 하나로
+     João Pedro 를 성 비교로 집으면, ESPN 이 Pedro Neto 를 뜻했을 때
+     엉뚱한 얼굴이 박힌다. */
+  if (want.split(' ').filter(Boolean).length < 2) return null;
+  const last = (n) => n.split(' ').filter(Boolean).slice(-1)[0] ?? '';
+  const bySurname = players.filter((x) => last(byNorm(x)) === last(want));
+  return bySurname.length === 1 ? bySurname[0] : null;
+}
+
+/** 로스터·검색 결과 한 건에서 쓸 만한 사진 주소를 뽑는다 */
+export function photoFromSportsdb(hit) {
+  const cut = String(hit?.strCutout ?? '');
+  if (cut) return { url: cut, kind: 'cutout' };
+  const thumb = String(hit?.strThumb ?? '');
+  if (thumb) return { url: thumb, kind: 'thumb' };
+  return undefined;
 }
 
 /**

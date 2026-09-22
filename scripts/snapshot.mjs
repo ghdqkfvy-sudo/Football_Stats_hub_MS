@@ -31,7 +31,8 @@ import {
   athleteRecent, scheduleMeta, seasonStatsUrl, seasonTotals, teamScheduleUrl,
 } from './lib/athlete.mjs';
 import {
-  betterPhoto, kindFromUrl, pickSportsdbPlayer, rankOf, rateLimiter, urlVerdict,
+  betterPhoto, kindFromUrl, matchInRoster, photoFromSportsdb, pickSportsdbPlayer,
+  rankOf, rateLimiter, urlVerdict,
 } from './lib/photos.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -86,6 +87,7 @@ const TEAMS = [
   { id: '360', slug: 'man-united', name: 'Manchester United', league: 'eng.1', koQuery: '맨체스터 유나이티드' },
   { id: '367', slug: 'tottenham', name: 'Tottenham Hotspur', league: 'eng.1', koQuery: '토트넘 홋스퍼' },
   { id: '361', slug: 'newcastle', name: 'Newcastle United', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
+  { id: '364', slug: 'liverpool', name: 'Liverpool', league: 'eng.1', koQuery: '리버풀 FC' },
   { id: '451', slug: 'korea', name: 'South Korea', national: true, league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
 ];
 const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
@@ -611,29 +613,71 @@ async function urlOk(url) {
  */
 const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8 });
 
+/** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
+function tsdbGet(path) {
+  return tsdbLimit.run(async () => {
+    const res = await fetch(`${TSDB}/${path}`, {
+      headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
+    }).catch(() => null);
+    if (!res || !res.ok) return { ok: false, value: undefined };   // 429 도 여기로
+    return { ok: true, value: await res.json().catch(() => null) };
+  });
+}
+
+/* ── TheSportsDB 팀 로스터 ────────────────────────────────
+ * 이름으로 한 명씩 찾는 것보다 **팀 단위로 한 번 받는 쪽**이 훨씬 낫다.
+ *
+ *  · 동명이인 위험이 없다 — 팀이 확정된 목록 안에서 찾으므로.
+ *    (리스 제임스 자리에 셰필드 웬즈데이 선수 얼굴이 박힌 사고가 이 때문)
+ *  · 표기 차이에 강하다 — ESPN "João Pedro" 를 이름 검색은 못 찾지만
+ *    첼시 로스터에는 컷아웃까지 있는 João Pedro 가 그대로 들어 있다.
+ *  · 요청이 팀당 2번뿐이라 한도에 걸릴 일이 거의 없다.
+ *
+ * 무료 키는 로스터를 10명 남짓으로 잘라 주므로 전부는 못 덮는다 —
+ * 나머지는 이름 검색(소속팀 일치 필수)으로 내려간다.
+ */
+const tsdbRosterCache = new Map();
+function sportsdbRoster(clubName) {
+  const key = normName(clubName);
+  if (!key) return Promise.resolve([]);
+  const hit = tsdbRosterCache.get(key);
+  if (hit) return hit;
+
+  const p = (async () => {
+    const t = await tsdbGet(`searchteams.php?t=${encodeURIComponent(clubName)}`);
+    const id = String(t?.teams?.[0]?.idTeam ?? '');
+    if (!id) return [];
+    const r = await tsdbGet(`lookup_all_players.php?id=${id}`);
+    const list = Array.isArray(r?.player) ? r.player : [];
+    if (list.length) console.log(`    TheSportsDB 로스터 ${clubName}: ${list.length}명`);
+    return list;
+  })();
+  tsdbRosterCache.set(key, p);
+  return p;
+}
+
 /** @returns {Promise<{url:string, kind:'cutout'|'thumb'}|undefined>} */
 function sportsdbPhoto(name, club) {
-  const key = normName(name);
-  if (!key) return Promise.resolve(undefined);
+  const key = `${normName(name)}|${normName(club)}`;
+  if (!normName(name)) return Promise.resolve(undefined);
   if (tsdbCache.has(key)) return tsdbCache.get(key);
 
   const p = (async () => {
-    const j = await tsdbLimit.run(async () => {
-      const res = await fetch(`${TSDB}/searchplayers.php?p=${encodeURIComponent(name)}`, {
-        headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
-      }).catch(() => null);
-      if (!res || !res.ok) return { ok: false, value: undefined };   // 429 도 여기로
-      const body = await res.json().catch(() => null);
-      return { ok: true, value: body };
-    });
-    if (!j) return undefined;                 // 한도에 걸렸거나 회로가 열렸다
-
-    const hit = pickSportsdbPlayer(j?.player, club, normName);
+    /* 1순위 — 팀 로스터. 팀이 확정돼 있어 동명이인 위험이 없다. */
+    const hit = matchInRoster(await sportsdbRoster(club), name, normName)
+      /* 2순위 — 이름 검색. 소속팀이 맞는 후보만 받는다(엉뚱한 얼굴 방지). */
+      ?? pickSportsdbPlayer(
+        (await tsdbGet(`searchplayers.php?p=${encodeURIComponent(name)}`))?.player,
+        club, normName,
+      );
     if (!hit) return undefined;
-    const cut = String(hit?.strCutout ?? '');
-    if (cut && await urlOk(cut)) return { url: cut, kind: 'cutout' };
+
+    const cand = photoFromSportsdb(hit);
+    if (!cand) return undefined;
+    if (await urlOk(cand.url)) return cand;
+    /* 컷아웃이 404 면 썸네일이라도 */
     const thumb = String(hit?.strThumb ?? '');
-    if (thumb && await urlOk(thumb)) return { url: thumb, kind: 'thumb' };
+    if (cand.kind === 'cutout' && thumb && await urlOk(thumb)) return { url: thumb, kind: 'thumb' };
     return undefined;
   })();
   tsdbCache.set(key, p);
@@ -1018,7 +1062,10 @@ async function nextMatchPreview(events, teamId, national = false) {
 
   const [sum, older] = await Promise.all([
     lg ? get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${upcoming.id}`) : null,
-    prevSeasonGames(teamId, national ? 12 : 1),
+    /* 클럽은 지난 두 시즌 + 이번 시즌 = 최근 세 시즌.
+       한 시즌만 보면 리그에서 두 번 만난 기록뿐이라 "요즘 이 상대에게
+       어떤가" 를 읽기에 표본이 너무 얇았다. */
+    prevSeasonGames(teamId, national ? 12 : 2),
   ]);
 
   /* lastFiveGames 는 [{team:{id}, events:[…]}, …] 형태다 — 팀별로 나눠 담는다 */
@@ -1054,7 +1101,7 @@ async function nextMatchPreview(events, teamId, national = false) {
     h2h,
     /* 화면이 "최근 두 시즌" 과 "역대" 를 구분해 적을 수 있게 */
     h2hScope: national ? 'all' : 'recent',
-    h2hSeasons: national ? 13 : 2,
+    h2hSeasons: national ? 13 : 3,
   };
 }
 
@@ -1630,6 +1677,7 @@ async function main() {
         club: team?.displayName ? String(team.displayName) : undefined,
         league,
         apps: totals.apps,
+        starts: totals.starts,
         goals: totals.goals,
         assists: totals.assists,
         minutes: totals.minutes,

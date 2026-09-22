@@ -75,7 +75,7 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
           <div className="mprev__h2hh">
             <span className="eyebrow">상대전적</span>
             <span className="mprev__note num">
-              {h2hScope === 'all' ? '역대' : '최근 두 시즌'} {meetings.length}경기
+              {h2hScope === 'all' ? '역대' : '최근 세 시즌'} {meetings.length}경기
             </span>
           </div>
 
@@ -93,7 +93,9 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
           </div>
 
           <div className="mprev__list">
-            {meetings.slice(0, 3).map((g) => (
+            {/* 최근 5경기까지 — 세 시즌이면 리그 6경기 + 컵이 쌓여 목록이
+                길어진다. 요즘 흐름을 보는 자리라 최신 5경기로 자른다. */}
+            {meetings.slice(0, 5).map((g) => (
               <div className="mprev__m" key={g.id}>
                 <i className="fchip" data-r={g.result}>{g.result}</i>
                 <span className="mprev__md num">{ymd(g.date)}</span>

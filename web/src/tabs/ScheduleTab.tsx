@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Match, StandingTable } from '../lib/types';
 import type { Target } from '../config/targets';
 import { dayKey, monthKey } from '../lib/kst';
@@ -69,24 +69,41 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
   }, [target.espnTeamId]);
 
   const [tables, setTables] = useState<Record<string, StandingTable | null>>({});
+  /**
+   * 이미 요청한 대회.
+   *
+   * ⚠️ 여기에 히어로의 "3위 · 3승1무0패" 를 통째로 지워 버린 버그가 있었다.
+   * 예전 코드는 `tables` 를 의존성에 넣고, 그 안에서 `setTables` 로
+   * 로딩 표시를 넣고, 정리 함수에서 `alive = false` 로 응답을 버렸다.
+   * 그러면 순서가 이렇게 된다.
+   *
+   *   1) 이펙트 실행 → setTables({esp.1: null}) → 요청 시작
+   *   2) tables 가 바뀌어 이펙트 재실행 → **정리 함수가 alive=false**
+   *   3) 요청이 돌아옴 → `if (!alive) return` → 결과를 버린다
+   *   4) 재실행된 이펙트는 `'esp.1' in tables` 라서 다시 요청하지 않는다
+   *
+   * 결과적으로 표는 **영원히 채워지지 않았다**. 3.2MB 파일을 받던 시절에도
+   * 같았다(응답이 느릴수록 확실히 버려진다).
+   *
+   * 요청 이력은 상태가 아니라 ref 에 둔다 — 렌더를 유발하지 않으므로
+   * 이펙트가 자기 자신을 다시 트리거하지 않는다. 그리고 응답을 버리지
+   * 않는다: 결과는 대회 슬러그로 키가 박혀 있어 늦게 와도 제자리에 들어간다.
+   * (팀이나 탭을 바꾸면 App 이 이 컴포넌트를 remount 하므로 ref 도 초기화된다)
+   */
+  const asked = useRef(new Set<string>());
 
   useEffect(() => {
-    let alive = true;
-    const want = [leagueKey, matchKey].filter((k): k is string => !!k);
-    for (const k of want) {
-      if (k in tables) continue;
+    for (const k of [leagueKey, matchKey]) {
+      if (!k || asked.current.has(k)) continue;
+      asked.current.add(k);
       setTables((t) => ({ ...t, [k]: null }));
       /* 히어로에 필요한 건 순위·승무패뿐이다 — 3.2MB 리그 파일이 아니라
          순위표 전용 경량본을 읽는다(api.ts 의 loadLeagueTable 주석 참고). */
       loadLeagueTable(k, palette.name(k)).then((r) => {
-        if (!alive) return;
         setTables((t) => ({ ...t, [k]: buildTable(r.data.table, r.data.matches, k, palette.name(k)) }));
       });
     }
-    return () => {
-      alive = false;
-    };
-  }, [leagueKey, matchKey, tables, palette]);
+  }, [leagueKey, matchKey, palette]);
 
   const leagueTable = tables[leagueKey] ?? null;
   const matchTable = matchKey ? (tables[matchKey] ?? null) : null;

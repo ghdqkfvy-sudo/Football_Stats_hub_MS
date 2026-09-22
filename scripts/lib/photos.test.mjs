@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  betterPhoto, kindFromUrl, pickSportsdbPlayer, rateLimiter, urlVerdict,
+  betterPhoto, kindFromUrl, matchInRoster, photoFromSportsdb, pickSportsdbPlayer,
+  rateLimiter, urlVerdict,
 } from './photos.mjs';
 
-const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+/* 스냅샷의 normName 과 같은 정규화 — 발음기호를 벗긴다.
+   (이게 없으면 'João' 와 'Joao' 가 다른 이름이 되어 테스트가 실제를 못 흉내낸다) */
+const norm = (s) => String(s ?? '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 test('betterPhoto: 등급이 높을 때만 갈아탄다', () => {
   const wiki = { url: 'w', kind: 'wiki' };
@@ -29,17 +34,53 @@ test('kindFromUrl: 지난 회차 파일에 kind 가 없어도 등급을 되짚�
   assert.equal(kindFromUrl(''), undefined);
 });
 
-test('pickSportsdbPlayer: 축구 선수만, 동명이인은 소속팀으로 가른다', () => {
+test('pickSportsdbPlayer: 소속팀이 맞아야 고른다 — 동명이인 사고 방지', () => {
   const list = [
     { strPlayer: 'Danny Ings', strSport: 'Cricket', strTeam: 'Somerset' },
     { strPlayer: 'Danny Ings', strSport: 'Soccer', strTeam: 'West Ham United' },
     { strPlayer: 'Danny Ings', strSport: 'Soccer', strTeam: 'Newcastle United' },
   ];
   assert.equal(pickSportsdbPlayer(list, 'Newcastle United', norm).strTeam, 'Newcastle United');
-  // 소속팀을 모르면 첫 축구 선수
-  assert.equal(pickSportsdbPlayer(list, '', norm).strTeam, 'West Ham United');
+
+  /* ⚠️ 실제로 난 사고: 리스 제임스(첼시) 자리에 셰필드 웬즈데이의
+     1993년생 동명이인 얼굴이 박혔다. 이름은 완전히 같아서 이름 검사로는
+     절대 못 걸러진다 — 소속팀이 안 맞으면 포기해야 한다. */
+  const reece = [{ strPlayer: 'Reece James', strSport: 'Soccer', strTeam: 'Sheffield Wednesday' }];
+  assert.equal(pickSportsdbPlayer(reece, 'Chelsea', norm), null);
+
+  // 소속팀을 모르면 아무도 고르지 않는다 (예전엔 첫 번째를 집었다)
+  assert.equal(pickSportsdbPlayer(list, '', norm), null);
   assert.equal(pickSportsdbPlayer([{ strSport: 'Cricket' }], 'x', norm), null);
   assert.equal(pickSportsdbPlayer(null, 'x', norm), null);
+});
+
+test('matchInRoster: 팀 안에서는 표기 차이에 관대해도 안전하다', () => {
+  const roster = [
+    { strPlayer: 'João Pedro', strCutout: 'jp.png' },
+    { strPlayer: 'Pedro Neto', strCutout: 'pn.png' },
+    { strPlayer: 'Jorrel Hato', strCutout: 'jh.png' },
+    { strPlayer: 'Cole Palmer', strThumb: 'cp.jpg' },
+  ];
+  // 발음기호가 달라도 정규화하면 같다 (이름 검색은 이걸 못 찾았다)
+  assert.equal(matchInRoster(roster, 'Joao Pedro', norm).strCutout, 'jp.png');
+  // ESPN 이 성만 줘도 팀 안에서 하나뿐이면 찾는다
+  assert.equal(matchInRoster(roster, 'Hato', norm).strCutout, 'jh.png');
+  // 'Pedro' 는 João Pedro / Pedro Neto 둘에 걸리고, 한 단어라 성 비교도
+  // 하지 않는다 → 포기한다 (엉뚱한 얼굴보다 사진 없음이 낫다)
+  assert.equal(matchInRoster(roster, 'Pedro', norm), null);
+  // 풀네임이면 정확히 찾는다
+  assert.equal(matchInRoster(roster, 'Joao Pedro', norm).strCutout, 'jp.png');
+  assert.equal(matchInRoster(roster, 'Pedro Neto', norm).strCutout, 'pn.png');
+  assert.equal(matchInRoster(roster, 'Nobody Here', norm), null);
+  assert.equal(matchInRoster([], 'x', norm), null);
+});
+
+test('photoFromSportsdb: 컷아웃 우선, 없으면 썸네일', () => {
+  assert.deepEqual(photoFromSportsdb({ strCutout: 'c.png', strThumb: 't.jpg' }),
+    { url: 'c.png', kind: 'cutout' });
+  assert.deepEqual(photoFromSportsdb({ strThumb: 't.jpg' }), { url: 't.jpg', kind: 'thumb' });
+  assert.equal(photoFromSportsdb({}), undefined);
+  assert.equal(photoFromSportsdb(null), undefined);
 });
 
 test('urlVerdict: 404 만 버린다 — 405/403/네트워크 오류로는 버리지 않는다', () => {

@@ -355,6 +355,7 @@ export default {
           res = json({
             league: a,
             apps: tot.appearances ?? 0,
+            starts: tot.starts ?? Math.max(0, (tot.appearances ?? 0) - (tot.subIns ?? 0)),
             goals: tot.totalGoals ?? 0,
             assists: tot.goalAssists ?? 0,
             minutes: tot.minutes ?? 0,

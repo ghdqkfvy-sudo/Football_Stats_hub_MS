@@ -13,3 +13,7 @@
 *.html text eol=lf
 *.yml  text eol=lf
 *.md   text eol=lf
+
+# .webmanifest 에 eol 규칙이 없어서 윈도우 체크아웃에서 CRLF 가 되고,
+# 그때부터 git 이 이 파일을 "항상 수정됨" 으로 본다. json 과 같이 LF 로 고정한다.
+*.webmanifest text eol=lf

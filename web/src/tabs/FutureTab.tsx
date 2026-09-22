@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import type { Target } from '../config/targets';
 import { CLAUSE_COLOR, CLAUSE_LABEL, futureFor, type ClauseKind, type FuturePlayer } from '../data/future';
 import { loadFutureStat, type FutureStat } from '../lib/api';
-import { Headshot } from '../components/Headshot';
-import { kstShortDate } from '../lib/kst';
+import { usePalette } from '../lib/palette';
+import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
 
 const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -14,16 +14,11 @@ const CLAUSE_DESC: Record<ClauseKind, string> = {
   loan: '임대로 나가 있고 계약은 원 소속 구단에 남아 있다',
 };
 
-const LEAGUE_LABEL: Record<string, string> = {
-  'esp.1': 'La Liga', 'eng.1': 'Premier League', 'ita.1': 'Serie A',
-  'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'por.1': 'Primeira Liga',
-  'ned.1': 'Eredivisie', 'eng.2': 'Championship', 'usa.1': 'MLS',
-};
-
 export function FutureTab({ target }: { target: Target }) {
   const rows = futureFor(target.espnTeamId);
   const [stats, setStats] = useState<Record<string, FutureStat | null>>({});
   const [filter, setFilter] = useState<ClauseKind | 'ALL'>('ALL');
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +61,7 @@ export function FutureTab({ target }: { target: Target }) {
         <div className="sec__head">
           <h2 className="sec__title">Future Resources</h2>
           <span className="sec__note">
-            조항 종류만 표기 · 소속팀과 기록은 ESPN 실시간
+            조항 종류만 표기 · 소속팀과 기록은 ESPN 에서
           </span>
         </div>
 
@@ -103,9 +98,16 @@ export function FutureTab({ target }: { target: Target }) {
                   <span className="num">{group.length}명</span>
                   <p>{CLAUSE_DESC[k]}</p>
                 </header>
-                <div className="fgrid">
+                {/* 코리안리거 탭과 **같은 격자·같은 카드** 를 쓴다 */}
+                <div className="kr__grid">
                   {group.map((p) => (
-                    <FutureCard key={p.id} p={p} stat={stats[p.id]} />
+                    <FutureCard
+                      key={p.id}
+                      p={p}
+                      stat={stats[p.id]}
+                      open={openId === p.id}
+                      onHover={(v) => setOpenId(v ? p.id : null)}
+                    />
                   ))}
                 </div>
               </section>
@@ -125,61 +127,59 @@ export function FutureTab({ target }: { target: Target }) {
   );
 }
 
-function FutureCard({ p, stat }: { p: FuturePlayer; stat?: FutureStat | null }) {
+function FutureCard({
+  p, stat, open, onHover,
+}: {
+  p: FuturePlayer;
+  stat?: FutureStat | null;
+  open: boolean;
+  onHover: (v: boolean) => void;
+}) {
+  const palette = usePalette();
+  /* 지금 뛰는 리그·팀은 조회 결과가 알려 준다 — 큐레이션 파일의 값이
+     낡아도(이적) 화면은 따라간다. */
+  const league = stat?.league ?? p.league;
   const club = stat?.club ?? p.club;
+
+  const comps: CompLine[] = stat && stat.apps > 0
+    ? [{
+      competition: league,
+      label: palette.name(league) === league ? league : palette.name(league),
+      apps: stat.apps,
+      starts: stat.starts ?? 0,
+      goals: stat.goals,
+      assists: stat.assists,
+    }]
+    : [];
+
+  const recent: RecentLine[] = (stat?.recent ?? []).map((g): RecentLine => ({
+    competition: league,
+    opponent: g.opponent,
+    score: g.score,
+    goals: g.goals,
+    assists: g.assists,
+  }));
+
   return (
-    <article className="fcard" style={{ ['--c' as string]: CLAUSE_COLOR[p.kind] }}>
-      <header className="fcard__top">
-        <Headshot id={p.id} size={46} className="fcard__hs" label={p.name.slice(0, 1)} />
-        <div className="fcard__id">
-          <b>{p.name}</b>
-          <span>
-            {p.pos && <em>{POS[p.pos]}</em>}
-            {club}
-          </span>
-        </div>
-        <span className="fcard__tag">{CLAUSE_LABEL[p.kind]}</span>
-      </header>
-
-      <div className="fcard__league">
-        {/* 지금 뛰는 리그는 조회 결과가 알려 준다 — 큐레이션 파일의 값이
-            낡아도(이적) 화면은 따라간다. */}
-        {LEAGUE_LABEL[stat?.league ?? p.league] ?? stat?.league ?? p.league}
-        {stat === undefined ? ' · 불러오는 중' : stat === null ? ' · 이번 시즌 기록 없음' : ''}
-      </div>
-
-      <div className="fcard__stats">
-        {([
-          ['출전', stat?.apps],
-          ['골', stat?.goals],
-          ['도움', stat?.assists],
-          ['공격P', stat ? stat.goals + stat.assists : undefined],
-        ] as const).map(([k, v]) => (
-          <div key={k} data-on={!!v}>
-            <b className="num">{v === undefined ? '–' : v}</b>
-            <span>{k}</span>
-          </div>
-        ))}
-      </div>
-
-      {stat && stat.recent.length > 0 && (
-        <div className="fcard__recent">
-          <span className="eyebrow">최근 {stat.recent.length}경기</span>
-          {stat.recent.map((g, i) => (
-            <div className="fcard__g" key={i}>
-              <span className="fcard__gd num">{g.date ? kstShortDate(g.date) : '-'}</span>
-              <span className="fcard__go">{g.opponent || '—'}</span>
-              {g.score && <span className="fcard__gs num">{g.score}</span>}
-              <span className="fcard__ga num">
-                {g.goals > 0 && <em className="g">{g.goals}G</em>}
-                {g.assists > 0 && <em className="a">{g.assists}A</em>}
-                {g.goals === 0 && g.assists === 0 && <i>-</i>}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-    </article>
+    <StatCard
+      id={p.id}
+      name={p.name}
+      posLabel={p.pos ? POS[p.pos] : undefined}
+      fallbackLabel={p.name.slice(0, 1)}
+      club={club}
+      league={league}
+      leagueName={palette.name(league)}
+      comps={comps}
+      recent={recent}
+      tag={CLAUSE_LABEL[p.kind]}
+      emptyNote={
+        stat === undefined
+          ? '기록을 불러오는 중입니다.'
+          : '이번 시즌 출전 기록이 아직 없습니다.'
+      }
+      recentNote="이번 시즌 출전한 경기가 아직 없습니다."
+      open={open}
+      onHover={onHover}
+    />
   );
 }

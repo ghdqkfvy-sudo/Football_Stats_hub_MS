@@ -395,6 +395,8 @@ export interface FutureStat {
   /** 지금 뛰는 리그 — 선수가 옮기면 큐레이션 파일보다 이 값이 맞다 */
   league?: string;
   apps: number;
+  /** 선발 출전 수 — 카드 게이지(선발 비율)에 쓴다 */
+  starts?: number;
   goals: number;
   assists: number;
   minutes?: number;

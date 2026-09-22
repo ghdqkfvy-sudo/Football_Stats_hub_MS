@@ -126,7 +126,13 @@ export default function App() {
     <div style={themeVars}>
       {/* 팀 배경 아트워크 — 콘텐츠 뒤에서 어둡게 깔린다 */}
       <div className="bgart" data-kind={target.bgKind} aria-hidden="true">
-        <div className="bgart__img" style={{ backgroundImage: `url(${target.bg})` }} />
+        {/* 사진이 없는 팀은 팀 컬러 그라디언트로 — 사진을 못 구했다고
+            팀을 추가하지 못하는 편이 더 나쁘다 */}
+        <div
+          className="bgart__img"
+          data-empty={target.bg ? undefined : true}
+          style={target.bg ? { backgroundImage: `url(${target.bg})` } : undefined}
+        />
         <div className="bgart__veil" />
       </div>
 
