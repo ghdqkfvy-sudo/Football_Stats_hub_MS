@@ -96,6 +96,36 @@ export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8 } = {}) {
   };
 }
 
+/* ── 생년으로 동명이인 가리기 ────────────────────────────
+ *
+ * ⚠️ 소속팀만으로는 부족하다. 실제로 걸린 두 사례:
+ *   · TheSportsDB 의 유일한 "Reece James" 는 셰필드 웬즈데이 1993년생
+ *   · 위키백과 "Reece James" 검색의 **첫 결과**도 1993년생 쪽이다
+ *     (첼시의 1999년생은 두 번째)
+ * 이름도 같고 국적도 같고 포지션도 같다. 가를 수 있는 건 나이뿐이다.
+ *
+ * ESPN 팀 로스터가 age 를 준다(첼시 28명 중 26명). 그걸 기준으로
+ * 후보의 생년이 말이 되는지 본다. 생일이 지났는지 모르므로 두 해를 허용한다.
+ */
+
+/** 'YYYY-MM-DD' · 'born 1999' · 1999 등에서 연도를 뽑는다 */
+export function birthYearOf(v) {
+  const m = String(v ?? '').match(/(18|19|20)\d{2}/);
+  return m ? Number(m[0]) : undefined;
+}
+
+/**
+ * 나이와 생년이 맞아떨어지는가.
+ * 판단할 근거가 없으면(둘 중 하나가 없으면) **막지 않는다** — 확인 못 한 것과
+ * 틀린 것은 다르다. 근거가 있을 때만 거른다.
+ */
+export function plausibleBirthYear(birthYear, age, today = new Date()) {
+  if (!birthYear || !age) return true;
+  const y = today.getUTCFullYear();
+  // 생일 전이면 y-age-1, 지났으면 y-age
+  return birthYear === y - age || birthYear === y - age - 1;
+}
+
 /**
  * 이름 검색 결과에서 그 선수를 고른다 — **소속팀이 맞아야 한다.**
  *
@@ -108,10 +138,11 @@ export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8 } = {}) {
  * 이적 직후라 TheSportsDB 의 소속팀이 낡은 경우는 팀 로스터 조회
  * (sportsdbRoster)가 먼저 잡아 준다.
  */
-export function pickSportsdbPlayer(list, club, normName) {
-  const players = (Array.isArray(list) ? list : []).filter(
-    (x) => String(x?.strSport ?? '') === 'Soccer',
-  );
+export function pickSportsdbPlayer(list, club, normName, age, today) {
+  const players = (Array.isArray(list) ? list : [])
+    .filter((x) => String(x?.strSport ?? '') === 'Soccer')
+    /* 나이가 어긋나면 동명이인이다 (리스 제임스 1993 vs 1999) */
+    .filter((x) => plausibleBirthYear(birthYearOf(x?.dateBorn), age, today));
   if (!players.length) return null;
   const want = normName(club);
   if (!want) return null;                 // 소속팀을 모르면 고르지 않는다
@@ -130,10 +161,11 @@ export function pickSportsdbPlayer(list, club, normName) {
  * 발음기호 때문에 못 찾는 경우가 있다(실측: 검색은 포르투갈 3부 선수만
  * 돌려주고, 첼시 로스터에는 컷아웃까지 있는 João Pedro 가 들어 있었다).
  */
-export function matchInRoster(list, name, normName) {
+export function matchInRoster(list, name, normName, age, today) {
   const want = normName(name);
   if (!want) return null;
-  const players = Array.isArray(list) ? list : [];
+  const players = (Array.isArray(list) ? list : [])
+    .filter((x) => plausibleBirthYear(birthYearOf(x?.dateBorn), age, today));
   const byNorm = (x) => normName(x?.strPlayer);
 
   const exact = players.filter((x) => byNorm(x) === want);

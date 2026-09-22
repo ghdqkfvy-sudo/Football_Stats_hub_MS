@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  betterPhoto, kindFromUrl, matchInRoster, photoFromSportsdb, pickSportsdbPlayer,
-  rateLimiter, urlVerdict,
+  betterPhoto, birthYearOf, kindFromUrl, matchInRoster, photoFromSportsdb,
+  pickSportsdbPlayer, plausibleBirthYear, rateLimiter, urlVerdict,
 } from './photos.mjs';
+
+/** 테스트를 고정하기 위한 '오늘' — 2026-09-23 */
+const TODAY = new Date('2026-09-23T00:00:00Z');
 
 /* 스냅샷의 normName 과 같은 정규화 — 발음기호를 벗긴다.
    (이게 없으면 'João' 와 'Joao' 가 다른 이름이 되어 테스트가 실제를 못 흉내낸다) */
@@ -52,6 +55,54 @@ test('pickSportsdbPlayer: 소속팀이 맞아야 고른다 — 동명이인 사�
   assert.equal(pickSportsdbPlayer(list, '', norm), null);
   assert.equal(pickSportsdbPlayer([{ strSport: 'Cricket' }], 'x', norm), null);
   assert.equal(pickSportsdbPlayer(null, 'x', norm), null);
+});
+
+test('birthYearOf: 여러 표기에서 연도를 뽑는다', () => {
+  assert.equal(birthYearOf('1993-11-07'), 1993);
+  assert.equal(birthYearOf('English footballer (born 1999)'), 1999);
+  assert.equal(birthYearOf(2006), 2006);
+  assert.equal(birthYearOf(''), undefined);
+  assert.equal(birthYearOf(null), undefined);
+  assert.equal(birthYearOf('no year here'), undefined);
+});
+
+test('plausibleBirthYear: 생일 전후 두 해를 허용하고, 근거가 없으면 막지 않는다', () => {
+  // 2026년에 26세 → 1999년생(생일 지남) 또는 2000년생(생일 전)
+  assert.equal(plausibleBirthYear(1999, 26, TODAY), true);
+  assert.equal(plausibleBirthYear(2000, 26, TODAY), true);
+  assert.equal(plausibleBirthYear(1993, 26, TODAY), false);
+  // 확인할 근거가 없으면 통과시킨다 — "확인 못 함" 과 "틀림" 은 다르다
+  assert.equal(plausibleBirthYear(undefined, 26, TODAY), true);
+  assert.equal(plausibleBirthYear(1993, undefined, TODAY), true);
+});
+
+test('pickSportsdbPlayer: 나이가 어긋나면 동명이인이다 (리스 제임스)', () => {
+  /* ⚠️ 실제 데이터. 첼시 리스 제임스는 1999년생(26세)이고, TheSportsDB 에
+     있는 유일한 "Reece James" 는 셰필드 웬즈데이의 1993년생이다.
+     이름·국적·포지션이 전부 같아서 나이 말고는 가를 방법이 없다. */
+  const sheffield = [{
+    strPlayer: 'Reece James', strSport: 'Soccer', strTeam: 'Sheffield Wednesday',
+    dateBorn: '1993-11-07', strCutout: 'wrong.png',
+  }];
+  assert.equal(pickSportsdbPlayer(sheffield, 'Chelsea', norm, 26, TODAY), null);
+  // 소속팀까지 같더라도 나이가 다르면 거른다
+  assert.equal(pickSportsdbPlayer(
+    [{ ...sheffield[0], strTeam: 'Chelsea' }], 'Chelsea', norm, 26, TODAY,
+  ), null);
+  // 나이가 맞으면 받는다
+  assert.equal(pickSportsdbPlayer(
+    [{ ...sheffield[0], strTeam: 'Chelsea', dateBorn: '1999-12-08' }], 'Chelsea', norm, 26, TODAY,
+  ).strTeam, 'Chelsea');
+});
+
+test('matchInRoster: 팀 안에서도 나이가 어긋나면 거른다', () => {
+  const roster = [
+    { strPlayer: 'Reece James', dateBorn: '1993-11-07', strCutout: 'wrong.png' },
+  ];
+  assert.equal(matchInRoster(roster, 'Reece James', norm, 26, TODAY), null);
+  assert.equal(matchInRoster(roster, 'Reece James', norm, 32, TODAY).strCutout, 'wrong.png');
+  // 나이를 모르면 막지 않는다
+  assert.equal(matchInRoster(roster, 'Reece James', norm, undefined, TODAY).strCutout, 'wrong.png');
 });
 
 test('matchInRoster: 팀 안에서는 표기 차이에 관대해도 안전하다', () => {

@@ -31,8 +31,8 @@ import {
   athleteRecent, scheduleMeta, seasonStatsUrl, seasonTotals, teamScheduleUrl,
 } from './lib/athlete.mjs';
 import {
-  betterPhoto, kindFromUrl, matchInRoster, photoFromSportsdb, pickSportsdbPlayer,
-  rankOf, rateLimiter, urlVerdict,
+  betterPhoto, birthYearOf, kindFromUrl, matchInRoster, photoFromSportsdb,
+  pickSportsdbPlayer, plausibleBirthYear, rankOf, rateLimiter, urlVerdict,
 } from './lib/photos.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -72,7 +72,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-16';
+const CODE_VERSION = 'snap-17';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -656,29 +656,50 @@ function sportsdbRoster(clubName) {
   return p;
 }
 
-/** @returns {Promise<{url:string, kind:'cutout'|'thumb'}|undefined>} */
-function sportsdbPhoto(name, club) {
-  const key = `${normName(name)}|${normName(club)}`;
+/**
+ * TheSportsDB 사진.
+ *
+ * 답이 **세 가지**다 — 이 구분이 중요하다.
+ *   {url,kind} : 찾았다
+ *   null       : 확인했고, 지금 규칙으로는 쓸 만한 후보가 없다
+ *   undefined  : 확인하지 못했다 (한도·네트워크)
+ *
+ * ⚠️ 왜 구분하는가: 예전의 느슨한 규칙이 박아 둔 **틀린 사진**을 걷어내야
+ * 하는데, 이어받기(betterPhoto)는 등급만 보므로 컷아웃이면 무엇이든
+ * 영원히 남는다. 실제로 리스 제임스 자리의 남의 얼굴이 규칙을 고친 뒤에도
+ * 그대로였다. "확인했는데 없다(null)" 일 때만 이어받은 TheSportsDB 사진을
+ * 의심해 버린다 — 한도에 걸려 확인조차 못 한 회차(undefined)에 멀쩡한
+ * 사진을 날리면 안 되기 때문이다.
+ *
+ * @returns {Promise<{url:string, kind:'cutout'|'thumb'}|null|undefined>}
+ */
+function sportsdbPhoto(name, club, age) {
+  const key = `${normName(name)}|${normName(club)}|${age ?? ''}`;
   if (!normName(name)) return Promise.resolve(undefined);
   if (tsdbCache.has(key)) return tsdbCache.get(key);
 
   const p = (async () => {
-    /* 1순위 — 팀 로스터. 팀이 확정돼 있어 동명이인 위험이 없다. */
-    const hit = matchInRoster(await sportsdbRoster(club), name, normName)
-      /* 2순위 — 이름 검색. 소속팀이 맞는 후보만 받는다(엉뚱한 얼굴 방지). */
-      ?? pickSportsdbPlayer(
-        (await tsdbGet(`searchplayers.php?p=${encodeURIComponent(name)}`))?.player,
-        club, normName,
-      );
-    if (!hit) return undefined;
+    /* 1순위 — 팀 로스터. 팀이 확정돼 있어 동명이인 위험이 없다.
+       (무료 키는 10명 남짓만 준다 — 나머지는 이름 검색으로) */
+    const roster = await sportsdbRoster(club);
+    let hit = matchInRoster(roster, name, normName, age);
+
+    let searched = null;
+    if (!hit) {
+      searched = await tsdbGet(`searchplayers.php?p=${encodeURIComponent(name)}`);
+      if (searched === undefined) return undefined;      // 한도 — 확인 못 함
+      /* 2순위 — 이름 검색. 소속팀과 나이가 맞는 후보만 받는다. */
+      hit = pickSportsdbPlayer(searched?.player, club, normName, age);
+    }
+    if (!hit) return null;                                // 확인했고 없다
 
     const cand = photoFromSportsdb(hit);
-    if (!cand) return undefined;
+    if (!cand) return null;
     if (await urlOk(cand.url)) return cand;
     /* 컷아웃이 404 면 썸네일이라도 */
     const thumb = String(hit?.strThumb ?? '');
     if (cand.kind === 'cutout' && thumb && await urlOk(thumb)) return { url: thumb, kind: 'thumb' };
-    return undefined;
+    return null;
   })();
   tsdbCache.set(key, p);
   return p;
@@ -713,34 +734,58 @@ function espnHeadshot(id) {
   return p;
 }
 
-async function wikipediaPhoto(name) {
+/**
+ * 위키백과 대표 이미지.
+ *
+ * ⚠️ 여기에도 TheSportsDB 와 **똑같은 동명이인 함정**이 있다. "Reece James"
+ * 를 검색하면 첫 결과가 `Reece James (footballer, born 1993)`(셰필드
+ * 웬즈데이)이고 첼시의 1999년생은 두 번째다. 예전 코드는 "축구 선수이고
+ * 이름이 맞으면 첫 번째" 라서 매번 1993년생을 집었다 — TheSportsDB 만
+ * 고쳐서는 같은 얼굴이 위키 경로로 다시 들어온다.
+ *
+ * 문서 설명에 `(born 1999)` 처럼 생년이 들어 있으므로 ESPN 이 준 나이와
+ * 대조한다. 나이를 아는데 맞는 후보가 하나도 없으면 **사진을 포기한다**.
+ */
+async function wikipediaPhoto(name, age) {
   const want = normName(name);
   if (!want) return undefined;
-  if (wikiCache.has(want)) return wikiCache.get(want);
+  const key = `${want}|${age ?? ''}`;
+  if (wikiCache.has(key)) return wikiCache.get(key);
 
   let out;
   try {
     const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json'
-      + '&generator=search&gsrlimit=3&gsrsearch=' + encodeURIComponent(`${name} footballer`)
+      + '&generator=search&gsrlimit=5&gsrsearch=' + encodeURIComponent(`${name} footballer`)
       + '&prop=pageimages|description&piprop=thumbnail&pithumbsize=250';
     const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': WIKI_UA } });
     if (res.ok) {
       const j = await res.json();
+      const ok = [];
       for (const p of Object.values(j?.query?.pages ?? {})) {
         const src = p?.thumbnail?.source;
         if (!src || /\.svg(\?|$)/i.test(src)) continue;
-        if (!/footballer|football|soccer/i.test(String(p?.description ?? ''))) continue;
+        const desc = String(p?.description ?? '');
+        if (!/footballer|football|soccer/i.test(desc)) continue;
         const title = normName(p?.title);
         const sameName = title === want
           || want.split(' ').filter((t) => t.length > 1).every((t) => title.includes(t));
         if (!sameName) continue;
-        out = String(src);
-        break;
+        ok.push({ src: String(src), born: birthYearOf(desc), index: Number(p?.index ?? 99) });
+      }
+      ok.sort((a, b) => a.index - b.index);   // 검색 순위 순
+
+      if (age) {
+        /* 나이를 안다 — 생년이 맞는 문서만 쓴다. 없으면 포기한다.
+           (생년을 안 적은 문서도 후보에서 빠진다 — 확인할 수 없으면
+            엉뚱한 얼굴을 박느니 배지로 두는 편이 낫다) */
+        out = ok.find((x) => x.born && plausibleBirthYear(x.born, age))?.src;
+      } else {
+        out = ok[0]?.src;
       }
     }
   } catch { /* 실패해도 배지로 떨어질 뿐이라 조용히 넘어간다 */ }
 
-  wikiCache.set(want, out);
+  wikiCache.set(key, out);
   await sleep(200);
   return out;
 }
@@ -1281,7 +1326,13 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
      지난 회차 값도 후보다 — 그래야 한도에 걸린 회차에 사진이 사라지지 않고,
      예전에 박힌 위키 경기 사진이 컷아웃으로 올라간다. */
   const enName = String(prof?.displayName ?? nameKo);
-  let best = betterPhoto(carriedPhoto ?? null, await sportsdbPhoto(enName, club));
+  const playerAge = Number(prof?.age ?? 0) || undefined;
+  const tsdb = await sportsdbPhoto(enName, club, playerAge);
+  /* 스쿼드 쪽과 같은 규칙 — "확인했는데 없다" 면 이어받은 TheSportsDB
+     사진을 의심해 버린다(예전 느슨한 규칙의 오답일 수 있다). */
+  const staleTsdb = tsdb === null && carriedPhoto
+    && (carriedPhoto.kind === 'cutout' || carriedPhoto.kind === 'thumb');
+  let best = betterPhoto(staleTsdb ? null : (carriedPhoto ?? null), tsdb || null);
   if (rankOfBest(best) < 2 && league && clubId !== '0') {
     const rosterPhoto = (await teamPhotos(league, clubId)).get(String(id))?.photo;
     if (rosterPhoto) best = betterPhoto(best, { url: rosterPhoto, kind: 'espn' });
@@ -1291,7 +1342,7 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
     if (direct) best = betterPhoto(best, { url: direct, kind: 'espn' });
   }
   if (!best) {
-    const wiki = await wikipediaPhoto(enName);
+    const wiki = await wikipediaPhoto(enName, playerAge);
     if (wiki) best = { url: wiki, kind: 'wiki' };
   }
   const photo = best?.url;
@@ -1598,18 +1649,29 @@ async function main() {
          * (예전 코드는 "직접 받은 게 있으면 그걸, 없으면 이어받기" 라서
          *  한 번 박힌 위키 경기 사진이 영원히 남았다.)
          */
+        const age = athletes[id].age;
         const [tsdb, espn, mins] = await Promise.all([
-          sportsdbPhoto(athletes[id].name, t.name),
+          sportsdbPhoto(athletes[id].name, t.name, age),
           meta?.photo
             ? Promise.resolve({ url: meta.photo, kind: 'espn' })
             : espnHeadshot(id).then((u) => (u ? { url: u, kind: 'espn' } : undefined)),
           athleteSeasonMinutes(t.league, id),
         ]);
 
-        let best = betterPhoto(carried.get(id) ?? null, tsdb);
+        /* ⚠️ 이어받은 TheSportsDB 사진이 **지금 규칙으로는 못 찾는 것** 이면
+           예전 느슨한 규칙이 박아 둔 오답일 수 있다 — 버린다.
+           (등급만 보는 betterPhoto 로는 컷아웃이 영원히 남아, 리스 제임스
+            자리의 남의 얼굴이 규칙을 고친 뒤에도 그대로였다)
+           한도에 걸려 확인조차 못 한 회차(undefined)에는 건드리지 않는다. */
+        const prev = carried.get(id) ?? null;
+        const staleTsdb = tsdb === null && prev
+          && (prev.kind === 'cutout' || prev.kind === 'thumb');
+        if (staleTsdb) console.log(`    사진 재검증: ${athletes[id].name} — 예전 TheSportsDB 사진을 버림`);
+
+        let best = betterPhoto(staleTsdb ? null : prev, tsdb || null);
         best = betterPhoto(best, espn);
         if (!best) {
-          const wiki = await wikipediaPhoto(athletes[id].name);
+          const wiki = await wikipediaPhoto(athletes[id].name, age);
           if (wiki) best = { url: wiki, kind: 'wiki' };
         }
         if (best) {
