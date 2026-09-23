@@ -71,3 +71,6 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-lists.mjs
+      # 데이터 커밋으로는 이 워크플로가 돌지 않지만(paths-ignore), 소스가
+      # 바뀔 때마다 한 번씩은 보는 편이 아무도 안 보는 것보다 낫다.
+      - run: node scripts/check-data.mjs web/public/data

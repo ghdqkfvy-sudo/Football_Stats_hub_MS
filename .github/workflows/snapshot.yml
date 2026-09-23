@@ -50,26 +50,58 @@ jobs:
       - name: ESPN 팀 일정·뉴스 수집
         run: node scripts/snapshot.mjs web/public/data --only=fast
 
+      # 수집 직후에 한 번 본다 — 깨진 JSON 을 커밋하지 않게
+      - name: 산출물 검사
+        run: node scripts/check-data.mjs web/public/data
+
       - name: 변경분 커밋 + Pages 재배포 트리거
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name  "stats-bot"
           git config user.email "stats-bot@users.noreply.github.com"
-          # 원격을 먼저 당겨 온 다음에 스테이징한다.
-          # (예전 순서는 add → pull --rebase --autostash 였는데, autostash 는
-          #  되살릴 때 스테이징 상태를 잃어버린다. 그래서 바로 다음 commit 이
-          #  "no changes added to commit" 으로 죽고, 데이터가 배포에 한 번도
-          #  반영되지 않았다.)
-          git pull --rebase --autostash
+
+          # ⚠️ 예전에는 여기서 `git pull --rebase --autostash` 를 먼저 돌렸다.
+          # 그게 2026-09-23 새벽에 사이트의 모든 일정을 비운 원인이다.
+          # fast 잡과 leagues 잡은 concurrency 그룹이 달라 이 단계에 동시에
+          # 들어올 수 있는데, autostash 가 되살아날 때 같은 파일이 원격에서도
+          # 바뀌어 있으면 **충돌 마커(<<<<<<< Updated upstream)가 파일 안에
+          # 그대로 남는다**. 그 상태에서 `git add` 가 그걸 담아 커밋·푸시했고,
+          # JSON.parse 가 죽어 일정·뉴스가 전부 빈 화면이 됐다.
+          #
+          # 스냅샷 산출물은 매 회차가 **파일 전체를 새로 쓴다**. 즉 병합할 것이
+          # 애초에 없다. 그러니 스태시하지 말고 먼저 커밋한 다음, 원격이 앞서
+          # 있으면 우리 커밋을 그 위에 얹는다.
           git add web/public/data
           if git diff --staged --quiet; then
-            echo "변경 없음"
-          else
-            git commit -m "chore(data): 팀 일정·뉴스 $(date -u +'%Y-%m-%dT%H:%MZ')"
-            git push
-            # GITHUB_TOKEN으로 한 push는 다른 on:push 워크플로우(Pages 배포)를
-            # 자동으로 트리거하지 않는다(무한루프 방지를 위한 GitHub의 기본 동작).
-            # 그래서 여기서 명시적으로 deploy-pages.yml 을 한 번 더 돌려준다.
-            gh workflow run deploy-pages.yml --ref main
+            echo "변경 없음"; exit 0
           fi
+
+          # 마지막 안전핀 — 어떤 경로로 들어왔든 마커가 섞였으면 올리지 않는다.
+          # (정상 JSON 한 줄이 통째로 '=======' 일 수는 없다)
+          if git grep -nI --cached -E '^(<<<<<<< |=======$|>>>>>>> )' -- web/public/data; then
+            echo "::error::충돌 마커가 섞인 데이터가 있다. 커밋하지 않고 멈춘다."
+            exit 1
+          fi
+
+          git commit -m "chore(data): 팀 일정·뉴스 $(date -u +'%Y-%m-%dT%H:%MZ')"
+
+          # 다른 스냅샷 잡이 먼저 밀어 넣었으면 그 위에 다시 얹고 재시도한다.
+          # 데이터 충돌은 항상 **지금 막 뜬 값**(리베이스에서 얹는 쪽 = theirs)이
+          # 옳다. 이 커밋은 web/public/data 만 건드리므로 소스에는 닿지 않는다.
+          pushed=0
+          for i in 1 2 3; do
+            if git push; then pushed=1; break; fi
+            git fetch origin main
+            if ! git rebase -X theirs origin/main; then
+              git rebase --abort || true
+              echo "::error::리베이스 실패 — 이번 회차는 건너뛴다."
+              exit 1
+            fi
+          done
+          if [ "$pushed" != 1 ]; then echo "::error::푸시 3회 실패"; exit 1; fi
+
+          # GITHUB_TOKEN으로 한 push는 다른 on:push 워크플로우(Pages 배포)를
+          # 자동으로 트리거하지 않는다(무한루프 방지를 위한 GitHub의 기본 동작).
+          # 그래서 여기서 명시적으로 deploy-pages.yml 을 한 번 더 돌려준다.
+          gh workflow run deploy-pages.yml --ref main
