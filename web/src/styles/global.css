@@ -943,6 +943,37 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .tbl__form { display: flex; gap: 3px; padding-left: 4px; }
 .tbl__nof { color: var(--text-lo); font-size: 11px; font-style: normal; }
 
+/*
+ * 숫자 열은 **오른쪽 정렬**한다.
+ * 가운데 정렬이면 칸 안에서 "5" 와 "15", "+11" 과 "0" 이 각자 가운데로 가서
+ * 일의 자리가 줄마다 좌우로 흔들린다 — 세로줄(열)이 삐뚤어 보이던 원인이다.
+ * 오른쪽 끝을 맞추면 자릿수가 세로로 딱 맞는다. 칸 안에서 너무 오른쪽에
+ * 붙어 보이지 않게, 두 자리 숫자가 대략 가운데 오도록 오른쪽 여백을 준다.
+ * 머리글(P W D L GD PTS)도 같은 오른쪽 끝에 맞춘다.
+ */
+.tbl__head > .num, .tbl__line > .num { text-align: right; padding-right: 8px; }
+.tbl__head > .tbl__g, .tbl__line > .tbl__g { padding-right: 10px; }
+.tbl__head > .tbl__gd, .tbl__line > .tbl__gd { padding-right: 12px; }
+.tbl__head > .tbl__pts, .tbl__line > .tbl__pts { padding-right: 13px; }
+/* 머리글 자간(.1em)은 마지막 글자 뒤에도 붙어 오른쪽 끝이 그만큼 안으로 들어간다 */
+.tbl__head > .num, .tbl__head > .tbl__rank { margin-right: -.1em; }
+/* 순위(1–20)도 같은 이유로 오른쪽 끝을 맞춘다 */
+.tbl__head > .tbl__rank, .tbl__line > .tbl__rank { text-align: right; padding-right: 11px; }
+/* 승점은 굵은 디스플레이 글꼴이라 숫자 오른쪽 여백(사이드 베어링)이 이미 그만큼 있다 */
+.tbl__head > .tbl__pts { margin-right: 0; }
+@media (max-width: 900px) {
+  .tbl__head > .num, .tbl__line > .num { padding-right: 7px; }
+  .tbl__head > .tbl__gd, .tbl__line > .tbl__gd { padding-right: 11px; }
+  .tbl__head > .tbl__pts, .tbl__line > .tbl__pts { padding-right: 12px; }
+  .tbl__head > .tbl__rank, .tbl__line > .tbl__rank { padding-right: 8px; }
+}
+@media (max-width: 640px) {
+  .tbl__head > .num, .tbl__line > .num { padding-right: 6px; }
+  .tbl__head > .tbl__gd, .tbl__line > .tbl__gd { padding-right: 9px; }
+  .tbl__head > .tbl__pts, .tbl__line > .tbl__pts { padding-right: 11px; }
+  .tbl__head > .tbl__rank, .tbl__line > .tbl__rank { padding-right: 5px; }
+}
+
 .tbl__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.4,0,.2,1); }
 .tbl__row[data-open='true'] .tbl__panel { grid-template-rows: 1fr; }
 .tbl__panelIn { overflow: hidden; }
