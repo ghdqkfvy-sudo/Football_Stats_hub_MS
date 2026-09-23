@@ -27,8 +27,7 @@ interface Props {
   barColorOf?: (m: Match) => string | undefined;
   /**
    * 그 경기에서 **상대 팀**을 칠할 색 (Summary).
-   * 기본은 흰색이지만, 팀 컬러 자체가 흰색에 가까운 뉴캐슬은 둘이 갈리지
-   * 않아 따로 준다 (targets 의 theme.opponent).
+   * Summary 는 늘 흰색(targets 의 SUMMARY_OPP)을 넘긴다.
    */
   oppColorOf?: (m: Match) => string | undefined;
 }

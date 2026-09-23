@@ -2073,8 +2073,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /*
  * 득점자 펼침 — 한 줄만 보고도 어느 팀 골인지 알아야 한다.
  * 우리 득점자는 팀 컬러(--accent, Summary 에서는 그 경기 팀 컬러로 갈린다),
- * 상대 득점자는 흰색(--opp). 팀 컬러가 흰색에 가까운 뉴캐슬만 상대를
- * 하늘색으로 바꿔 둘이 갈리게 한다(targets 의 theme.opponent).
+ * 상대 득점자는 흰색(--opp). (팀 컬러가 흰색에 가까운 팀이 생기면
+ * targets 의 theme.opponent 로 상대 색을 바꿀 수 있다.)
  * 이름 앞 팀 약어에도 같은 색을 얇게 입혀 눈이 왼쪽에서부터 갈린다.
  */
 .gl__row .gl__s { color: var(--accent); font-weight: 700; }

@@ -241,14 +241,16 @@ export const TARGETS: Target[] = [
     bgKind: 'photo',
     theme: {
       brand: '#241F20',
-      accent: '#E6EAF2',      // 검정은 어두운 배경에서 안 보인다 — 흑백의 흰쪽을 쓴다
-      secondary: '#41B6E6',   // 엠블럼의 하늘색
+      /*
+       * 팀 컬러는 엠블럼의 하늘색이다. 흑백 줄무늬의 검정은 어두운 배경에서
+       * 안 보이고, 흰쪽을 쓰면 상대 팀(흰색)과 같아져 뉴캐슬만 "상대를
+       * 하늘색으로" 뒤집어 칠해야 했다. 하늘색을 팀 컬러로 삼아 모든 화면에서
+       * 다른 팀과 같은 규칙(우리 = 팀 컬러, 상대 = 흰색)을 쓴다.
+       */
+      accent: '#63C9F0',
+      secondary: '#E6EAF2',   // 줄무늬의 흰색 — 게이지 반대쪽 끝
       onAccent: '#0B0B0C',
-      // 팀 컬러가 흰색이라 상대 팀도 흰색이면 구분이 안 된다 — 하늘색으로
-      opponent: '#63C9F0',
-      // Summary 에서는 반대로 뉴캐슬 자신을 하늘색으로 — 상대는 다른 팀처럼 흰색
-      summary: '#63C9F0',
-      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(230,234,242,.16), transparent 60%)',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(99,201,240,.16), transparent 60%)',
     },
     league: 'eng.1',
     competitions: ['eng.1', 'eng.fa', 'eng.league_cup'],
@@ -359,12 +361,9 @@ export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary
 /**
  * Summary 에서 이 팀을 칠할 색 / 상대 팀을 칠할 색.
  *
- * Summary 의 색 규칙은 하나다 — **우리 팀 = 팀 컬러, 상대 = 흰색.**
- * 뉴캐슬은 팀 컬러(accent)가 흰색이라 이 규칙대로면 둘이 같아진다. 예전에는
- * 뉴캐슬 경기만 **상대**를 하늘색으로 칠했는데, 일곱 팀이 섞인 화면에서
- * 뉴캐슬 줄만 규칙이 뒤집혀 "하늘색 = 누구?" 를 매번 다시 읽어야 했다.
- * 그래서 뉴캐슬 쪽을 하늘색(엠블럼의 색)으로 바꾸고 상대는 흰색으로 둔다.
- * (팀 탭은 뉴캐슬 하나만 보는 화면이라 기존대로 둔다.)
+ * 색 규칙은 하나다 — **우리 팀 = 팀 컬러, 상대 = 흰색.** 지금은 모든 팀의
+ * accent 가 흰색과 갈리므로 summary 값을 따로 둔 팀이 없다(뉴캐슬도 accent 가
+ * 하늘색). 앞으로 흰색에 가까운 팀이 생기면 theme.summary 로 덮어쓴다.
  */
 export const summaryColor = (t: Target) => t.theme.summary ?? t.theme.accent;
 export const SUMMARY_OPP = '#FFFFFF';
