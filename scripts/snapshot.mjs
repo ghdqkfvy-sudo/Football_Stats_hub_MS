@@ -303,6 +303,12 @@ function slimEvent(ev) {
     competitions: [{
       status: { type: { completed: c?.status?.type?.completed === true, state: c?.status?.type?.state } },
       competitors: cs.map(team),
+      /* 득점자와 경기별 선수 기록도 싣는다.
+         Summary 탭의 대회 선수 순위(deriveLeaders)가 이 두 값으로 만들어진다 —
+         빼면 순위가 통째로 빈다. 실측으로 리그당 30KB(gzip 5KB)밖에 안 늘고,
+         그래도 원본 3.3MB 의 1/12 이다. */
+      __goals: c.__goals,
+      __stats: c.__stats,
     }],
   };
 }

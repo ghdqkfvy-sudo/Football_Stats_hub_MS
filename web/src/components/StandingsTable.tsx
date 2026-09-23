@@ -9,6 +9,12 @@ interface Props {
   matches: Match[];
   /** 이 팀 행을 강조한다 */
   focusTeamId: string;
+  /**
+   * 여러 팀을 **각자 팀 컬러로** 강조한다 (Summary 탭).
+   * 한 팀만 볼 때는 accent 하나로 충분하지만, 우리 팀이 여럿 섞인 표에서는
+   * 어느 줄이 누구인지 색으로 갈려야 한다.
+   */
+  focusTeams?: Record<string, string>;
 }
 
 /**
@@ -81,7 +87,7 @@ function rankRange(ranks: number[]): string {
   return parts.join(' · ');
 }
 
-export function StandingsTable({ table, matches, focusTeamId }: Props) {
+export function StandingsTable({ table, matches, focusTeamId, focusTeams }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
   /*
@@ -154,10 +160,18 @@ export function StandingsTable({ table, matches, focusTeamId }: Props) {
 
       {table.rows.map((r) => {
         const isOpen = open === r.team.id;
-        const focus = r.team.id === focusTeamId;
+        const teamColor = focusTeams?.[r.team.id];
+        const focus = teamColor ? true : r.team.id === focusTeamId;
         const zone = zoneOf(r.rank);
         return (
-          <div className="tbl__row" key={r.team.id} data-open={isOpen} data-focus={focus}>
+          <div
+            className="tbl__row"
+            key={r.team.id}
+            data-open={isOpen}
+            data-focus={focus}
+            /* 우리 팀이 여럿 섞인 표(Summary)에서는 강조색을 팀 컬러로 바꾼다 */
+            style={teamColor ? ({ ['--accent']: teamColor } as React.CSSProperties) : undefined}
+          >
             <button
               className="tbl__line"
               aria-expanded={isOpen}

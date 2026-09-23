@@ -13,6 +13,8 @@ import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
 import { Crest } from './components/Crest';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SummaryTab } from './tabs/SummaryTab';
+import bgSummary from './assets/bg-summary.webp';
 
 type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans';
 
@@ -49,8 +51,22 @@ function ago(iso: string): string {
 }
 
 export default function App() {
+  /**
+   * 어느 화면인가 — 요약이거나, 팀 하나거나.
+   *
+   * Summary 는 팀에 속하지 않는 화면이라 팀 탭 목록에 넣을 수 없다.
+   * 팀 스위처 왼쪽의 칩으로 두고, 앱에 들어오면 여기서 시작한다.
+   */
+  const [view, setView] = useState<'summary' | 'team'>('summary');
   const [targetId, setTargetId] = useState<TargetId>('real-madrid');
   const target = getTarget(targetId);
+  const summary = view === 'summary';
+
+  /** 팀을 고르면 그 팀 화면으로 넘어간다 */
+  const openTeam = useCallback((id: TargetId) => {
+    setTargetId(id);
+    setView('team');
+  }, []);
   /*
    * ⚠️ 예전에는 시즌을 고르는 단추가 두 개 있었다. 그런데 그 값은 헤더
    * 글자에만 쓰여서, 다음 시즌을 눌러도 라벨만 바뀌고 일정·순위는 그대로였다
@@ -125,13 +141,18 @@ export default function App() {
     <PaletteProvider target={target}>
     <div style={themeVars}>
       {/* 팀 배경 아트워크 — 콘텐츠 뒤에서 어둡게 깔린다 */}
-      <div className="bgart" data-kind={target.bgKind} aria-hidden="true">
-        {/* 사진이 없는 팀은 팀 컬러 그라디언트로 — 사진을 못 구했다고
-            팀을 추가하지 못하는 편이 더 나쁘다 */}
+      <div className="bgart" data-kind={summary ? 'summary' : target.bgKind} aria-hidden="true">
+        {/* 요약 화면은 팀이 없으므로 공용 아트워크를 쓴다.
+            사진이 없는 팀은 팀 컬러 그라디언트로 — 사진을 못 구했다고
+            팀을 추가하지 못하는 편이 더 나쁘다. */}
         <div
           className="bgart__img"
-          data-empty={target.bg ? undefined : true}
-          style={target.bg ? { backgroundImage: `url(${target.bg})` } : undefined}
+          data-empty={!summary && !target.bg ? true : undefined}
+          style={
+            summary
+              ? { backgroundImage: `url(${bgSummary})` }
+              : target.bg ? { backgroundImage: `url(${target.bg})` } : undefined
+          }
         />
         <div className="bgart__veil" />
       </div>
@@ -139,20 +160,26 @@ export default function App() {
       <header className="hdr">
         <div className="shell hdr__inner">
           <div className="hdr__id">
-            <Crest
-              team={{
-                id: target.espnTeamId,
-                name: target.name,
-                shortName: target.name,
-                abbr: target.abbr,
-                logo: target.crest,
-              }}
-              size={52}
-              className="hdr__crest"
-            />
+            {summary ? (
+              <span className="hdr__crest hdr__crest--sum" aria-hidden="true">★</span>
+            ) : (
+              <Crest
+                team={{
+                  id: target.espnTeamId,
+                  name: target.name,
+                  shortName: target.name,
+                  abbr: target.abbr,
+                  logo: target.crest,
+                }}
+                size={52}
+                className="hdr__crest"
+              />
+            )}
             <div>
-              <h1 className="hdr__name">{target.nameEn}</h1>
-              <div className="hdr__sub">MS STATS HUB · {target.subtitle} · {season}</div>
+              <h1 className="hdr__name">{summary ? 'Summary' : target.nameEn}</h1>
+              <div className="hdr__sub">
+                MS STATS HUB · {summary ? '전체 요약' : target.subtitle} · {season}
+              </div>
             </div>
           </div>
 
@@ -167,13 +194,20 @@ export default function App() {
               ref={switchRef}
               onScroll={syncSwitchEnd}
             >
+              <button
+                className="pill pill--sum"
+                aria-pressed={summary}
+                onClick={() => setView('summary')}
+              >
+                ★ SUMMARY
+              </button>
               <span className="switch__label">CLUB</span>
               {TARGETS.filter((t) => t.kind === 'club').map((t) => (
                 <button
                   key={t.id}
                   className="pill"
-                  aria-pressed={t.id === targetId}
-                  onClick={() => setTargetId(t.id)}
+                  aria-pressed={!summary && t.id === targetId}
+                  onClick={() => openTeam(t.id)}
                 >
                   <img src={t.crest} alt="" />
                   {t.name}
@@ -186,8 +220,8 @@ export default function App() {
                 <button
                   key={t.id}
                   className="pill"
-                  aria-pressed={t.id === targetId}
-                  onClick={() => setTargetId(t.id)}
+                  aria-pressed={!summary && t.id === targetId}
+                  onClick={() => openTeam(t.id)}
                 >
                   {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
                       태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
@@ -220,26 +254,33 @@ export default function App() {
             </span>
           </div>
 
-          <nav className="tabs" role="tablist">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                className="tab"
-                role="tab"
-                aria-selected={t.id === tab}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+          {/* 요약 화면에는 팀별 탭이 없다 — 한 화면에 다 들어 있다 */}
+          {!summary && (
+            <nav className="tabs" role="tablist">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  className="tab"
+                  role="tab"
+                  aria-selected={t.id === tab}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          )}
         </div>
       </header>
 
       <main className="shell">
         {/* key: 팀을 바꾸면 선택 날짜·펼친 행 상태와 함께 오류 상태도 초기화된다 */}
-        <ErrorBoundary key={`${target.id}-${tab}`} label={tabs.find((t) => t.id === tab)?.label}>
-          {tab === 'schedule' && (
+        <ErrorBoundary
+          key={summary ? 'summary' : `${target.id}-${tab}`}
+          label={summary ? '요약' : tabs.find((t) => t.id === tab)?.label}
+        >
+          {summary && <SummaryTab onOpenTeam={openTeam} />}
+          {!summary && tab === 'schedule' && (
             <ScheduleTab
               target={target}
               matches={matches}
@@ -247,11 +288,11 @@ export default function App() {
               onGoalsLoaded={onGoalsLoaded}
             />
           )}
-          {tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
-          {tab === 'players' && <PlayersTab target={target} matches={matches} />}
-          {tab === 'koreans' && <KoreansTab />}
-          {tab === 'news' && <NewsTab target={target} />}
-          {tab === 'future' && <FutureTab target={target} />}
+          {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
+          {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} />}
+          {!summary && tab === 'koreans' && <KoreansTab />}
+          {!summary && tab === 'news' && <NewsTab target={target} />}
+          {!summary && tab === 'future' && <FutureTab target={target} />}
         </ErrorBoundary>
       </main>
     </div>

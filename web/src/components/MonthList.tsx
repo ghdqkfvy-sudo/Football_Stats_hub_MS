@@ -14,6 +14,17 @@ interface Props {
   openId: string | null;
   onToggle: (m: Match) => void;
   selectedDay: string | null;
+  /**
+   * 경기마다 "우리 팀" 이 다를 때 (Summary 탭은 일곱 팀이 섞인다).
+   * 승패와 득점자 색을 이 팀 기준으로 읽는다. 없으면 focusTeamId 를 쓴다.
+   */
+  focusFor?: (m: Match) => string;
+  /**
+   * 왼쪽 띠 색을 대회 색 대신 팀 색으로 바꾼다 (Summary 탭).
+   * 한 팀만 볼 때는 대회로 나누는 게 맞지만, 여러 팀이 섞이면
+   * "누구 경기인가" 가 먼저 읽혀야 한다.
+   */
+  barColorOf?: (m: Match) => string | undefined;
 }
 
 const CLOCK = (
@@ -25,6 +36,7 @@ const CLOCK = (
 
 export function MonthList({
   matches, focusTeamId, nextMatchId, loadingGoals, openId, onToggle, selectedDay,
+  focusFor, barColorOf,
 }: Props) {
   const palette = usePalette();
 
@@ -41,22 +53,26 @@ export function MonthList({
 
   return (
     <div className="ml">
-      <div className="ml__legend">
-        {comps.map((c) => (
-          <span key={c} style={{ ['--c' as string]: palette.color(c) }}>
-            <CompCrest k={c} size={16} />
-            {palette.name(c)}
-          </span>
-        ))}
-      </div>
+      {/* 띠가 팀 색을 뜻할 때는 대회 범례가 오히려 오해를 만든다 */}
+      {!barColorOf && (
+        <div className="ml__legend">
+          {comps.map((c) => (
+            <span key={c} style={{ ['--c' as string]: palette.color(c) }}>
+              <CompCrest k={c} size={16} />
+              {palette.name(c)}
+            </span>
+          ))}
+        </div>
+      )}
 
       {matches.map((m) => {
         const p = kstParts(m.kickoffUtc);
         const done = m.status === 'finished';
-        const res = resultFor(m, focusTeamId);
+        const mine = focusFor ? focusFor(m) : focusTeamId;
+        const res = resultFor(m, mine);
         const isOpen = openId === m.id;
         const onSelectedDay = selectedDay !== null && dayKey(m.kickoffUtc) === selectedDay;
-        const c = palette.color(m.competition);
+        const c = barColorOf?.(m) ?? palette.color(m.competition);
 
         return (
           <div
@@ -129,7 +145,7 @@ export function MonthList({
               <div className="ml__panel">
                 <div className="ml__panelIn">
                   <div className="ml__goals">
-                    <GoalSheet m={m} loading={loadingGoals.has(m.id)} focusTeamId={focusTeamId} />
+                    <GoalSheet m={m} loading={loadingGoals.has(m.id)} focusTeamId={mine} />
                   </div>
                 </div>
               </div>

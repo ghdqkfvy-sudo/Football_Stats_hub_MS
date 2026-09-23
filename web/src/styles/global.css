@@ -2174,3 +2174,183 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .fgroup__h p {
   grid-column: 2 / -1; margin: 2px 0 0; font-size: 11.5px; color: var(--text-lo);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SUMMARY 탭
+   일곱 팀이 한 화면에 섞인다. 그래서 여기서는 **대회 색이 아니라
+   팀 색**이 1차 구분이다 — 카드·캘린더 줄·결과 띠가 전부 팀 컬러다.
+   ══════════════════════════════════════════════════════════════ */
+
+/* 요약 화면 배경 — 팀이 없으므로 공용 아트워크를 쓴다.
+   세로 사진이라 위쪽(트로피)이 헤더 뒤에 오게 잡는다. */
+.bgart[data-kind='summary'] .bgart__img {
+  background-size: min(700px, 72%) auto;
+  background-position: 50% -2%;
+  /* 표와 순위 숫자가 위에 얹히는 화면이라 사진을 팀 배경보다 더 눌러 둔다 */
+  filter: saturate(.62) brightness(.40);
+}
+
+.hdr__crest--sum {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 14px; flex: none;
+  font-size: 22px; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.pill--sum { font-weight: 700; letter-spacing: .04em; }
+
+/* ── 매치데이 히어로 ─────────────────────────────────── */
+.mdh { display: grid; gap: 12px; }
+.mdh__rest {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+.mdh__card {
+  position: relative; display: block; width: 100%; text-align: left;
+  border: 1px solid var(--line); border-left: 3px solid var(--team);
+  border-radius: var(--r-lg); padding: 13px 15px; color: inherit; font: inherit;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--team) 22%, transparent), transparent 60%),
+    color-mix(in srgb, var(--ink-900) 74%, transparent);
+  backdrop-filter: blur(14px) saturate(1.1);
+  transition: border-color .18s, transform .18s;
+}
+button.mdh__card { cursor: pointer; }
+button.mdh__card:hover, button.mdh__card:focus-visible {
+  border-color: color-mix(in srgb, var(--teamfg) 55%, transparent); transform: translateY(-2px);
+}
+.mdh__card[data-hero] { padding: 20px 22px; border-radius: var(--r-xl); }
+
+.mdh__top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.mdh__team {
+  font-size: 13px; font-weight: 700; color: var(--text-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mdh__card[data-hero] .mdh__team { font-size: 16px; }
+.mdh__comp {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--text-lo); white-space: nowrap;
+}
+
+.mdh__fx { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.mdh__side { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.mdh__side span {
+  font-size: 11px; color: var(--text-mid); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+.mdh__card[data-hero] .mdh__side span { font-size: 13.5px; color: var(--text-hi); }
+.mdh__vs { font-family: var(--font-display); font-size: 15px; color: var(--text-lo); }
+.mdh__card[data-hero] .mdh__vs { font-size: 22px; }
+.mdh__live {
+  font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  color: #fff; background: var(--loss); padding: 2px 7px; border-radius: 4px;
+}
+
+.mdh__foot {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 10.5px; color: var(--text-lo);
+}
+.mdh__ha {
+  font-size: 9px; font-weight: 800; letter-spacing: .05em; padding: 2px 5px; border-radius: 4px;
+  color: var(--teamfg); border: 1px solid color-mix(in srgb, var(--teamfg) 45%, transparent);
+}
+.mdh__ha[data-side='AWAY'] { color: var(--text-mid); border-color: var(--line-2); }
+.mdh__venue { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdh__when { margin-left: auto; white-space: nowrap; color: var(--text-mid); }
+
+.mdh__cd { display: flex; gap: 7px; margin-top: 12px; }
+.mdh__cd b {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  font-family: var(--font-display); font-size: 21px; font-weight: 700; color: var(--accent);
+}
+.mdh__cd i { font-style: normal; font-size: 9.5px; color: var(--text-lo); font-family: var(--font-body); }
+
+/* ── 주간 캘린더 ─────────────────────────────────────── */
+.wcal { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  background: var(--panel); backdrop-filter: var(--panel-blur); }
+
+.wcal__bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.wcal__nav, .wcal__today {
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
+  border-radius: 7px; cursor: pointer; font: inherit;
+}
+.wcal__nav { width: 26px; height: 26px; font-size: 16px; line-height: 1; }
+.wcal__today { padding: 4px 10px; font-size: 11px; }
+.wcal__nav:hover, .wcal__today:hover { color: var(--text-hi); border-color: var(--accent); }
+.wcal__label { font-family: var(--font-display); font-size: 14px; color: var(--text-hi); }
+.wcal__spacer { flex: 1; }
+
+.wcal__grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.wcal__cell {
+  min-height: 118px; padding: 8px 7px; border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.wcal__cell:last-child { border-right: 0; }
+.wcal__cell[data-empty] { opacity: .5; }
+.wcal__cell[data-sel] {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.wcal__head { display: flex; align-items: center; justify-content: space-between; }
+.wcal__dow { font-size: 10px; color: var(--text-lo); }
+.wcal__cell[data-weekend] .wcal__dow { color: #FF8DA1; }
+.wcal__date { font-family: var(--font-display); font-size: 14px; color: var(--text-mid); }
+.wcal__date[data-today] {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--accent); color: var(--on-accent); font-weight: 700;
+}
+
+.wcal__list { display: flex; flex-direction: column; gap: 4px; }
+.wcal__m {
+  display: grid; grid-template-columns: minmax(0,1fr); gap: 2px;
+  border: 0; border-left: 3px solid var(--team); border-radius: 5px;
+  padding: 5px 6px; cursor: pointer; text-align: left; font: inherit;
+  background: color-mix(in srgb, var(--team) 20%, transparent);
+  color: var(--text-mid);
+}
+.wcal__m:hover { background: color-mix(in srgb, var(--team) 34%, transparent); }
+.wcal__m[data-on] {
+  outline: 1px solid var(--teamfg);
+  background: color-mix(in srgb, var(--team) 44%, transparent);
+  color: var(--text-hi);
+}
+.wcal__mine, .wcal__opp { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.wcal__mine b { font-size: 10.5px; font-weight: 700; color: var(--text-hi); }
+.wcal__mine i {
+  font-style: normal; font-size: 8px; font-weight: 800; padding: 0 3px; border-radius: 3px;
+  background: rgba(255,255,255,.14); color: var(--text-mid);
+}
+.wcal__opp span {
+  font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wcal__t { font-family: var(--font-display); font-size: 11px; color: var(--text-lo); }
+
+.wcal__hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--text-lo); }
+
+/* 좁은 화면: 7열이 무너지므로 가로 스크롤로 */
+@media (max-width: 860px) {
+  .wcal__grid { grid-template-columns: repeat(7, minmax(124px, 1fr)); overflow-x: auto; }
+}
+
+/* ── 우리 팀 선수 강조 (대회 선수 순위) ─────────────── */
+.lbc__row[data-mine] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.lbc__row[data-mine] .lbc__name { color: var(--text-hi); font-weight: 600; }
+
+/* ── 아래 팀 바로가기 ────────────────────────────────── */
+.sum__foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 6px 0 0; font-size: 11.5px; color: var(--text-lo);
+}
+.sum__jump {
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
+  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.sum__jump:hover { color: var(--text-hi); border-color: var(--accent); }

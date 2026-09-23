@@ -63,12 +63,14 @@ function rankRows(rows: LeaderRow[], key: Key, take: number): Ranked[] {
 const CAPS = { basic: 8, more: 15 };
 
 export function LeaderBoard({
-  rows, note, variant = 'table',
+  rows, note, variant = 'table', teamColors,
 }: {
   rows: LeaderRow[];
   note?: string;
   /** table = 숫자만 (대회 순위표) · bar = 게이지 (팀 내 기록) */
   variant?: 'table' | 'bar';
+  /** 우리 팀 선수를 그 팀 컬러로 강조한다 (Summary 탭) */
+  teamColors?: Record<string, string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const take = expanded ? CAPS.more : CAPS.basic;
@@ -90,7 +92,7 @@ export function LeaderBoard({
     <>
       <div className="lb3" data-variant={variant}>
         {cols.map(({ col, shown }) => (
-          <Column key={col.key} col={col} shown={shown} variant={variant} />
+          <Column key={col.key} col={col} shown={shown} variant={variant} teamColors={teamColors} />
         ))}
       </div>
 
@@ -110,11 +112,12 @@ export function LeaderBoard({
 }
 
 function Column({
-  col, shown, variant,
+  col, shown, variant, teamColors,
 }: {
   col: (typeof COLS)[number];
   shown: Ranked[];
   variant: 'table' | 'bar';
+  teamColors?: Record<string, string>;
 }) {
   // 게이지 기준값은 그 표의 1위 — 팀 안에서의 비중으로 읽힌다
   const max = shown[0]?.r[col.key] ?? 1;
@@ -129,7 +132,17 @@ function Column({
       ) : (
         <ol className="lbc__list">
           {shown.map(({ r, rank: rk }) => (
-            <li className="lbc__row" key={`${r.name}-${r.teamId}`} data-top={rk === 1}>
+            <li
+              className="lbc__row"
+              key={`${r.name}-${r.teamId}`}
+              data-top={rk === 1}
+              /* 우리 팀 선수는 그 팀 컬러로 — 여러 팀이 섞인 대회 순위에서
+                 "우리 선수가 몇 위인가" 가 먼저 읽혀야 한다 */
+              data-mine={teamColors?.[r.teamId] ? true : undefined}
+              style={teamColors?.[r.teamId]
+                ? ({ ['--accent']: teamColors[r.teamId] } as React.CSSProperties)
+                : undefined}
+            >
               <span className="lbc__rank num">{rk}</span>
               {r.team ? <Crest team={r.team} size={18} /> : <span className="lbc__pad" />}
               <span className="lbc__name">{r.name}</span>
