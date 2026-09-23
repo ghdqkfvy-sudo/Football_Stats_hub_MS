@@ -210,3 +210,87 @@ export function urlVerdict(status) {
   if (status === 404 || status === 410) return 'gone';
   return 'keep';
 }
+
+/* ── 무료 키 예산 배분 ────────────────────────────────────
+ * TheSportsDB 무료 키는 한 회차에 두 팀 남짓밖에 감당하지 못한다.
+ * 그래서 "누구에게 요청을 쓸 것인가" 가 곧 "누구 얼굴이 뜨는가" 다.
+ * 아래 두 함수가 그 배분을 정한다 — 순수 함수라 따로 검증한다.
+ */
+
+/**
+ * 팀을 **사진이 부족한 순**으로 정렬한다.
+ *
+ * 순서가 고정이면 늘 맨 앞 팀이 예산을 다 쓰고 뒤쪽 팀은 차례가 오지
+ * 않는다("레알마드리드만 헤드샷"). 아직 TheSportsDB 사진이 아닌 선수를
+ * 세어 많이 빈 팀부터 돈다. 지난 회차 파일이 없는 팀(첫 실행)이 가장 급하다.
+ *
+ * @param teams  [{ slug, ... }]
+ * @param prevOf (slug) => Map<id, {kind}>   지난 회차 사진
+ */
+export function photoNeedOrder(teams, prevOf) {
+  const need = new Map();
+  for (const t of teams) {
+    const prev = prevOf(t.slug);
+    if (!prev || prev.size === 0) { need.set(t.slug, Infinity); continue; }
+    let upgradable = 0;
+    for (const v of prev.values()) {
+      if (v?.kind !== 'cutout' && v?.kind !== 'thumb') upgradable++;
+    }
+    need.set(t.slug, upgradable);
+  }
+  /* 같은 값이면 원래 순서를 지킨다 — 회차마다 결과가 뒤바뀌면 안 된다 */
+  const idx = new Map(teams.map((t, i) => [t.slug, i]));
+  return {
+    order: [...teams].sort(
+      (a, b) => (need.get(b.slug) - need.get(a.slug)) || (idx.get(a.slug) - idx.get(b.slug)),
+    ),
+    need,
+  };
+}
+
+/**
+ * 이미 사진이 있는 선수를 이번 회차에 다시 확인할 차례인가.
+ *
+ * 매 회차 전부 다시 물으면 한도를 그것만으로 다 쓰고, 아예 안 물으면
+ * 예전 느슨한 규칙이 박아 둔 오답(리스 제임스 자리의 남의 얼굴)을 영영
+ * 걷어낼 수 없다. 선수를 `buckets` 무리로 나눠 한 회차에 한 무리씩 본다.
+ */
+export function dueForReverify(id, bucket, buckets = 6) {
+  const digits = String(id ?? '').replace(/\D/g, '').slice(-6);
+  if (!digits) return false;
+  return Number(digits) % buckets === ((bucket % buckets) + buckets) % buckets;
+}
+
+/**
+ * 한 선수의 최종 사진을 고른다.
+ *
+ * 이 함수가 이 파일에서 가장 위험한 자리다. 잘못 쓰면 **멀쩡한 사진을
+ * 지운다** — 2026-09-23 새벽에 실제로 그랬다. 그래서 규칙을 표로 박아 두고
+ * 테스트로 잠근다.
+ *
+ * @param prev  지난 회차 사진 {url,kind} | null
+ * @param tsdb  이번 회차 TheSportsDB 답
+ *              {url,kind} = 찾았다 · null = 확인했고 없다 · undefined = 못 물어봤다
+ * @param espn  ESPN 헤드샷 {url,kind:'espn'} | undefined
+ * @returns {{photo: {url,kind}|null, dropped: boolean}}
+ *          photo=null 이면 부르는 쪽이 위키로 내려간다.
+ *          dropped=true 는 이어받은 TheSportsDB 사진을 오답으로 보고 버렸다는 뜻.
+ */
+export function choosePhoto({ prev = null, tsdb, espn } = {}) {
+  const heldTsdb = !!prev && (prev.kind === 'cutout' || prev.kind === 'thumb');
+
+  /*
+   * ⚠️ `null` 과 `undefined` 를 구분하는 이유가 여기 전부 들어 있다.
+   *
+   * null      = 물어봤고 지금 규칙으로는 후보가 없다 → 예전 느슨한 규칙이
+   *             박아 둔 오답일 수 있으니 이어받은 TheSportsDB 사진을 버린다.
+   * undefined = 한도·네트워크로 **묻지 못했다** → 아무것도 판단할 수 없다.
+   *             여기서 버리면 한도에 걸린 회차마다 멀쩡한 컷아웃이 위키로
+   *             떨어진다. 반드시 그대로 둔다.
+   */
+  const dropped = tsdb === null && heldTsdb;
+
+  let best = betterPhoto(dropped ? null : prev, tsdb || null);
+  best = betterPhoto(best, espn ?? null);
+  return { photo: best ?? null, dropped };
+}

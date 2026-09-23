@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  betterPhoto, birthYearOf, kindFromUrl, matchInRoster, photoFromSportsdb,
-  pickSportsdbPlayer, plausibleBirthYear, rateLimiter, urlVerdict,
+  betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
+  photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
+  rateLimiter, urlVerdict,
 } from './photos.mjs';
 
 /** 테스트를 고정하기 위한 '오늘' — 2026-09-23 */
@@ -172,4 +173,134 @@ test('rateLimiter: 한 건이 예외를 던져도 줄이 끊기지 않는다', a
   const boom = lim.run(async () => { throw new Error('boom') });
   await assert.rejects(boom, /boom/);
   assert.equal(await lim.run(async () => ({ ok: true, value: 'after' })), 'after');
+});
+
+/* ── 무료 키 예산 배분 ─────────────────────────────────── */
+
+const TEAMS = [
+  { slug: 'real-madrid' }, { slug: 'chelsea' }, { slug: 'man-united' },
+  { slug: 'tottenham' }, { slug: 'newcastle' }, { slug: 'liverpool' },
+];
+const mapOf = (kinds) => new Map(kinds.map((k, i) => [String(i), { kind: k }]));
+
+test('photoNeedOrder — 덜 채워진 팀이 먼저 온다', () => {
+  /* 2026-09-23 실제 상태: 레알은 다 찼고 나머지는 위키뿐이었다 */
+  const prev = {
+    'real-madrid': mapOf(Array(26).fill('cutout')),
+    'chelsea': mapOf([...Array(16).fill('cutout'), ...Array(9).fill('wiki')]),
+    'man-united': mapOf(Array(23).fill('wiki')),
+    'tottenham': mapOf(Array(25).fill('wiki')),
+    'newcastle': mapOf(Array(17).fill('wiki')),
+    'liverpool': mapOf(Array(22).fill('wiki')),
+  };
+  const { order } = photoNeedOrder(TEAMS, (s) => prev[s]);
+  assert.deepEqual(order.map((t) => t.slug), [
+    'tottenham',    // 25
+    'man-united',   // 23
+    'liverpool',    // 22
+    'newcastle',    // 17
+    'chelsea',      // 9
+    'real-madrid',  // 0
+  ]);
+});
+
+test('photoNeedOrder — 지난 회차 파일이 없는 팀(첫 실행)이 가장 급하다', () => {
+  const prev = {
+    'real-madrid': mapOf(Array(26).fill('wiki')),
+    'chelsea': new Map(),                       // 첫 실행
+  };
+  const { order } = photoNeedOrder(
+    [{ slug: 'real-madrid' }, { slug: 'chelsea' }],
+    (s) => prev[s],
+  );
+  assert.deepEqual(order.map((t) => t.slug), ['chelsea', 'real-madrid']);
+});
+
+test('photoNeedOrder — 같은 값이면 원래 순서를 지킨다 (회차마다 뒤바뀌면 안 된다)', () => {
+  const prev = { a: mapOf(['wiki']), b: mapOf(['wiki']), c: mapOf(['wiki']) };
+  const teams = [{ slug: 'a' }, { slug: 'b' }, { slug: 'c' }];
+  assert.deepEqual(
+    photoNeedOrder(teams, (s) => prev[s]).order.map((t) => t.slug),
+    ['a', 'b', 'c'],
+  );
+});
+
+test('photoNeedOrder — 썸네일도 "채워진" 것으로 센다', () => {
+  const prev = { a: mapOf(['thumb', 'thumb']), b: mapOf(['wiki', 'espn']) };
+  assert.deepEqual(
+    photoNeedOrder([{ slug: 'a' }, { slug: 'b' }], (s) => prev[s]).order.map((t) => t.slug),
+    ['b', 'a'],
+  );
+});
+
+test('dueForReverify — 여섯 회차에 한 바퀴, 한 회차엔 한 무리만', () => {
+  const ids = Array.from({ length: 60 }, (_, i) => String(100000 + i));
+  const seen = new Set();
+  for (let b = 0; b < 6; b++) {
+    const due = ids.filter((id) => dueForReverify(id, b, 6));
+    assert.ok(due.length > 0, `회차 ${b} 에 아무도 안 걸린다`);
+    for (const id of due) {
+      assert.ok(!seen.has(id), `${id} 가 두 회차에 걸린다`);
+      seen.add(id);
+    }
+  }
+  // 여섯 회차면 전원이 한 번씩
+  assert.equal(seen.size, ids.length);
+});
+
+test('dueForReverify — 숫자가 없는 id 는 건드리지 않는다', () => {
+  assert.equal(dueForReverify('', 0), false);
+  assert.equal(dueForReverify(null, 0), false);
+  assert.equal(dueForReverify('abc', 0), false);
+});
+
+/* ── 최종 사진 고르기 ──────────────────────────────────── */
+
+const CUT = { url: 'https://www.thesportsdb.com/images/media/player/cutout/x.png', kind: 'cutout' };
+const THUMB = { url: 'https://www.thesportsdb.com/images/media/player/thumb/x.jpg', kind: 'thumb' };
+const ESPN = { url: 'https://a.espncdn.com/i/headshots/soccer/players/full/1.png', kind: 'espn' };
+const WIKI = { url: 'https://upload.wikimedia.org/x.jpg', kind: 'wiki' };
+
+test('choosePhoto — 한도에 걸려 못 물어본 회차(undefined)는 컷아웃을 지키지 않으면 안 된다', () => {
+  /* 2026-09-23 회귀의 핵심. 여기가 깨지면 맨유·토트넘·뉴캐슬·리버풀이
+     한 회차 만에 전부 위키 사진으로 떨어진다. */
+  const r = choosePhoto({ prev: CUT, tsdb: undefined, espn: ESPN });
+  assert.deepEqual(r.photo, CUT);
+  assert.equal(r.dropped, false);
+});
+
+test('choosePhoto — 물어봤는데 없다(null)면 이어받은 컷아웃을 버린다', () => {
+  const r = choosePhoto({ prev: CUT, tsdb: null, espn: ESPN });
+  assert.deepEqual(r.photo, ESPN);
+  assert.equal(r.dropped, true);
+});
+
+test('choosePhoto — null 이어도 위키/ESPN 이면 버릴 것이 없다', () => {
+  const r = choosePhoto({ prev: WIKI, tsdb: null, espn: ESPN });
+  assert.equal(r.dropped, false);
+  assert.deepEqual(r.photo, ESPN);   // 등급이 위키(1) < ESPN(2)
+});
+
+test('choosePhoto — 위키를 들고 있다가 컷아웃을 받으면 올라간다', () => {
+  assert.deepEqual(choosePhoto({ prev: WIKI, tsdb: CUT, espn: ESPN }).photo, CUT);
+});
+
+test('choosePhoto — 같은 등급이면 흔들지 않는다', () => {
+  const other = { url: 'https://www.thesportsdb.com/images/media/player/cutout/y.png', kind: 'cutout' };
+  assert.deepEqual(choosePhoto({ prev: CUT, tsdb: other, espn: undefined }).photo, CUT);
+});
+
+test('choosePhoto — 컷아웃이 썸네일보다 높다', () => {
+  assert.deepEqual(choosePhoto({ prev: THUMB, tsdb: CUT, espn: undefined }).photo, CUT);
+  assert.deepEqual(choosePhoto({ prev: CUT, tsdb: THUMB, espn: undefined }).photo, CUT);
+});
+
+test('choosePhoto — 아무것도 없으면 null (부르는 쪽이 위키로 간다)', () => {
+  const r = choosePhoto({ prev: null, tsdb: undefined, espn: undefined });
+  assert.equal(r.photo, null);
+  assert.equal(r.dropped, false);
+});
+
+test('choosePhoto — 첫 실행에 ESPN 만 있으면 ESPN', () => {
+  assert.deepEqual(choosePhoto({ prev: null, tsdb: null, espn: ESPN }).photo, ESPN);
 });

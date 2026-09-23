@@ -31,8 +31,9 @@ import {
   athleteRecent, scheduleMeta, seasonStatsUrl, seasonTotals, teamScheduleUrl,
 } from './lib/athlete.mjs';
 import {
-  betterPhoto, birthYearOf, kindFromUrl, matchInRoster, photoFromSportsdb,
-  pickSportsdbPlayer, plausibleBirthYear, rankOf, rateLimiter, urlVerdict,
+  betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
+  photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
+  rankOf, rateLimiter, urlVerdict,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames, seriesSummary } from './lib/h2h.mjs';
 
@@ -73,7 +74,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-17';
+const CODE_VERSION = 'snap-18';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -618,6 +619,12 @@ async function urlOk(url) {
  * 이번 회차는 포기하고 지난 회차 값을 이어받는다 — 회차를 거듭하며
  * 채워지므로 한 번에 다 못 받아도 결국 다 붙는다.
  */
+/* 이번 회차에 재검증할 무리 — 매시 한 칸씩 돌아 여섯 시간이면 한 바퀴다
+   (판정은 lib/photos.mjs 의 dueForReverify, 테스트 있음) */
+const REVERIFY_BUCKETS = 6;
+const RUN_BUCKET = Math.floor(Date.now() / 3_600_000) % REVERIFY_BUCKETS;
+const dueNow = (id) => dueForReverify(id, RUN_BUCKET, REVERIFY_BUCKETS);
+
 const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8 });
 
 /** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
@@ -651,15 +658,21 @@ function sportsdbRoster(clubName) {
   if (hit) return hit;
 
   const p = (async () => {
+    /* undefined = 못 물어봤다(한도·네트워크) · [] = 물어봤는데 없다.
+       이 둘을 뭉개면 "확인했고 없다" 로 잘못 읽혀 멀쩡한 사진을 버린다. */
     const t = await tsdbGet(`searchteams.php?t=${encodeURIComponent(clubName)}`);
+    if (t === undefined) return undefined;
     const id = String(t?.teams?.[0]?.idTeam ?? '');
     if (!id) return [];
     const r = await tsdbGet(`lookup_all_players.php?id=${id}`);
+    if (r === undefined) return undefined;
     const list = Array.isArray(r?.player) ? r.player : [];
     if (list.length) console.log(`    TheSportsDB 로스터 ${clubName}: ${list.length}명`);
     return list;
   })();
+  /* 실패를 캐시하면 그 회차 내내 같은 팀을 영영 못 받는다 */
   tsdbRosterCache.set(key, p);
+  p.then((v) => { if (v === undefined) tsdbRosterCache.delete(key); }).catch(() => {});
   return p;
 }
 
@@ -680,7 +693,7 @@ function sportsdbRoster(clubName) {
  *
  * @returns {Promise<{url:string, kind:'cutout'|'thumb'}|null|undefined>}
  */
-function sportsdbPhoto(name, club, age) {
+function sportsdbPhoto(name, club, age, { have = null, reverify = false } = {}) {
   const key = `${normName(name)}|${normName(club)}|${age ?? ''}`;
   if (!normName(name)) return Promise.resolve(undefined);
   if (tsdbCache.has(key)) return tsdbCache.get(key);
@@ -689,10 +702,21 @@ function sportsdbPhoto(name, club, age) {
     /* 1순위 — 팀 로스터. 팀이 확정돼 있어 동명이인 위험이 없다.
        (무료 키는 10명 남짓만 준다 — 나머지는 이름 검색으로) */
     const roster = await sportsdbRoster(club);
+    if (roster === undefined) return undefined;          // 한도 — 확인 못 함
     let hit = matchInRoster(roster, name, normName, age);
 
     let searched = null;
     if (!hit) {
+      /*
+       * 이름 검색은 **선수 한 명당 요청 한 번**이다. 무료 키의 예산은
+       * 여기서 다 탄다 — 7팀 × 28명이면 190번이고, 그 훨씬 전에 한도에
+       * 걸려 뒤쪽 팀은 통째로 위키로 떨어진다(레알만 컷아웃이던 이유).
+       *
+       * 이미 컷아웃/썸네일을 들고 있는 선수에게는 쓰지 않는다. 그 예산은
+       * **사진이 없는 선수**에게 가야 한다. 다만 오답(리스 제임스 자리의
+       * 남의 얼굴)을 걷어낼 길은 남겨야 하므로, 회차마다 일부만 재검증한다.
+       */
+      if (have && !reverify) return undefined;           // 이번 회차는 건드리지 않는다
       searched = await tsdbGet(`searchplayers.php?p=${encodeURIComponent(name)}`);
       if (searched === undefined) return undefined;      // 한도 — 확인 못 함
       /* 2순위 — 이름 검색. 소속팀과 나이가 맞는 후보만 받는다. */
@@ -804,18 +828,64 @@ async function wikipediaPhoto(name, age) {
  * 주소로 되짚는다. 이게 있어야 "위키 경기 사진이 한 번 박히면 영원히
  * 남는" 문제를 끊을 수 있다 — 나중에 컷아웃을 받으면 올라간다.
  */
-async function prevPhotos(fileName) {
+async function loadPrevPhotos(fileName) {
   const map = new Map();
   const put = (id, url, kind) => {
     if (!url) return;
     map.set(String(id), { url: String(url), kind: kind ?? kindFromUrl(url) });
   };
+  let text = null;
   try {
-    const json = JSON.parse(await readFile(join(OUT, fileName), 'utf8'));
+    text = await readFile(join(OUT, fileName), 'utf8');
+  } catch { return map; }                      // 첫 실행 — 이어받을 것이 없다
+
+  try {
+    const json = JSON.parse(text);
     for (const [id, a] of Object.entries(json?.athletes ?? {})) put(id, a?.photo, a?.photoKind);
     for (const p of json?.players ?? []) put(p?.id, p?.photo, p?.photoKind);
-  } catch { /* 첫 실행 */ }
+  } catch (e) {
+    /*
+     * ⚠️ 파일은 있는데 읽히지 않는다. 예전에는 이것을 "첫 실행" 과 똑같이
+     * 조용히 넘겼고, 그 대가가 컸다 — 2026-09-23 새벽 봇이 병합 충돌
+     * 마커를 박아 넣자 다음 회차가 **이어받을 사진을 하나도 못 읽고**
+     * 전부 처음부터 받으려 들었다. TheSportsDB 무료 키가 한 회차에 7팀을
+     * 감당하지 못하므로 레알·첼시만 컷아웃을 받고 나머지 네 팀은 통째로
+     * 위키 사진으로 떨어졌다. 조용히 넘어갈 일이 아니다.
+     */
+    note(`${fileName}: 지난 회차 사진을 읽지 못했다 (${String(e).split('\n')[0]}) — 이번 회차는 이어받기 없이 간다`);
+  }
   return map;
+}
+
+/** 같은 파일을 두 번 읽지 않는다 (팀 순서 계산 + 본 루프) */
+const prevPhotoCache = new Map();
+function prevPhotos(fileName) {
+  let hit = prevPhotoCache.get(fileName);
+  if (!hit) { hit = loadPrevPhotos(fileName); prevPhotoCache.set(fileName, hit); }
+  return hit;
+}
+
+/*
+ * 팀을 **사진이 부족한 순**으로 돌린다.
+ *
+ * TheSportsDB 무료 키는 한 회차에 두 팀 남짓밖에 감당하지 못한다. 순서가
+ * 고정이면 늘 맨 앞 팀(레알)이 예산을 다 쓰고 뒤쪽 팀은 차례가 오지 않는다
+ * — "레알마드리드만 헤드샷이 뜬다" 가 그것이다. 회로 차단과 이어받기로
+ * 버티게는 했지만, **공평하게** 만들지는 못했다.
+ *
+ * 지난 회차 파일에서 아직 TheSportsDB 사진이 아닌 선수를 세어, 많이 빈
+ * 팀부터 돈다. 회차를 거듭하면 고르게 채워지고 다 찬 팀은 뒤로 밀린다.
+ */
+async function teamsByPhotoNeed(teams) {
+  const prev = new Map();
+  for (const t of teams) prev.set(t.slug, await prevPhotos(`squad-${t.slug}.json`));
+  /* 정렬 규칙은 lib/photos.mjs 에 있다 (순수 함수 · 테스트 있음) */
+  const { order, need } = photoNeedOrder(teams, (slug) => prev.get(slug));
+  console.log(
+    '  사진 보충 순서: ' +
+      order.map((t) => `${t.slug}(${need.get(t.slug) === Infinity ? '신규' : need.get(t.slug)})`).join(' · '),
+  );
+  return order;
 }
 
 /* ── 선수 시즌 누적 출전 시간 ─────────────────────────────
@@ -1355,12 +1425,17 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
      예전에 박힌 위키 경기 사진이 컷아웃으로 올라간다. */
   const enName = String(prof?.displayName ?? nameKo);
   const playerAge = Number(prof?.age ?? 0) || undefined;
-  const tsdb = await sportsdbPhoto(enName, club, playerAge);
-  /* 스쿼드 쪽과 같은 규칙 — "확인했는데 없다" 면 이어받은 TheSportsDB
-     사진을 의심해 버린다(예전 느슨한 규칙의 오답일 수 있다). */
-  const staleTsdb = tsdb === null && carriedPhoto
+  /* 스쿼드 쪽과 **같은 규칙**을 쓴다 — 이미 컷아웃을 들고 있으면 이름 검색
+     예산을 아끼고, 못 물어본 회차에는 절대 버리지 않는다(choosePhoto). */
+  const heldTsdb = carriedPhoto
     && (carriedPhoto.kind === 'cutout' || carriedPhoto.kind === 'thumb');
-  let best = betterPhoto(staleTsdb ? null : (carriedPhoto ?? null), tsdb || null);
+  const tsdb = await sportsdbPhoto(enName, club, playerAge, {
+    have: heldTsdb ? carriedPhoto : null,
+    reverify: dueNow(id),
+  });
+  const { photo: chosen, dropped } = choosePhoto({ prev: carriedPhoto ?? null, tsdb });
+  if (dropped) console.log(`    사진 재검증: ${enName} — 예전 TheSportsDB 사진을 버림`);
+  let best = chosen;
   if (rankOfBest(best) < 2 && league && clubId !== '0') {
     const rosterPhoto = (await teamPhotos(league, clubId)).get(String(id))?.photo;
     if (rosterPhoto) best = betterPhoto(best, { url: rosterPhoto, kind: 'espn' });
@@ -1564,7 +1639,7 @@ async function main() {
      경기별 로스터에는 formationPlace·starter 와 **선수별 골·도움**이
      athleteId 와 함께 들어 있다. 이름 매칭 없이 시즌 집계를 만들 수 있는
      유일한 경로다(예전에 이름으로 맞추다 도움이 통째로 0 이 됐다). */
-  if (wants('slow')) for (const t of TEAMS) {
+  if (wants('slow')) for (const t of await teamsByPhotoNeed(TEAMS)) {
     const sched = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${t.id}/schedule`);
     /* 최근 16경기만 모은다. 단 **클럽 친선경기는 제외**한다 —
        프리시즌 친선전은 포메이션·라인업을 실험하는 자리라 그대로 섞이면
@@ -1678,26 +1753,29 @@ async function main() {
          *  한 번 박힌 위키 경기 사진이 영원히 남았다.)
          */
         const age = athletes[id].age;
+        const held = carried.get(id) ?? null;
+        /* 이미 TheSportsDB 사진을 들고 있으면 이번 회차는 아끼고 넘어간다
+           (여섯 회차에 한 번은 다시 확인한다 — dueForReverify 참고) */
+        const holdsTsdb = held && (held.kind === 'cutout' || held.kind === 'thumb');
         const [tsdb, espn, mins] = await Promise.all([
-          sportsdbPhoto(athletes[id].name, t.name, age),
+          sportsdbPhoto(athletes[id].name, t.name, age, {
+            have: holdsTsdb ? held : null,
+            reverify: dueNow(id),
+          }),
           meta?.photo
             ? Promise.resolve({ url: meta.photo, kind: 'espn' })
             : espnHeadshot(id).then((u) => (u ? { url: u, kind: 'espn' } : undefined)),
           athleteSeasonMinutes(t.league, id),
         ]);
 
-        /* ⚠️ 이어받은 TheSportsDB 사진이 **지금 규칙으로는 못 찾는 것** 이면
-           예전 느슨한 규칙이 박아 둔 오답일 수 있다 — 버린다.
-           (등급만 보는 betterPhoto 로는 컷아웃이 영원히 남아, 리스 제임스
-            자리의 남의 얼굴이 규칙을 고친 뒤에도 그대로였다)
-           한도에 걸려 확인조차 못 한 회차(undefined)에는 건드리지 않는다. */
-        const prev = carried.get(id) ?? null;
-        const staleTsdb = tsdb === null && prev
-          && (prev.kind === 'cutout' || prev.kind === 'thumb');
-        if (staleTsdb) console.log(`    사진 재검증: ${athletes[id].name} — 예전 TheSportsDB 사진을 버림`);
+        /* 고르는 규칙은 lib/photos.mjs 의 choosePhoto 하나로 모았다 —
+           "못 물어본 회차(undefined)에는 절대 버리지 않는다" 를 포함해
+           표로 박아 두고 테스트로 잠갔다. 이 자리를 직접 손으로 쓰다가
+           한 회차 만에 네 팀의 컷아웃을 날린 적이 있다. */
+        const { photo: chosen, dropped } = choosePhoto({ prev: held, tsdb, espn });
+        if (dropped) console.log(`    사진 재검증: ${athletes[id].name} — 예전 TheSportsDB 사진을 버림`);
 
-        let best = betterPhoto(staleTsdb ? null : prev, tsdb || null);
-        best = betterPhoto(best, espn);
+        let best = chosen;
         if (!best) {
           const wiki = await wikipediaPhoto(athletes[id].name, age);
           if (wiki) best = { url: wiki, kind: 'wiki' };
