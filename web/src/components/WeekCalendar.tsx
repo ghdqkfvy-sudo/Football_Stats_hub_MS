@@ -1,10 +1,40 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Target } from '../config/targets';
 import type { Match } from '../lib/types';
 import { kstTime, todayKey } from '../lib/kst';
 import { weekKeys, weekLabel, type DayMatch } from '../lib/summary';
 import { Crest } from './Crest';
+import { MatchPopCard } from './MatchPop';
 
 const WEEKDAY = ['월', '화', '수', '목', '금', '토', '일'];
+
+/** 실제 마우스가 있는 기기인지 — 터치에는 "호버" 가 없어 탭(=선택)만 남긴다 */
+const HAS_HOVER =
+  typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+
+interface Pop { m: Match; teamId: string; x: number; y: number; above: boolean }
+
+/**
+ * 타일 옆에 뜨는 미리보기.
+ *
+ * ⚠️ `position: fixed` + 포털이다. `.wcal` 이 `overflow: hidden`(둥근 모서리
+ * 때문에) 이라 칸 안에서 absolute 로 띄우면 잘려 나간다. 월간 캘린더는
+ * `.cal` 이 visible 이라 absolute 로 되지만 여기는 안 된다.
+ */
+function TilePop({ pop }: { pop: Pop }) {
+  const W = 262;
+  const x = Math.min(Math.max(pop.x - W / 2, 10), window.innerWidth - W - 10);
+  const style: React.CSSProperties = pop.above
+    ? { position: 'fixed', left: x, bottom: window.innerHeight - pop.y + 8, top: 'auto', transform: 'none' }
+    : { position: 'fixed', left: x, top: pop.y + 8, bottom: 'auto', transform: 'none' };
+  return createPortal(
+    <div className="pop" style={style} role="tooltip">
+      <MatchPopCard m={pop.m} focusTeamId={pop.teamId} />
+    </div>,
+    document.body,
+  );
+}
 
 interface Props {
   startKey: string;
@@ -29,6 +59,10 @@ export function WeekCalendar({
 }: Props) {
   const keys = weekKeys(startKey);
   const today = todayKey();
+  const [pop, setPop] = useState<Pop | null>(null);
+
+  /* 주가 바뀌면 떠 있던 미리보기는 더 이상 그 자리의 경기가 아니다 */
+  useEffect(() => { setPop(null); }, [startKey]);
 
   return (
     <div className="wcal">
@@ -88,6 +122,19 @@ export function WeekCalendar({
                       /* accent — brand 가 거의 검정인 팀은 띠가 안 보인다 */
                       style={{ ['--team' as string]: t.theme.accent, ['--teamfg' as string]: t.theme.accent }}
                       onClick={() => onPick(k)}
+                      onMouseEnter={(e) => {
+                        if (!HAS_HOVER) return;
+                        const r = e.currentTarget.getBoundingClientRect();
+                        /* 위쪽에 자리가 없으면 아래로 뒤집는다 */
+                        const above = r.top > 260;
+                        setPop({
+                          m, teamId: t.espnTeamId,
+                          x: r.left + r.width / 2,
+                          y: above ? r.top : r.bottom,
+                          above,
+                        });
+                      }}
+                      onMouseLeave={() => setPop(null)}
                       title={`${t.name} vs ${opp.name}`}
                     >
                       <span className="wcal__mine">
@@ -116,6 +163,8 @@ export function WeekCalendar({
           );
         })}
       </div>
+
+      {pop && <TilePop pop={pop} />}
 
       {/* 같은 날 경기가 여럿이면 다시 눌러 넘길 수 있다는 안내 */}
       {selectedDay && (byDay.get(selectedDay)?.length ?? 0) > 1 && (

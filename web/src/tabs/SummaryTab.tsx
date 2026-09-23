@@ -92,8 +92,22 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     const i = cycleIndex(selDay, k, selIdx, list.length);
     setSelDay(k);
     setSelIdx(i);
-    lastHero.current = list[i].match.id;   // 아래 이펙트가 주를 되돌리지 않게
-    setPickedTeam(list[i].teamId);
+
+    /*
+     * ⚠️ 여기서 캘린더가 엉뚱한 주로 날아가던 버그가 있었다.
+     *
+     * `board` 는 팀별 **다음 경기**만 담는다. 그래서 지난 경기를 누르면
+     * 히어로는 누른 그 경기가 아니라 그 팀의 다음 경기가 된다. 아래
+     * 이펙트는 "히어로가 바뀌었다" 고 보고 **다음 경기가 있는 주로**
+     * 캘린더를 옮겨 버렸다 — 방금 누른 자리에서 튕겨 나가는 것처럼 보인다.
+     *
+     * 예전 가드는 누른 경기 id 를 적어 뒀는데, 이펙트가 보는 값은 히어로
+     * 경기 id 라 서로 달라 가드가 걸리지 않았다. 실제로 히어로가 될 경기의
+     * id 를 미리 적어 둔다.
+     */
+    const teamId = list[i].teamId;
+    lastHero.current = board.find((b) => b.teamId === teamId)?.match.id ?? list[i].match.id;
+    setPickedTeam(teamId);
   };
 
   /* ── 대회 순위 ────────────────────────────────────── */
