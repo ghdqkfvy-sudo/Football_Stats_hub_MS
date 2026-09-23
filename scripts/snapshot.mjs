@@ -1270,13 +1270,19 @@ async function googleNewsKo(q) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
 
+    /* 엔티티를 **먼저** 풀고 나서 태그를 지운다. 구글 뉴스 <description> 은
+       `&lt;a href=...&gt;제목&lt;/a&gt;` 처럼 엔티티로 싸인 HTML 이라, 태그를
+       먼저 지우면 하나도 안 지워지고 나중에 풀린 `<a href="…` 가 화면에
+       그대로 찍혔다. */
     const clean = (v) =>
       String(v ?? '')
         .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-        .replace(/<[^>]+>/g, '')
         .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
         .replace(/&amp;/g, '&')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
     const tag = (block, name) =>
       clean(block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`))?.[1]);
@@ -1294,7 +1300,11 @@ async function googleNewsKo(q) {
       return {
         id: href || headline,
         headline,
-        description: tag(b, 'description').slice(0, 220),
+        // 구글 뉴스 설명은 "제목 + 매체명" 뿐이라 제목과 겹치면 비운다
+        description: (() => {
+          const d = tag(b, 'description');
+          return d.startsWith(headline.slice(0, 20)) ? '' : d.slice(0, 220);
+        })(),
         published: pub ? new Date(pub).toISOString() : '',
         type: 'Story',
         href,

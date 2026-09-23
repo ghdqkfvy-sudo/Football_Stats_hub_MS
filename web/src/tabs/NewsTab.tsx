@@ -26,6 +26,24 @@ function ago(iso: string, now: number): string {
   return kstShortDate(iso);
 }
 
+/**
+ * 기사 설명을 글자로만. 예전 스냅샷의 구글 뉴스 설명에는 HTML 조각
+ * (`<a href="https://news.google.com/…`)이 220자에서 잘린 채 들어 있어
+ * 화면에 주소가 그대로 찍혔다. 스냅샷도 고쳤지만, 이미 받아 둔 피드와
+ * 실시간 프록시 응답을 위해 그리기 직전에 한 번 더 걸러 낸다.
+ * 제목과 같은 말로 시작하면(구글 설명 = 제목 + 매체명) 보여 주지 않는다.
+ */
+function plainDesc(a: Article): string {
+  const d = (a.description ?? '')
+    .replace(/<[^>]*(>|$)/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!d || d === a.headline) return '';
+  if (d.startsWith(a.headline.slice(0, 20))) return '';
+  return d;
+}
+
 type Filter = 'ALL' | 'ko' | 'espn' | 'Media';
 
 export function NewsTab({ target }: { target: Target }) {
@@ -125,6 +143,7 @@ export function NewsTab({ target }: { target: Target }) {
 
 function Card({ a, now, lead = false }: { a: Article; now: number; lead?: boolean }) {
   const [imgOk, setImgOk] = useState(true);
+  const desc = plainDesc(a);
   return (
     <a className="ncard" data-lead={lead} href={a.href} target="_blank" rel="noreferrer noopener">
       <div className="ncard__ph">
@@ -151,9 +170,7 @@ function Card({ a, now, lead = false }: { a: Article; now: number; lead?: boolea
           )}
         </div>
         <h3 className="ncard__h">{a.headline}</h3>
-        {a.description && a.description !== a.headline && (
-          <p className="ncard__d">{a.description}</p>
-        )}
+        {desc && <p className="ncard__d">{desc}</p>}
         {a.byline && <span className="ncard__by">{a.byline}</span>}
       </div>
     </a>
