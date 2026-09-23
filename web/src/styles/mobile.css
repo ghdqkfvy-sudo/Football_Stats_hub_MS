@@ -125,3 +125,40 @@
   .ncard__kind { font-size: 10.5px; }
   .ncard__by { font-size: 11px; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 3. 누르는 영역 — 손가락 기준 44px 가까이
+ *
+ *    작은 버튼은 두 가지로 넓힌다.
+ *    · 홀로 떨어진 버튼 → 보이는 크기는 그대로 두고 투명한 ::after 로 누르는
+ *      영역만 바깥으로 넓힌다(레이아웃이 1px 도 안 움직인다).
+ *    · 여러 줄로 감기는 버튼 묶음(팀 바로가기·Future 필터) → ::after 가 윗줄
+ *      버튼을 덮으면 엉뚱한 게 눌리므로 실제 크기를 키운다.
+ *    ::after 는 이웃 버튼과 겹치지 않는 폭까지만 넓혔다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .pill, .wcal__nav, .wcal__today, .cal__nav button, .pt__filters button { position: relative; }
+  .pill::after, .wcal__nav::after, .wcal__today::after,
+  .cal__nav button::after, .pt__filters button::after, .pt__sort::after {
+    content: ''; position: absolute;
+  }
+  /* 팀 전환 알약 35px → 43px (스크롤 줄 위아래 여백 4px 안에서) */
+  .pill::after { inset: -4px 0; }
+  /* 주간 캘린더 ‹ › 26px · 오늘 27px → 44px */
+  .wcal__nav::after { inset: -9px; }
+  .wcal__today::after { inset: -9px -4px; }
+  /* 월간 캘린더 ‹ › 30px → 44px */
+  .cal__nav button::after { inset: -7px; }
+  /* 선수 스탯 전체/포지션 필터 27px → 43px (옆 버튼과는 겹치지 않게 세로만) */
+  .pt__filters button::after { inset: -8px 0; }
+  /* 정렬 머리글 19px → 39px (머리 줄 여백 안에서, 열 간격의 절반까지만 옆으로) */
+  .pt__sort::after { inset: -10px -3px; }
+
+  /* Summary 아래 팀 바로가기 27px → 38px */
+  .sum__foot { gap: 8px; }
+  .sum__jump { padding: 9px 14px; }
+  /* Future Resources 필터 34px → 40px */
+  .nf button { padding-block: 10px; }
+  /* 득점/도움/공격포인트 서브탭 38px → 42px */
+  .lb3__tab { padding-block: 11px; }
+}
