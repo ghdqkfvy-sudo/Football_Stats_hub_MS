@@ -107,7 +107,7 @@ export function LeaderBoard({
     <>
       {/* 좁은 화면 전용 서브탭 — 넓은 화면에서는 CSS 가 숨긴다 */}
       <div className="lb3__tabs" role="tablist" aria-label="선수 기록">
-        {cols.map(({ col, shown }) => (
+        {cols.map(({ col }) => (
           <button
             key={col.key}
             role="tab"
@@ -117,7 +117,6 @@ export function LeaderBoard({
             onClick={() => setTab(col.key)}
           >
             {col.label}
-            <i className="num">{shown.length}</i>
           </button>
         ))}
       </div>

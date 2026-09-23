@@ -57,7 +57,14 @@ export interface Target {
   nameEn: string;
   /** 엠블럼 폴백 배지에 쓰는 ESPN 약어 */
   abbr: string;
-  subtitle: string;
+  /**
+   * 손으로 적는 부제 — **국가대표 전용**이다.
+   * 클럽은 `subtitleParts` 가 `competitions` 에서 만들어 낸다. 예전에는 클럽도
+   * 손으로 적었는데, 첼시가 이번 시즌 챔피언스리그에 안 나가는데도 부제에는
+   * "Premier League · Champions League" 가 남아 있었다 — 같은 사실을 두 곳에
+   * 적으면 반드시 어긋난다. 참가 대회는 competitions 한 곳에만 있다.
+   */
+  subtitle?: string;
   crest: string;
   /**
    * 배경 아트워크. 없으면 팀 컬러 그라디언트로 떨어진다 —
@@ -105,7 +112,6 @@ export const TARGETS: Target[] = [
     name: 'Real Madrid',
     nameEn: 'Real Madrid',
     abbr: 'RMA',
-    subtitle: 'LALIGA · Champions League',
     crest: CREST('86'),
     bg: bgRma,
     bgKind: 'photo',
@@ -136,7 +142,6 @@ export const TARGETS: Target[] = [
     name: 'Chelsea',
     nameEn: 'Chelsea',
     abbr: 'CHE',
-    subtitle: 'Premier League · Champions League',
     crest: CREST('363'),
     bg: bgChe,
     bgKind: 'photo',
@@ -168,7 +173,6 @@ export const TARGETS: Target[] = [
     name: 'Man United',
     nameEn: 'Manchester United',
     abbr: 'MAN',
-    subtitle: 'Premier League · Champions League',
     crest: CREST('360'),
     bg: bgMun,
     bgKind: 'photo',
@@ -199,7 +203,6 @@ export const TARGETS: Target[] = [
     name: 'Tottenham',
     nameEn: 'Tottenham Hotspur',
     abbr: 'TOT',
-    subtitle: 'Premier League',
     crest: CREST('367'),
     bg: bgTot,
     bgKind: 'photo',
@@ -228,7 +231,6 @@ export const TARGETS: Target[] = [
     name: 'Newcastle',
     nameEn: 'Newcastle United',
     abbr: 'NEW',
-    subtitle: 'Premier League',
     crest: CREST('361'),
     bg: bgNew,
     bgKind: 'photo',
@@ -262,7 +264,6 @@ export const TARGETS: Target[] = [
     name: 'Liverpool',
     nameEn: 'Liverpool',
     abbr: 'LIV',
-    subtitle: 'Premier League · Champions League',
     crest: CREST('364'),
     /* 배경 사진은 아직 없다 — 팀 컬러 그라디언트로 떨어진다.
        web/src/assets/bg-liv.jpg 를 넣고 여기 bg 를 채우면 된다. */
@@ -330,6 +331,22 @@ export const OUR_TEAM_IDS: ReadonlySet<string> = new Set(TARGETS.map((t) => t.es
  * 순위표에서 우리 줄을 찾을 수가 없다. 그럴 때만 보조색으로 물러난다
  * (lib/mark.ts · 팀 이름을 박지 않고 색만 보고 판단한다).
  */
+/**
+ * 헤더 부제 조각 — "MS STATS HUB · Premier League · FA · EFL · 2026-27" 의 가운데.
+ *
+ * 리그는 이름 그대로, 나머지 대회는 **약어**로 적는다. 좁은 화면에서 전체
+ * 이름을 늘어놓으면 "Premier League · Champions League · FA Cup · EFL Cup" 이
+ * 되어 아무 데서나 줄이 꺾인다. 조각을 나눠 두면 줄바꿈이 조각 사이에서만
+ * 일어나 읽을 수 있다.
+ */
+export function subtitleParts(t: Target): string[] {
+  if (t.subtitle) return t.subtitle.split('·').map((x) => x.trim()).filter(Boolean);
+  const keys = t.competitions;
+  const lead = t.league && keys.includes(t.league) ? t.league : keys[0];
+  const rest = keys.filter((k) => k !== lead);
+  return [comp(lead).name, ...rest.map((k) => comp(k).short)];
+}
+
 export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary);
 
 export const getTarget = (id: TargetId) => TARGETS.find((t) => t.id === id)!;

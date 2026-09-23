@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './styles/global.css';
-import { TARGETS, getTarget, type TargetId } from './config/targets';
+import { TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { loadSchedule, type Source } from './lib/api';
 import { ScheduleTab } from './tabs/ScheduleTab';
@@ -177,8 +177,15 @@ export default function App() {
             )}
             <div>
               <h1 className="hdr__name">{summary ? 'Summary' : target.nameEn}</h1>
+              {/* 조각마다 <span> 을 둬서 좁은 화면에서 **조각 사이에서만**
+                  줄이 꺾이게 한다. 한 줄 문자열이면 "Premier Lea / gue" 처럼
+                  아무 데서나 끊긴다. 가운뎃점은 CSS 가 그린다. */}
               <div className="hdr__sub">
-                MS STATS HUB · {summary ? '전체 요약' : target.subtitle} · {season}
+                <span>MS STATS HUB</span>
+                {(summary ? ['전체 요약'] : subtitleParts(target)).map((part) => (
+                  <span key={part}>{part}</span>
+                ))}
+                <span className="num">{season}</span>
               </div>
             </div>
           </div>
