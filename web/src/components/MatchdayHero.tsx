@@ -19,6 +19,14 @@ import { CompCrest } from './CompCrest';
  * 테두리도 글자도 사라진다.
  */
 
+/* 팀 탭 히어로(.when__ico)와 같은 알람 아이콘 — 킥오프 시각의 무게를 맞춘다 */
+const ALARM = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9.5V13l2.4 1.6M5 3.4L2.6 5.6M19 3.4l2.4 2.2" />
+  </svg>
+);
+
 const PIN = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
     <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
@@ -136,6 +144,11 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
             size={hero ? 22 : 18}
           />
           {target.name}
+          {/* 팀 탭 캘린더의 선택된 막대처럼, 지금 크게 보고 있는 카드가
+              살아 있음을 펄스로 알린다. 배지 **안**에 두는 이유는 좁은
+              화면에서 머리줄이 접힐 때 점만 홀로 떨어지지 않게 하기 위해서다.
+              LIVE 일 때는 LIVE 배지가 이미 깜빡이므로 내보내지 않는다. */}
+          {hero && !live && <span className="mdh__pulse" aria-hidden="true" />}
         </span>
         <span className="mdh__comp">
           <CompCrest k={match.competition} size={hero ? 16 : 13} />
@@ -168,8 +181,9 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
           <div className="mdh__when">
             <div className="mdh__date">{kstFullDate(match.kickoffUtc)}</div>
             <div className="mdh__time">
+              <span className="mdh__ico">{ALARM}</span>
               <b>{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
-              <em>KST</em>
+              {!match.timeTBD && <em>KST</em>}
             </div>
             {match.venue && <div className="mdh__venue">{PIN}{match.venue}</div>}
           </div>

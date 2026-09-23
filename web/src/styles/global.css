@@ -2380,15 +2380,20 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 /* 히어로 킥오프 */
 .mdh__when { text-align: center; margin-top: 14px; }
 .mdh__date { font-size: 13.5px; font-weight: 700; color: var(--text-hi); }
-.mdh__time { margin-top: 3px; display: inline-flex; align-items: flex-end; justify-content: center; gap: 8px; }
+.mdh__time { margin-top: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+/* 팀 탭 히어로와 같은 알람 아이콘 — 시각 왼쪽에서 붉게 받쳐 준다 */
+.mdh__ico { color: var(--loss); display: grid; place-items: center; }
 .mdh__time b {
   font-family: var(--font-display); font-size: 42px; font-weight: 700; line-height: 1;
-  color: var(--team);
-  text-shadow: 0 0 28px color-mix(in srgb, var(--team) 48%, transparent);
+  color: var(--team); letter-spacing: 0;
+  /* 팀 탭 .when__time b 와 같은 2단 글로우. 한 겹(28px/48%)만으로는
+     큰 배경 사진 위에서 빛으로 읽히지 않고 그냥 색 글자로 보인다. */
+  text-shadow: 0 0 30px color-mix(in srgb, var(--team) 55%, transparent),
+               0 2px 22px color-mix(in srgb, var(--team) 30%, transparent);
 }
 .mdh__time em {
   font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
-  color: var(--text-mid); padding-bottom: 5px;
+  color: var(--text-mid); align-self: flex-end; padding-bottom: 5px;
 }
 .mdh__venue {
   display: inline-flex; align-items: center; gap: 5px; margin-top: 6px;
@@ -2417,6 +2422,23 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text-lo);
 }
 .mdh__soon { font-family: var(--font-display); font-size: 22px; color: var(--team); }
+
+/* 히어로 카드의 펄스닷 — 팀 캘린더에서 선택된 막대가 숨 쉬는 것과 같은 리듬.
+   "지금 크게 보고 있는 경기" 라는 표시다. LIVE 일 때는 LIVE 배지가 이미
+   깜빡이므로 겹치지 않게 내보내지 않는다. */
+.mdh__pulse {
+  position: relative; width: 6px; height: 6px; flex: none; margin-left: 3px;
+  border-radius: 50%; background: var(--team);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--team) 85%, transparent);
+}
+.mdh__pulse::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid var(--team);
+  animation: ping 1.9s cubic-bezier(0,.4,.6,1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mdh__pulse::after { animation: none; opacity: .5; }
+}
 
 /* 작은 카드 바닥 — 킥오프가 먼저 읽혀야 한다.
    예전에는 경기장과 같은 10.5px 회색 한 줄이라 카드 여섯 장을 훑어도
@@ -2529,6 +2551,18 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   color: var(--text-mid);
 }
 .wcal__m:hover { background: color-mix(in srgb, var(--team) 34%, transparent); }
+/* 팀 캘린더의 선택된 막대(.bar[data-sel])와 같은 리듬 —
+   왼쪽 팀 컬러 띠가 숨 쉬면서 "이 경기를 보고 있다" 를 말한다. */
+.wcal__m[data-on] { animation: wcalPulse 1.9s cubic-bezier(.4,0,.6,1) infinite; }
+@keyframes wcalPulse {
+  /* 왼쪽 띠(border-left)는 그대로 두고 **빛만** 숨 쉬게 한다.
+     box-shadow 로 띠를 한 번 더 그리면 3px 띠가 6px 로 두꺼워 보인다. */
+  0%, 100% { box-shadow: 0 0 0 color-mix(in srgb, var(--team) 0%, transparent); }
+  50%      { box-shadow: 0 0 18px color-mix(in srgb, var(--team) 75%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wcal__m[data-on] { animation: none; }
+}
 .wcal__m[data-on] {
   outline: 1px solid var(--teamfg);
   background: color-mix(in srgb, var(--team) 44%, transparent);
@@ -2556,6 +2590,23 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 /* ── 우리 팀 선수 강조 (대회 선수 순위) ─────────────── */
 .lbc__row[data-mine] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .lbc__row[data-mine] .lbc__name { color: var(--text-hi); font-weight: 600; }
+
+/*
+ * 우리 팀이 섞인 대회 순위표(Summary · 팀 탭)에서는, 남의 팀 선수의 등수와
+ * 기록을 **흰색**으로 눕힌다. 예전에는 전부 앱 전역 --accent 로 칠해져서
+ * 스물네 줄이 같은 팀 컬러였고, 정작 우리 선수 줄이 묻혔다.
+ * 팀 컬러는 우리 줄에만 남긴다.
+ */
+.lb3[data-mixed] .lbc__row:not([data-mine]) .lbc__v {
+  color: var(--text-hi); text-shadow: none;
+}
+.lb3[data-mixed] .lbc__row:not([data-mine]) .lbc__rank { color: var(--text-mid); }
+.lb3[data-mixed] .lbc__row:not([data-mine])[data-top='true'] .lbc__rank {
+  color: var(--text-hi); font-weight: 700;
+}
+.lb3[data-mixed] .lbc__row[data-mine] .lbc__v {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
 
 /* ── 아래 팀 바로가기 ────────────────────────────────── */
 .sum__foot {
@@ -2627,15 +2678,23 @@ i.ml__res:empty { width: 17px; height: 17px; }
    승패는 W/D/L 칩이 말하므로 스코어까지 삼색으로 칠하면 한 줄에
    빨강·초록이 두 번 나와 오히려 안 읽힌다. */
 .ml__match[data-ours] .ml__score { font-size: 18px; letter-spacing: 0; }
-/* 팀 탭에서는 --c 가 "대회" 색이므로 우리 득점 색은 앱 전역 팀 컬러를 쓰고,
-   Summary(=data-ours)에서만 그 경기 팀 컬러(--c)로 갈아 끼운다. */
+/* 팀 탭은 화면 전체가 한 팀 색이라 "누구 골인가" 를 색으로 가른다 —
+   우리 득점은 팀 컬러, 상대는 흰색(뉴캐슬만 하늘색). */
 .ml__su { color: var(--accent); font-weight: 800; }
 .ml__so { color: var(--opp, #fff); font-weight: 700; opacity: .92; }
-.ml__match[data-ours] .ml__su {
-  color: var(--c);
-  text-shadow: 0 0 14px color-mix(in srgb, var(--c) 40%, transparent);
-}
 .ml__score i { color: var(--text-lo); font-weight: 500; }
+
+/*
+ * Summary(=data-ours)는 다르다. 일곱 팀이 섞인 목록에서 스코어까지 팀
+ * 컬러로 칠하면 한 화면에 여섯 색이 돌아 무엇이 중요한지 사라진다.
+ * 여기서는 스코어가 **결과**를 말하게 한다 — 이긴 경기는 흰색으로
+ * 또렷하게, 진 경기는 회색으로 가라앉힌다. 누구 골인지는 좌우 위치가,
+ * 승패는 W/D/L 칩이 이미 말하고 있으므로 색은 무게만 조절하면 된다.
+ */
+.ml__match[data-ours] .ml__score b { text-shadow: none; }
+.ml__match[data-ours] .ml__score[data-res='W'] b { color: #FFFFFF; opacity: 1; }
+.ml__match[data-ours] .ml__score[data-res='D'] b { color: var(--text-mid); opacity: 1; }
+.ml__match[data-ours] .ml__score[data-res='L'] b { color: var(--text-lo); opacity: 1; }
 /* 좁은 화면에서는 풀네임·HOME/AWAY 대신 약어와 H/A 로 바꾼다.
    폭이 없는 채로 말줄임에 맡기면 "M.." 처럼 읽을 수 없는 글자만 남는다. */
 .ml__short { display: none; }

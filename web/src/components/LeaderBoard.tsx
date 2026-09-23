@@ -95,7 +95,9 @@ export function LeaderBoard({
 
   return (
     <>
-      <div className="lb3" data-variant={variant}>
+      {/* teamColors 가 있으면 "우리 팀이 섞인 표" 다 — 남의 팀 줄은 흰색으로
+          눕히고 팀 컬러는 우리 줄에만 남긴다 (global.css 의 [data-mixed]) */}
+      <div className="lb3" data-variant={variant} data-mixed={teamColors ? true : undefined}>
         {cols.map(({ col, shown }) => (
           <Column
             key={col.key}
