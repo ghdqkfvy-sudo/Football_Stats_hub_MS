@@ -1039,8 +1039,50 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .lbc__row[data-top='true'] .lbc__name { font-weight: 700; }
 
+/* 서브탭은 좁은 화면에서만 — 넓은 화면은 세 표를 나란히 보는 편이 낫다 */
+.lb3__tabs { display: none; }
+
 @media (max-width: 900px) {
+  /*
+   * 세 표를 세로로 쌓으면 여덟 줄짜리 표 세 개가 이어 붙어 스크롤이 길고,
+   * "득점 1위" 를 보려고 두 표를 지나쳐야 한다. 서브탭으로 한 번에 하나만.
+   * 고르는 상태는 리액트가 들고 data-active 로 내려 주지만, **감추는 일은
+   * CSS 가** 한다 — 넓은 화면에서는 이 블록이 통째로 꺼지므로 셋 다 보인다.
+   */
   .lb3 { grid-template-columns: 1fr; }
+  .lb3[data-active] > .lbc { display: none; }
+  .lb3[data-active='goals'] > .lbc[data-key='goals'],
+  .lb3[data-active='assists'] > .lbc[data-key='assists'],
+  .lb3[data-active='points'] > .lbc[data-key='points'] { display: block; }
+
+  /* 표 안에 이미 제목이 있으므로 탭에는 이름과 인원수만 */
+  .lb3[data-active] > .lbc > .lbc__h { display: none; }
+
+  .lb3__tabs {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+    margin-bottom: 10px;
+  }
+  .lb3__tab {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 8px; border-radius: 11px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(6, 16, 38, .3);
+    color: var(--text-mid); font: inherit; font-size: 12px; font-weight: 700;
+    letter-spacing: -.01em; white-space: nowrap;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .lb3__tab i {
+    font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--text-lo);
+    padding: 1px 5px; border-radius: 5px; background: rgba(255, 255, 255, .06);
+  }
+  .lb3__tab[data-on] {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .lb3__tab[data-on] i {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+  }
 }
 
 /* ══ 순위표 반응형 ═════════════════════════════════════════ */

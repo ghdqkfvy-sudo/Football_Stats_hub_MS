@@ -78,6 +78,16 @@ export function LeaderBoard({
   soloGlowTeamId?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  /*
+   * 좁은 화면에서는 세 표를 서브탭으로 바꾼다.
+   *
+   * 900px 아래에서 세 표가 세로로 쌓이면 한 화면에 여덟 줄짜리 표 세 개가
+   * 이어 붙어 스크롤이 길어지고, "득점 1위" 를 보려고 두 표를 지나쳐야 한다.
+   * 상태는 항상 들고 있되 **감추는 일은 CSS 가** 한다 — 뷰포트를 자바스크립트로
+   * 재면 넓은 화면에서 쓸데없이 다시 그리게 되고, 창 크기를 바꿀 때 한 박자
+   * 늦게 따라온다. 넓은 화면에서는 data-active 를 무시하고 셋 다 보인다.
+   */
+  const [tab, setTab] = useState<Key>('goals');
   const take = expanded ? CAPS.more : CAPS.basic;
 
   const cols = useMemo(
@@ -95,9 +105,31 @@ export function LeaderBoard({
 
   return (
     <>
+      {/* 좁은 화면 전용 서브탭 — 넓은 화면에서는 CSS 가 숨긴다 */}
+      <div className="lb3__tabs" role="tablist" aria-label="선수 기록">
+        {cols.map(({ col, shown }) => (
+          <button
+            key={col.key}
+            role="tab"
+            aria-selected={tab === col.key}
+            className="lb3__tab"
+            data-on={tab === col.key || undefined}
+            onClick={() => setTab(col.key)}
+          >
+            {col.label}
+            <i className="num">{shown.length}</i>
+          </button>
+        ))}
+      </div>
+
       {/* teamColors 가 있으면 "우리 팀이 섞인 표" 다 — 남의 팀 줄은 흰색으로
           눕히고 팀 컬러는 우리 줄에만 남긴다 (global.css 의 [data-mixed]) */}
-      <div className="lb3" data-variant={variant} data-mixed={teamColors ? true : undefined}>
+      <div
+        className="lb3"
+        data-variant={variant}
+        data-mixed={teamColors ? true : undefined}
+        data-active={tab}
+      >
         {cols.map(({ col, shown }) => (
           <Column
             key={col.key}
@@ -137,7 +169,7 @@ function Column({
   // 게이지 기준값은 그 표의 1위 — 팀 안에서의 비중으로 읽힌다
   const max = shown[0]?.r[col.key] ?? 1;
   return (
-    <section className="lbc" data-rev={col.reverse}>
+    <section className="lbc" data-rev={col.reverse} data-key={col.key}>
       <header className="lbc__h">
         <h3>{col.label}</h3>
       </header>

@@ -16,7 +16,7 @@
  */
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { betterPhoto, kindFromUrl } from './lib/photos.mjs';
+import { betterPhoto, isBadPhoto, kindFromUrl } from './lib/photos.mjs';
 
 const [from, to] = process.argv.slice(2);
 if (!from || !to) {
@@ -27,7 +27,11 @@ if (!from || !to) {
 const readJson = async (dir, name) => {
   try { return JSON.parse(await readFile(join(dir, name), 'utf8')); } catch { return null; }
 };
-const photoOf = (a) => (a?.photo ? { url: a.photo, kind: a.photoKind ?? kindFromUrl(a.photo) } : null);
+/* 확인된 오답은 옛 커밋에 남아 있어도 되살리지 않는다 — 실제로 한 번
+   그렇게 하비에르 사비올라 얼굴이 Sávio 자리로 돌아왔다.
+   (betterPhoto 가 이미 막지만, 여기서 읽히게 한 번 더 적는다) */
+const photoOf = (a) =>
+  (a?.photo && !isBadPhoto(a.photo) ? { url: a.photo, kind: a.photoKind ?? kindFromUrl(a.photo) } : null);
 
 let files = 0;
 let restored = 0;

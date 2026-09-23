@@ -787,7 +787,7 @@ async function wikipediaPhoto(name, age) {
   try {
     const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json'
       + '&generator=search&gsrlimit=5&gsrsearch=' + encodeURIComponent(`${name} footballer`)
-      + '&prop=pageimages|description&piprop=thumbnail&pithumbsize=250';
+      + '&prop=pageimages|description&piprop=thumbnail|original&pithumbsize=250';
     const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': WIKI_UA } });
     if (res.ok) {
       const j = await res.json();
@@ -795,6 +795,18 @@ async function wikipediaPhoto(name, age) {
       for (const p of Object.values(j?.query?.pages ?? {})) {
         const src = p?.thumbnail?.source;
         if (!src || /\.svg(\?|$)/i.test(src)) continue;
+        /*
+         * ⚠️ 세로로 긴 사진은 버린다.
+         *
+         * 위키 대표 이미지는 얼굴 사진이 아니라 **경기 중 전신 사진**일 때가
+         * 많다. 웨슬리 포파나가 그랬다 — 542×1164(2.15:1) 짜리 2022년 레스터
+         * 경기 사진이라, 원형 아바타로 잘라 놓으면 얼굴이 거의 남지 않아
+         * "전혀 다른 사람" 으로 보인다. 사람이 아니라 사진이 문제였다.
+         * 알아볼 수 없는 사진을 박느니 이름 배지로 두는 편이 낫다.
+         */
+        const ow = Number(p?.original?.width) || 0;
+        const oh = Number(p?.original?.height) || 0;
+        if (ow && oh && oh / ow > 1.8) continue;
         const desc = String(p?.description ?? '');
         if (!/footballer|football|soccer/i.test(desc)) continue;
         const title = normName(p?.title);

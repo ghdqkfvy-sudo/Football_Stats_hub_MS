@@ -31,6 +31,29 @@
  *     올라간다(한 번에 다 못 받아도 결국 채워진다).
  */
 
+/* ── 확인된 오답 ─────────────────────────────────────────
+ *
+ * 한 번 "이 사진은 저 사람이 아니다" 로 밝혀진 파일은 **어떤 경로로도**
+ * 다시 들어오면 안 된다. 규칙을 조이는 것만으로는 부족하다는 걸 두 번
+ * 배웠다 — 이어받기가 도로 물어 오고(등급만 보니까), 사고 복구 스크립트가
+ * 옛 커밋에서 도로 끌어왔다.
+ *
+ * 키는 이미지 파일 이름이다. 주소 호스트가 바뀌어도(thesportsdb.com →
+ * r2.thesportsdb.com) 파일 이름은 그대로였다.
+ */
+export const BAD_PHOTO_FILES = new Set([
+  /* Sávio(토트넘, 2003년생) 자리에 박혀 있던 사진.
+     실제 주인은 하비에르 사비올라(1981년생, 은퇴) — 이름 검색이 "Savio" 로
+     사비올라를 물어 온 것이다. 화면에서도 마흔 줄 남자 얼굴이 떴다. */
+  '3100367.png',
+]);
+
+/** 이 주소가 확인된 오답인가 */
+export function isBadPhoto(url) {
+  const file = String(url ?? '').split('?')[0].split('/').pop();
+  return !!file && BAD_PHOTO_FILES.has(file);
+}
+
 /** 출처 등급 — 숫자가 클수록 좋은 사진이다 */
 export const PHOTO_RANK = { cutout: 4, thumb: 3, espn: 2, wiki: 1 };
 
@@ -41,9 +64,13 @@ export const rankOf = (kind) => PHOTO_RANK[kind] ?? 0;
  * 같은 등급이면 갈아타지 않는다 — 이미 있는 주소를 괜히 흔들 이유가 없다.
  */
 export function betterPhoto(current, candidate) {
-  if (!candidate?.url) return current ?? null;
-  if (!current?.url) return candidate;
-  return rankOf(candidate.kind) > rankOf(current.kind) ? candidate : current;
+  /* 오답은 후보로도, 이어받기로도 통과시키지 않는다.
+     사진이 바뀌는 길은 전부 이 함수를 지나므로 여기 한 곳이면 된다. */
+  const cur = current?.url && !isBadPhoto(current.url) ? current : null;
+  const cand = candidate?.url && !isBadPhoto(candidate.url) ? candidate : null;
+  if (!cand) return cur;
+  if (!cur) return cand;
+  return rankOf(cand.kind) > rankOf(cur.kind) ? cand : cur;
 }
 
 /** 주소의 출처 등급을 되짚는다 (지난 회차 파일에 kind 가 없을 때) */
@@ -276,7 +303,9 @@ export function dueForReverify(id, bucket, buckets = 6) {
  *          photo=null 이면 부르는 쪽이 위키로 내려간다.
  *          dropped=true 는 이어받은 TheSportsDB 사진을 오답으로 보고 버렸다는 뜻.
  */
-export function choosePhoto({ prev = null, tsdb, espn } = {}) {
+export function choosePhoto({ prev: rawPrev = null, tsdb, espn } = {}) {
+  /* 확인된 오답을 들고 있었다면 애초에 없던 것으로 친다 */
+  const prev = rawPrev?.url && !isBadPhoto(rawPrev.url) ? rawPrev : null;
   const heldTsdb = !!prev && (prev.kind === 'cutout' || prev.kind === 'thumb');
 
   /*

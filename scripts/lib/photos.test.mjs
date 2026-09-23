@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
+  betterPhoto, birthYearOf, choosePhoto, dueForReverify, isBadPhoto, kindFromUrl, matchInRoster,
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
   rateLimiter, urlVerdict,
 } from './photos.mjs';
@@ -303,4 +303,37 @@ test('choosePhoto — 아무것도 없으면 null (부르는 쪽이 위키로 �
 
 test('choosePhoto — 첫 실행에 ESPN 만 있으면 ESPN', () => {
   assert.deepEqual(choosePhoto({ prev: null, tsdb: null, espn: ESPN }).photo, ESPN);
+});
+
+/* ── 확인된 오답은 어떤 경로로도 다시 못 들어온다 ───────── */
+
+const SAVIOLA = { url: 'https://r2.thesportsdb.com/images/media/player/cutout/3100367.png', kind: 'cutout' };
+
+test('isBadPhoto — 호스트가 바뀌어도 파일 이름으로 잡는다', () => {
+  assert.equal(isBadPhoto(SAVIOLA.url), true);
+  assert.equal(isBadPhoto('https://www.thesportsdb.com/images/media/player/cutout/3100367.png'), true);
+  assert.equal(isBadPhoto('https://r2.thesportsdb.com/x/3100367.png?v=2'), true);
+  assert.equal(isBadPhoto('https://r2.thesportsdb.com/x/3100368.png'), false);
+  assert.equal(isBadPhoto(''), false);
+  assert.equal(isBadPhoto(null), false);
+});
+
+test('betterPhoto — 오답은 후보로 들어오지 못한다', () => {
+  assert.deepEqual(betterPhoto(WIKI, SAVIOLA), WIKI);      // 등급이 높아도 거절
+  assert.deepEqual(betterPhoto(null, SAVIOLA), null);
+});
+
+test('betterPhoto — 오답을 들고 있었다면 없던 것으로 친다', () => {
+  assert.deepEqual(betterPhoto(SAVIOLA, WIKI), WIKI);      // 컷아웃(4) > 위키(1) 인데도 교체
+  assert.deepEqual(betterPhoto(SAVIOLA, null), null);
+});
+
+test('choosePhoto — 이어받은 것이 오답이면 못 물어본 회차라도 버린다', () => {
+  /* 사고 복구 스크립트가 옛 커밋에서 되살려 놓은 경우가 이것이다 */
+  const r = choosePhoto({ prev: SAVIOLA, tsdb: undefined, espn: undefined });
+  assert.equal(r.photo, null);   // 부르는 쪽이 위키로 내려간다
+});
+
+test('choosePhoto — 오답을 들고 있어도 멀쩡한 새 사진은 받는다', () => {
+  assert.deepEqual(choosePhoto({ prev: SAVIOLA, tsdb: CUT, espn: undefined }).photo, CUT);
 });
