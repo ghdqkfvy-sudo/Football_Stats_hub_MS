@@ -3,6 +3,7 @@ import type { Target } from '../config/targets';
 import { loadNews, type Source } from '../lib/api';
 import type { Article } from '../types/feedTypes';
 import { kstShortDate, kstTime } from '../lib/kst';
+import { useIsMobile } from '../lib/useMedia';
 
 const KIND: Record<string, string> = {
   HeadlineNews: '뉴스',
@@ -46,6 +47,10 @@ function plainDesc(a: Article): string {
 
 type Filter = 'ALL' | 'ko' | 'espn' | 'Media';
 
+/* 폰에서 처음 보여 줄 기사 수(대표 기사 포함). 한 팀 피드가 40건이라
+   전부 그리면 화면 18장 길이가 된다. 넓은 화면은 지금처럼 전부 그린다. */
+const MOBILE_PAGE = 12;
+
 export function NewsTab({ target }: { target: Target }) {
   const [rows, setRows] = useState<Article[] | null>(null);
   const [source, setSource] = useState<Source>('none');
@@ -53,10 +58,13 @@ export function NewsTab({ target }: { target: Target }) {
   /* "3시간 전" 의 기준 시각. 렌더 중에 Date.now() 를 부르면 같은 렌더가
      매번 다른 값을 내므로(순수하지 않다), 목록을 받은 그 순간으로 고정한다. */
   const [now, setNow] = useState(() => Date.now());
+  const mobile = useIsMobile();
+  const [shown, setShown] = useState(MOBILE_PAGE);
 
   useEffect(() => {
     let alive = true;
     setRows(null);
+    setShown(MOBILE_PAGE);
     const league = target.league ?? target.competitions[0];
     loadNews(league, target.espnTeamId, target.newsQuery).then((r) => {
       if (!alive) return;
@@ -88,6 +96,9 @@ export function NewsTab({ target }: { target: Target }) {
   }
 
   const [lead, ...rest] = list;
+  /* 폰에서는 앞의 몇 건만 — 나머지는 "더보기" 로 */
+  const restShown = mobile ? rest.slice(0, Math.max(0, shown - 1)) : rest;
+  const hidden = rest.length - restShown.length;
 
   return (
     <div className="page">
@@ -110,7 +121,14 @@ export function NewsTab({ target }: { target: Target }) {
             ['espn', 'ESPN'],
             ['Media', '영상'],
           ] as const).map(([id, label]) => (
-            <button key={id} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+            <button
+              key={id}
+              aria-pressed={filter === id}
+              onClick={() => {
+                setFilter(id);
+                setShown(MOBILE_PAGE);
+              }}
+            >
               {label}
             </button>
           ))}
@@ -131,10 +149,16 @@ export function NewsTab({ target }: { target: Target }) {
 
         {rest.length > 0 && (
           <div className="ngrid">
-            {rest.map((x) => (
+            {restShown.map((x) => (
               <Card key={x.id} a={x} now={now} />
             ))}
           </div>
+        )}
+
+        {hidden > 0 && (
+          <button className="nmore" onClick={() => setShown((n) => n + MOBILE_PAGE)}>
+            기사 더보기 <span className="num">({hidden}건 남음)</span>
+          </button>
         )}
       </section>
     </div>

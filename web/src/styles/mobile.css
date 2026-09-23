@@ -162,3 +162,86 @@
   /* 득점/도움/공격포인트 서브탭 38px → 42px */
   .lb3__tab { padding-block: 11px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 2차 묶음 ([mobile-ux2]) — 가로 잘림 없애기 · 긴 페이지 줄이기
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 4. 팀 전환 = 엠블럼 한 줄
+ *
+ *    이름까지 넣은 알약 8개는 1,177px — 폰 화면 3장 폭이라 오른쪽 팀은
+ *    스크롤해야 보였다. 엠블럼만 남기면 8개가 한 화면에 다 들어간다.
+ *    팀 이름은 바로 위 헤더에 크게 나와 있어 잃는 정보가 없다.
+ *    (알약마다 aria-label 로 팀 이름을 달아 스크린리더도 그대로 읽는다.)
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .hdr__switches {
+    overflow: visible; margin-inline: 0; padding: 4px 0;
+    justify-content: space-between; gap: 4px;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .hdr__switches::after { content: none; }
+  .hdr__switches > .switch, .hdr__switches > .switch[data-scroll] { display: contents; }
+  .hdr__switches .switch__label { display: none; }
+  .hdr__switches > .switch + .switch { margin-left: 0 !important; }
+
+  /* .switch[data-scroll] > .pill { flex: 0 0 auto } 보다 세게 */
+  .hdr__switches .pill, .hdr__switches .switch[data-scroll] > .pill {
+    flex: 1 1 0; max-width: 50px; min-width: 0; height: 40px;
+    justify-content: center; gap: 0; padding: 0;
+    border-radius: 12px;
+  }
+  .hdr__switches .pill img { width: 24px; height: 24px; }
+  .hdr__switches .pill__name { display: none; }
+  .hdr__switches .pill--sum { font-size: 17px; letter-spacing: 0; color: var(--text-mid); }
+  /* 고른 팀 — 팀 컬러 테두리 + 은은한 글로우 */
+  .hdr__switches .pill[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 38%, transparent);
+  }
+  .hdr__switches .pill--sum[aria-pressed='true'] { color: var(--accent); }
+  /* 3차에서 넣은 누르는 영역(::after -4px)은 40px 알약에 그대로 두면 44px */
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 5. 메인 탭 = 5칸 균등
+ *
+ *    "Future Resources" 가 길어 탭 줄이 429px — "뉴스" 가 화면 밖이었다.
+ *    폰에서는 짧은 이름(순위 · 선수 · Future)으로 바꾸고 5칸을 나눠 쓴다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .tab__full { display: none; }
+  .tab__short { display: inline; }
+  .tabs { gap: 0; }
+  .tab { flex: 1 1 0; min-width: 0; padding-inline: 4px; text-align: center; font-size: 14px; }
+  .tab[aria-selected='true']::after { left: 14%; right: 14%; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 6. 뉴스 = 목록형 + 더보기
+ *
+ *    40건을 사진 카드로 쌓으면 15,000px(폰 화면 18장). 대표 기사 하나만
+ *    큰 카드로 두고 나머지는 "왼쪽 사진 + 제목 3줄" 행으로 줄이고,
+ *    처음 12건만 그린 뒤 "더보기" 로 12건씩 연다(NewsTab.tsx).
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ngrid { gap: 8px; margin-top: 10px; }
+  .ngrid .ncard { flex-direction: row; align-items: stretch; min-height: 92px; border-radius: 12px; }
+  .ngrid .ncard__ph { width: 108px; aspect-ratio: auto; }
+  .ngrid .ncard__body { padding: 10px 12px; gap: 5px; justify-content: center; }
+  .ngrid .ncard__h { font-size: 13.5px; line-height: 1.36; }
+  .ngrid .ncard__d, .ngrid .ncard__by { display: none; }
+  .ngrid .ncard__noimg { font-size: 24px; }
+  .ngrid .ncard__play { left: 7px; bottom: 7px; width: 22px; height: 22px; font-size: 9px; }
+  .ngrid .ncard:hover { transform: none; }
+
+  .nmore {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; min-height: 46px; margin-top: 12px;
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: rgba(6,16,38,.3); color: var(--text-mid);
+    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .nmore .num { color: var(--text-lo); font-weight: 600; }
+}

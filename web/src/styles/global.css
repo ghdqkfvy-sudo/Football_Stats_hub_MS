@@ -210,6 +210,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   white-space: nowrap; transition: color .18s;
 }
 .tab:hover { color: var(--text-mid); }
+/* 폰용 짧은 탭 이름 — 넓은 화면에서는 항상 숨긴다(styles/mobile.css 가 폰에서 바꿔 끼운다) */
+.tab__short { display: none; }
 .tab[aria-selected='true'] { color: var(--text-hi); font-weight: 600; }
 .tab[aria-selected='true']::after {
   content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2.5px;

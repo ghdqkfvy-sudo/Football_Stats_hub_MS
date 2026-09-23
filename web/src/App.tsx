@@ -20,15 +20,17 @@ import bgSummary from './assets/bg-summary.webp';
 
 type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans';
 
-const CLUB_TABS: { id: TabId; label: string }[] = [
+/* short: 폰에서 탭 5개가 한 줄에 다 들어가도록 쓰는 짧은 이름(styles/mobile.css).
+   넓은 화면에서는 label 만 보인다. */
+const CLUB_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'schedule', label: '일정' },
-  { id: 'standings', label: '팀 순위' },
-  { id: 'players', label: '선수 스탯' },
-  { id: 'future', label: 'Future Resources' },
+  { id: 'standings', label: '팀 순위', short: '순위' },
+  { id: 'players', label: '선수 스탯', short: '선수' },
+  { id: 'future', label: 'Future Resources', short: 'Future' },
   { id: 'news', label: '뉴스' },
 ];
 
-const NATIONAL_TABS: { id: TabId; label: string }[] = [
+const NATIONAL_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'koreans', label: '코리안리거' },
   { id: 'schedule', label: '경기 일정' },
   { id: 'news', label: '뉴스' },
@@ -231,8 +233,12 @@ export default function App() {
                   className="pill pill--sum"
                   aria-pressed={summary}
                   onClick={() => setView('summary')}
+                  aria-label="Summary"
                 >
-                  ★ SUMMARY
+                  {/* 폰에서는 글자를 숨기고 ★ 만 남긴다(styles/mobile.css) */}
+                  {/* 하나로 감싸야 한다 — 알약은 flex(gap 7px)라 ★ 와 글자가 따로
+                      놓이면 그 사이에 gap 이 끼어 넓은 화면에서 2px 넓어진다 */}
+                  <span>★<span className="pill__name"> SUMMARY</span></span>
                 </button>
                 <span className="switch__label">CLUB</span>
                 {TARGETS.filter((t) => t.kind === 'club').map((t) => (
@@ -241,9 +247,10 @@ export default function App() {
                     className="pill"
                     aria-pressed={!summary && t.id === targetId}
                     onClick={() => openTeam(t.id)}
+                    aria-label={t.name}
                   >
                     <img src={t.crest} alt="" />
-                    {t.name}
+                    <span className="pill__name">{t.name}</span>
                   </button>
                 ))}
               </div>
@@ -255,11 +262,12 @@ export default function App() {
                     className="pill"
                     aria-pressed={!summary && t.id === targetId}
                     onClick={() => openTeam(t.id)}
+                    aria-label={t.name}
                   >
                     {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
                         태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
                     <img src={t.crest} alt="" />
-                    {t.name}
+                    <span className="pill__name">{t.name}</span>
                   </button>
                 ))}
               </div>
@@ -301,7 +309,14 @@ export default function App() {
                   aria-selected={t.id === tab}
                   onClick={() => setTab(t.id)}
                 >
-                  {t.label}
+                  {t.short ? (
+                    <>
+                      <span className="tab__full">{t.label}</span>
+                      <span className="tab__short">{t.short}</span>
+                    </>
+                  ) : (
+                    t.label
+                  )}
                 </button>
               ))}
             </nav>
