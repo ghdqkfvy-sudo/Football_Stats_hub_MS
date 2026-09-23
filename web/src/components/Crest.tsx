@@ -36,7 +36,9 @@ export function Crest({ team, size = 24, className = '' }: { team: TeamRef; size
   }
   return (
     <img
-      className={className}
+      /* `crest` 는 문양 윤곽에 아주 얇은 빛을 두른다 — 토트넘 남색 수탉처럼
+         어두운 엠블럼이 어두운 배경에 묻히는 것을 막는다(global.css 참고) */
+      className={`crest ${className}`}
       key={team.logo}
       src={team.logo}
       alt={team.name}

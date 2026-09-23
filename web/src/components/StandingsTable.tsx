@@ -171,6 +171,9 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams }: Prop
             data-focus={focus}
             /* 우리 팀이 여럿 섞인 표(Summary)에서는 강조색을 팀 컬러로 바꾼다 */
             style={teamColor ? ({ ['--accent']: teamColor } as React.CSSProperties) : undefined}
+            /* 우리 팀 줄은 색뿐 아니라 이름까지 팀 컬러로 — 스무 줄짜리 표에서
+               "우리가 어디 있나" 를 색 하나로 찾게 한다 */
+            data-mine={teamColor ? true : undefined}
           >
             <button
               className="tbl__line"

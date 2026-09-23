@@ -70,6 +70,12 @@ export function MonthList({
         const done = m.status === 'finished';
         const mine = focusFor ? focusFor(m) : focusTeamId;
         const res = resultFor(m, mine);
+        /* focusFor 가 있을 때(= 여러 팀이 섞인 목록)만 좌우를 우리 기준으로 뒤집는다 */
+        const ours = focusFor && (m.home.id === mine || m.away.id === mine)
+          ? (m.home.id === mine
+            ? { us: m.home, opp: m.away, home: true, usScore: m.homeScore, oppScore: m.awayScore }
+            : { us: m.away, opp: m.home, home: false, usScore: m.awayScore, oppScore: m.homeScore })
+          : null;
         const isOpen = openId === m.id;
         const onSelectedDay = selectedDay !== null && dayKey(m.kickoffUtc) === selectedDay;
         const c = barColorOf?.(m) ?? palette.color(m.competition);
@@ -98,25 +104,60 @@ export function MonthList({
               {/* 참가 대회 구별 택 */}
               <span className="ml__tick" aria-hidden="true" />
 
-              <span className="ml__match">
-                <span className="ml__side r">
-                  <Crest team={m.home} size={20} />
-                  <b>{m.home.abbr}</b>
-                </span>
-
-                {done ? (
-                  <span className="ml__score num" data-res={res ?? undefined}>
-                    {m.homeScore}<i>-</i>{m.awayScore}
+              {/*
+                * 여러 팀이 섞인 목록(Summary)에서는 **우리 팀을 항상 왼쪽**에
+                * 둔다. 홈/원정에 따라 자리가 바뀌면 줄마다 눈이 좌우를 다시
+                * 찾아야 해서 스무 줄을 훑는 데 방해가 된다. 대신 H/A 배지로
+                * 어느 쪽이었는지 알려 준다.
+                * 한 팀만 보는 팀 탭에서는 예전처럼 홈-원정 순서를 지킨다.
+                */}
+              {ours ? (
+                <span className="ml__match" data-ours="true">
+                  <span className="ml__side r">
+                    <i className="ml__ha" data-home={ours.home || undefined}>
+                      <span className="ml__long">{ours.home ? 'HOME' : 'AWAY'}</span>
+                      <span className="ml__short">{ours.home ? 'H' : 'A'}</span>
+                    </i>
+                    <b className="ml__long">{ours.us.shortName || ours.us.abbr}</b>
+                    <b className="ml__short">{ours.us.abbr}</b>
+                    <Crest team={ours.us} size={22} />
                   </span>
-                ) : (
-                  <span className="ml__vs">vs</span>
-                )}
 
-                <span className="ml__side">
-                  <Crest team={m.away} size={20} />
-                  <b>{m.away.abbr}</b>
+                  {done ? (
+                    <span className="ml__score num" data-res={res ?? undefined}>
+                      {ours.usScore}<i>-</i>{ours.oppScore}
+                    </span>
+                  ) : (
+                    <span className="ml__vs">vs</span>
+                  )}
+
+                  <span className="ml__side">
+                    <Crest team={ours.opp} size={22} />
+                    <b className="ml__long">{ours.opp.shortName || ours.opp.abbr}</b>
+                    <b className="ml__short">{ours.opp.abbr}</b>
+                  </span>
                 </span>
-              </span>
+              ) : (
+                <span className="ml__match">
+                  <span className="ml__side r">
+                    <Crest team={m.home} size={20} />
+                    <b>{m.home.abbr}</b>
+                  </span>
+
+                  {done ? (
+                    <span className="ml__score num" data-res={res ?? undefined}>
+                      {m.homeScore}<i>-</i>{m.awayScore}
+                    </span>
+                  ) : (
+                    <span className="ml__vs">vs</span>
+                  )}
+
+                  <span className="ml__side">
+                    <Crest team={m.away} size={20} />
+                    <b>{m.away.abbr}</b>
+                  </span>
+                </span>
+              )}
 
               <span className="ml__meta">
                 <span className="ml__comp">

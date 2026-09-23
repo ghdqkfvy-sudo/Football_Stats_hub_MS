@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TARGETS, comp, getTarget, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeagueTable, loadSchedule } from '../lib/api';
@@ -9,6 +9,7 @@ import {
   type TeamFeed,
 } from '../lib/summary';
 import { MatchdayCard } from '../components/MatchdayHero';
+import type { TeamStanding } from '../components/NextMatchHero';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { StandingsTable } from '../components/StandingsTable';
 import { LeaderBoard } from '../components/LeaderBoard';
@@ -100,22 +101,42 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   const [tables, setTables] = useState<Record<string, { table: StandingTable | null; matches: Match[] } | null>>({});
   const asked = useRef(new Set<string>());
 
+  /*
+   * 세 대회 표를 **처음에 다 받는다.**
+   * 순위 섹션은 고른 대회 하나만 쓰지만, 히어로의 "3위 · 3승1무0패" 는
+   * 그 경기 팀이 어느 리그 소속이냐에 따라 달라진다. 경량본이라 한 개당
+   * gzip 15KB 남짓이고, 어차피 탭을 누르면 받을 파일이다.
+   */
   useEffect(() => {
-    if (asked.current.has(active)) return;
-    asked.current.add(active);
-    setTables((t) => ({ ...t, [active]: null }));
-    loadLeagueTable(active, comp(active).name).then((r) => {
-      setTables((t) => ({
-        ...t,
-        [active]: {
-          table: buildTable(r.data.table, r.data.matches, active, comp(active).name),
-          matches: r.data.matches,
-        },
-      }));
-    });
-  }, [active]);
+    for (const k of COMPS) {
+      if (asked.current.has(k)) continue;
+      asked.current.add(k);
+      setTables((t) => ({ ...t, [k]: null }));
+      loadLeagueTable(k, comp(k).name).then((r) => {
+        setTables((t) => ({
+          ...t,
+          [k]: {
+            table: buildTable(r.data.table, r.data.matches, k, comp(k).name),
+            matches: r.data.matches,
+          },
+        }));
+      });
+    }
+  }, []);
 
   const league = tables[active];
+
+  /**
+   * 팀의 순위·승무패 — 받아 둔 표 어디에 있든 찾는다.
+   * 리그를 먼저 보고(그게 "그 팀 순위"다) 없으면 챔스 같은 대회 표에서.
+   */
+  const standingOf = useCallback((teamId: string): TeamStanding | undefined => {
+    for (const k of COMPS) {
+      const row = tables[k]?.table?.rows.find((r) => r.team.id === teamId);
+      if (row) return { rank: row.rank, win: row.win, draw: row.draw, loss: row.loss };
+    }
+    return undefined;
+  }, [tables]);
 
   /**
    * 우리 클럽 팀 → 강조색 (대한민국은 뺀다 — 클럽 대회 순위표에 자리가 없다).
@@ -169,13 +190,21 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
         </div>
         {hero ? (
           <div className="mdh">
-            <MatchdayCard target={targetOf(hero.teamId)} match={hero.match} hero />
+            <MatchdayCard
+              target={targetOf(hero.teamId)}
+              match={hero.match}
+              standingOf={standingOf}
+              hero
+            />
+            {/* 나머지는 3장씩 두 줄 — 한 줄에 여섯 장을 밀어 넣으면
+                엠블럼도 팀명도 읽을 수 없는 크기가 된다 */}
             <div className="mdh__rest">
               {rest.map((b) => (
                 <MatchdayCard
                   key={b.teamId}
                   target={targetOf(b.teamId)}
                   match={b.match}
+                  standingOf={standingOf}
                   onSelect={() => setPickedTeam(b.teamId)}
                 />
               ))}
@@ -247,7 +276,17 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               <h3 className="sec__title">{comp(active).name} 선수 순위</h3>
               <span className="sec__note">득점 · 도움 · 공격 포인트</span>
             </div>
-            <LeaderBoard rows={leaders} teamColors={clubColors} />
+            {leaders.length ? (
+              <LeaderBoard rows={leaders} teamColors={clubColors} />
+            ) : (
+              <div className="empty">
+                <h3>선수 기록이 아직 집계되지 않았습니다</h3>
+                <p>
+                  선수 순위는 경기별 기록(<code>__stats</code>)에서 만들어집니다.
+                  순위표 전용 경량 파일에 그 값이 들어오는 다음 수집 회차부터 채워집니다.
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <div className="empty">
