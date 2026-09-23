@@ -5,7 +5,7 @@
    GitHub Pages 프로젝트 페이지는 https://<user>.github.io/<repo>/ 처럼
    서브패스에서 서빙되므로 경로를 '/'로 하드코딩하지 않고
    registration.scope 에서 실제 베이스 경로를 읽어 쓴다. */
-const SHELL = 'shell-v1';
+const SHELL = 'shell-v2';   /* 아이콘·매니페스트가 바뀌면 올린다 — 낡은 셸이 남지 않게 */
 const BASE = new URL(self.registration.scope).pathname; // 예: '/' 또는 '/k-stats-hub/'
 const ASSETS = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`];
 

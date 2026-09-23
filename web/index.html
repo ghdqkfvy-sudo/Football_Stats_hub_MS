@@ -7,8 +7,13 @@
     <title>MS Stats Hub</title>
     <meta name="description" content="레알 마드리드 · 첼시 · 대한민국 축구 통계 허브 — 모든 일정과 기록을 한국시간으로." />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="%BASE_URL%icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- iOS 는 매니페스트의 icons 를 **무시한다** — 이 줄이 없으면 홈 화면에
+         추가했을 때 아이콘 자리에 페이지 스크린샷이 박힌다. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="MS Stats" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
