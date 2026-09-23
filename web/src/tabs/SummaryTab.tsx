@@ -8,7 +8,8 @@ import {
   cycleIndex, matchesByDay, monthResults, nextUpBoard, shiftWeek, weekStartKey,
   type TeamFeed,
 } from '../lib/summary';
-import { MatchdayCard } from '../components/MatchdayHero';
+import { MatchdayCard, MatchdayRow, revealHero } from '../components/MatchdayHero';
+import { useIsMobile } from '../lib/useMedia';
 import type { TeamStanding } from '../components/NextMatchHero';
 import { WeekCalendar } from '../components/WeekCalendar';
 import { StandingsTable } from '../components/StandingsTable';
@@ -69,6 +70,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
    * 옛 객체가 화면에 남는다. 매번 피드에서 다시 찾는다.
    */
   const [picked, setPicked] = useState<{ teamId: string; matchId: string } | null>(null);
+  const mobile = useIsMobile();
   const pickedUp = useMemo(() => {
     if (!picked) return null;
     const m = teamFeeds.find((f) => f.id === picked.teamId)?.matches
@@ -112,6 +114,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
        "히어로가 바뀌었다" 며 주를 옮기지 않는다 — 방금 누른 자리에 있어야 한다. */
     lastHero.current = list[i].match.id;
     setPicked({ teamId: list[i].teamId, matchId: list[i].match.id });
+    /* 폰에서는 주간 일정이 큰 카드보다 한참 아래라, 누른 결과가 안 보인다 */
+    if (mobile) revealHero();
   };
 
   /* ── 대회 순위 ────────────────────────────────────── */
@@ -176,6 +180,16 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   const thisMonth = monthKey(new Date());
   const results = useMemo(() => monthResults(teamFeeds, thisMonth), [teamFeeds, thisMonth]);
   const [openId, setOpenId] = useState<string | null>(null);
+  /*
+   * 폰에서는 최근 경기 몇 개만 먼저 — 한 달치를 다 그리면 화면 3장이었다.
+   * 주간 캘린더에서 고른 날의 경기가 접힌 쪽에 있으면 저절로 다 펼친다
+   * (고른 경기가 안 보이면 캘린더를 누른 보람이 없다).
+   */
+  const [allRes, setAllRes] = useState(false);
+  const RES_FIRST = 6;
+  const hiddenPicked = !!selDay && results.slice(RES_FIRST).some((r) => dayKey(r.match.kickoffUtc) === selDay);
+  const resAll = !mobile || allRes || hiddenPicked;
+  const resShown = resAll ? results : results.slice(0, RES_FIRST);
   /** 경기마다 "우리 팀" 이 다르다 — 그 팀 기준으로 승패·득점자를 읽는다 */
   const focusFor = useMemo(() => {
     const map = new Map<string, string>();
@@ -223,6 +237,19 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             />
             {/* 나머지는 3장씩 두 줄 — 한 줄에 여섯 장을 밀어 넣으면
                 엠블럼도 팀명도 읽을 수 없는 크기가 된다 */}
+            {/* 폰에서는 한 줄 카드 목록 — 작은 카드 6장이 화면 1.5장이었다 */}
+            {mobile ? (
+              <div className="mdr__list">
+                {rest.map((b) => (
+                  <MatchdayRow
+                    key={b.teamId}
+                    target={targetOf(b.teamId)}
+                    match={b.match}
+                    onSelect={() => setPicked({ teamId: b.teamId, matchId: b.match.id })}
+                  />
+                ))}
+              </div>
+            ) : (
             <div className="mdh__rest">
               {rest.map((b) => (
                 <MatchdayCard
@@ -234,6 +261,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
                 />
               ))}
             </div>
+            )}
           </div>
         ) : (
           <div className="empty">
@@ -328,8 +356,9 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
           <span className="sec__note">종료된 경기를 누르면 골 기록이 펼쳐집니다</span>
         </div>
         {results.length ? (
+          <>
           <MonthList
-            matches={results.map((r) => r.match)}
+            matches={resShown.map((r) => r.match)}
             focusTeamId=""
             focusFor={(m) => focusFor.get(m.id) ?? ''}
             barColorOf={(m) => barFor.get(m.id)}
@@ -339,6 +368,14 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             onToggle={(m) => setOpenId((v) => (v === m.id ? null : m.id))}
             selectedDay={selDay}
           />
+          {mobile && results.length > RES_FIRST && !hiddenPicked && (
+            <button className="nmore" onClick={() => setAllRes((v) => !v)}>
+              {allRes
+                ? '접기'
+                : <>이번 달 경기 전체 보기 <span className="num">(+{results.length - RES_FIRST})</span></>}
+            </button>
+          )}
+          </>
         ) : (
           <div className="empty">
             <h3>이 달에 끝난 경기가 없습니다</h3>

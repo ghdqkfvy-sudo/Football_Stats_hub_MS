@@ -245,3 +245,103 @@
   }
   .nmore .num { color: var(--text-lo); font-weight: 600; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 7. Summary "다음 경기" — 나머지 6팀은 한 줄 카드 (MatchdayHero.tsx · MatchdayRow)
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mdh__card[data-hero] { scroll-margin-top: 12px; }
+  .mdr__list { display: flex; flex-direction: column; gap: 8px; }
+  .mdr {
+    display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px;
+    width: 100%; min-height: 64px; padding: 10px 12px 10px 10px; text-align: left;
+    font: inherit; color: var(--text-mid); cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--team) 30%, var(--line));
+    border-left: 3px solid var(--team); border-radius: 14px;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--team) 16%, transparent), transparent 55%),
+      rgba(6, 16, 38, .42);
+    backdrop-filter: blur(10px);
+  }
+  .mdr:active { background: color-mix(in srgb, var(--team) 22%, rgba(6,16,38,.5)); }
+  .mdr__us {
+    display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px;
+    background: rgba(255,255,255,.05); border: 1px solid color-mix(in srgb, var(--team) 40%, transparent);
+  }
+  .mdr__mid { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .mdr__vs { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .mdr__vs i { font-style: normal; font-size: 11px; color: var(--text-lo); }
+  .mdr__vs b {
+    font-size: 14.5px; font-weight: 700; color: var(--opp); letter-spacing: -.01em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mdr__meta { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 11px; color: var(--text-lo); }
+  .mdr__comp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mdr__ha {
+    flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .06em;
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--text-mid);
+  }
+  .mdr__ha[data-home] { color: var(--team); border-color: color-mix(in srgb, var(--team) 50%, transparent); }
+  .mdr__when { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .mdr__dday {
+    font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    color: var(--team); background: color-mix(in srgb, var(--team) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
+  }
+  .mdr__dday[data-tone='now'] { color: #07101F; background: var(--team); }
+  .mdr__dday[data-tone='far'] { color: var(--text-mid); background: transparent; border-color: var(--line-2); }
+  .mdr__live {
+    font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    color: #fff; background: var(--loss);
+  }
+  .mdr__score { font-family: var(--font-display); font-size: 17px; color: var(--text-hi); }
+  .mdr__score i { font-style: normal; opacity: .5; margin: 0 2px; }
+  .mdr__score[data-r='L'] { color: var(--text-mid); }
+  .mdr__dt { display: flex; align-items: baseline; gap: 6px; font-size: 11px; color: var(--text-lo); white-space: nowrap; }
+  .mdr__dt b {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    color: color-mix(in srgb, var(--team) 50%, #FFFFFF);
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 8. 주간 캘린더 = 세로 일정 목록
+ *
+ *    7열 달력은 폰에서 868px 가로 스크롤이라 한 번에 사흘만 보였다.
+ *    폰에서는 날짜를 줄로 세우고, 경기 없는 날은 접는다(오늘은 남긴다).
+ *    같은 DOM 을 CSS 로만 다시 놓으므로 누르기·펄스·선택은 그대로다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .wcal__grid { display: flex; flex-direction: column; overflow: visible; }
+  .wcal__cell {
+    min-height: 0; flex-direction: row; align-items: flex-start; gap: 12px;
+    padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line);
+  }
+  .wcal__cell:last-child { border-bottom: 0; }
+  .wcal__cell[data-empty]:not([data-today]) { display: none; }
+  .wcal__cell[data-empty] { opacity: .75; }
+  .wcal__head { flex: 0 0 34px; flex-direction: column; align-items: center; gap: 3px; padding-top: 6px; }
+  .wcal__spread { display: none; }
+  .wcal__head .wcal__date { order: 1; font-size: 18px; }
+  .wcal__head .wcal__dow { order: 0; }
+  .wcal__head .wcal__pulse { order: 2; margin: 3px 0 0; }
+  .wcal__date[data-today] { width: 28px; height: 28px; font-size: 15px; }
+  .wcal__list { flex: 1 1 auto; min-width: 0; gap: 6px; }
+  .wcal__cell[data-empty] .wcal__list::after {
+    content: '경기 없음'; font-size: 12px; color: var(--text-lo); padding-top: 12px;
+  }
+  .wcal__m {
+    grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+  }
+  .wcal__m[data-on] { transform-origin: center; }
+  .wcal__opp::before { content: 'vs'; font-size: 11px; color: var(--text-lo); margin-right: 2px; }
+  .wcal__mine b { font-size: 13px; }
+  .wcal__opp span { font-size: 13px; }
+  .wcal__t { font-size: 15px; }
+  .wcal__t[data-done] { font-size: 16px; }
+  /* 이번 주에 경기가 하나도 없고 오늘도 이 주가 아니면 빈 상자만 남는다 */
+  .wcal__grid:not(:has(.wcal__cell:not([data-empty]))):not(:has(.wcal__cell[data-today]))::after {
+    content: '이번 주에는 경기가 없습니다'; padding: 18px 14px; font-size: 12.5px; color: var(--text-lo);
+  }
+}

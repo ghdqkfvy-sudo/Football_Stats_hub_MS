@@ -219,3 +219,96 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
     </Tag>
   );
 }
+
+/**
+ * 큰 카드(히어로)가 화면 밖이면 그리로 부드럽게 올라간다 — 폰에서 아래 목록이나
+ * 주간 일정을 눌렀을 때 "무엇이 바뀌었는지" 보이게. 이미 보이면 움직이지 않는다
+ * (괜히 화면이 튄다). 다음 그림 뒤에 재야 새 경기로 바뀐 카드 위치를 읽는다.
+ */
+export function revealHero() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLElement>('.mdh__card[data-hero]');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < 0 || r.top > window.innerHeight * 0.5) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+}
+
+/**
+ * 폰 전용 한 줄 카드 — Summary "다음 경기" 의 나머지 6팀.
+ *
+ * 작은 카드(엠블럼 타일 두 개 + 순위 줄 + 킥오프 스트립)를 폰에서 한 줄에
+ * 하나씩 쌓으면 장당 200px, 여섯 장이면 화면 1.5장이었다. 폰에서 이 목록으로
+ * 찾는 건 "우리 팀 누구랑 · 언제" 두 가지라 그것만 남긴다:
+ *
+ *   ▌[우리 엠블럼]  vs [상대] 상대팀        D-3   9/27 (토)
+ *   ▌               Premier League · HOME          23:00
+ *
+ * 누르면 위 큰 카드가 이 경기로 바뀌고, 큰 카드가 화면 밖이면 그리로 올라간다.
+ * 넓은 화면에서는 쓰지 않는다(SummaryTab 이 useIsMobile 로 고른다).
+ */
+export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 'standingOf'>) {
+  const c = comp(match.competition);
+  const home = match.home.id === target.espnTeamId;
+  const opp = home ? match.away : match.home;
+  const live = match.status === 'live';
+  const done = match.status === 'finished';
+  const dd = dday(match.kickoffUtc);
+  const ours = (home ? match.homeScore : match.awayScore) ?? 0;
+  const theirs = (home ? match.awayScore : match.homeScore) ?? 0;
+
+  return (
+    <button
+      type="button"
+      className="mdr"
+      style={{
+        ['--team' as string]: target.theme.accent,
+        ['--opp' as string]: target.theme.opponent ?? '#FFFFFF',
+      }}
+      onClick={() => {
+        onSelect?.();
+        revealHero();
+      }}
+      aria-label={`${target.nameEn} 대 ${opp.shortName} 경기를 크게 보기`}
+    >
+      <span className="mdr__us">
+        <Crest
+          team={{
+            id: target.espnTeamId, name: target.name, shortName: target.name,
+            abbr: target.abbr, logo: target.crest,
+          }}
+          size={30}
+        />
+      </span>
+      <span className="mdr__mid">
+        <span className="mdr__vs">
+          <i>vs</i>
+          <Crest team={opp} size={16} />
+          <b>{opp.shortName}</b>
+        </span>
+        <span className="mdr__meta">
+          <CompCrest k={match.competition} size={12} />
+          <span className="mdr__comp">{c.name}</span>
+          <span className="mdr__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</span>
+        </span>
+      </span>
+      <span className="mdr__when">
+        {live ? (
+          <em className="mdr__live">LIVE</em>
+        ) : done ? (
+          <b className="mdr__score num" data-r={ours > theirs ? 'W' : ours < theirs ? 'L' : 'D'}>
+            {match.homeScore}<i>-</i>{match.awayScore}
+          </b>
+        ) : (
+          <em className="mdr__dday" data-tone={dd.tone}>{dd.text}</em>
+        )}
+        <span className="mdr__dt num">
+          {kstShortDate(match.kickoffUtc)}
+          {!done && <b>{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>}
+        </span>
+      </span>
+    </button>
+  );
+}
