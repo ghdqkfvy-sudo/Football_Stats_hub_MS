@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seriesGames, seriesSummary, mergeH2H } from './h2h.mjs';
+import { seriesGames, mergeH2H } from './h2h.mjs';
 
 /* 실제 응답에서 잘라 온 모양 (한국 451 vs 에콰도르 209, 2010-05-16) */
 const SUMMARY = {
@@ -80,11 +80,6 @@ test('seriesGames — score.displayValue 형태도 읽는다', () => {
   });
   assert.equal(g[0].homeScore, 3);
   assert.equal(g[0].awayScore, 1);
-});
-
-test('seriesSummary', () => {
-  assert.equal(seriesSummary(SUMMARY), 'KOR leads series 1-0');
-  assert.equal(seriesSummary({}), '');
 });
 
 test('mergeH2H — id 로 중복 제거, 먼저 온 쪽이 이긴다', () => {

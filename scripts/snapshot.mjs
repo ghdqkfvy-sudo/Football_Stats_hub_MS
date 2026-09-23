@@ -35,7 +35,7 @@ import {
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
   rankOf, rateLimiter, urlVerdict,
 } from './lib/photos.mjs';
-import { mergeH2H, seriesGames, seriesSummary } from './lib/h2h.mjs';
+import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
 const rankOfBest = (b) => rankOf(b?.kind);
@@ -1237,7 +1237,6 @@ async function nextMatchPreview(events, teamId, national = false) {
   const fromSchedule = [...older, ...thisSeason]
     .filter((g) => g.homeId === oppId || g.awayId === oppId);
   const h2h = mergeH2H(fromSchedule, seriesGames(sum));
-  const h2hLine = seriesSummary(sum);
   const seasons = national ? 13 : 3;
 
   /* 라벨은 **실제로 보여 주는 것**에서 나와야 한다. 우리가 뒤진 시즌 창보다
@@ -1255,8 +1254,6 @@ async function nextMatchPreview(events, teamId, national = false) {
     h2h,
     h2hScope: national || beyondWindow ? 'all' : 'recent',
     h2hSeasons: seasons,
-    /* ESPN 이 직접 적어 준 한 줄 — "KOR leads series 1-0" */
-    h2hLine,
   };
 }
 

@@ -202,7 +202,6 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
           lastFive={extras.preview.lastFive}
           h2h={extras.preview.h2h}
           h2hScope={extras.preview.h2hScope}
-          h2hLine={extras.preview.h2hLine}
         />
       )}
 

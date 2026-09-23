@@ -20,8 +20,6 @@ interface Props {
   h2h: H2HGame[];
   /** 'all' 이면 "역대 n경기", 아니면 "최근 세 시즌 n경기" */
   h2hScope?: 'all' | 'recent';
-  /** ESPN 이 직접 적어 준 한 줄 — "KOR leads series 1-0" */
-  h2hLine?: string;
 }
 
 function recordOf(games: { result?: string }[]) {
@@ -36,7 +34,7 @@ function recordOf(games: { result?: string }[]) {
   return { w, d, l };
 }
 
-export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope, h2hLine }: Props) {
+export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Props) {
   const ourFive = lastFive[focusTeamId] ?? [];
   const oppId = match.home.id === focusTeamId ? match.away.id : match.home.id;
   const theirFive = lastFive[oppId] ?? [];
@@ -82,21 +80,25 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope, h2hL
             </span>
           </div>
 
-          {/* ESPN 이 시리즈를 직접 요약해 주면 그대로 옮긴다 —
-              우리가 모은 경기 수보다 넓은 범위를 볼 때가 있다 */}
-          {h2hLine && <p className="mprev__line">{h2hLine}</p>}
-
-          {/* 승·무·패 비율을 막대 하나로 — 숫자보다 먼저 눈에 들어온다 */}
-          <div className="mprev__bar" aria-hidden="true">
-            {(['W', 'D', 'L'] as const).map((k) => {
-              const n = k === 'W' ? rec.w : k === 'D' ? rec.d : rec.l;
-              return n > 0 ? <i key={k} data-r={k} style={{ flexGrow: n }} /> : null;
-            })}
-          </div>
-          <div className="mprev__rec num">
-            <b data-r="W">{rec.w}<span>W</span></b>
-            <b data-r="D">{rec.d}<span>D</span></b>
-            <b data-r="L">{rec.l}<span>L</span></b>
+          {/*
+            * 왼쪽 폼 카드의 `.mprev__sum`(폼 칩 + 전적)과 **같은 자리에 같은
+            * 높이로** 놓이는 요약 밴드다. 두 카드가 나란히 서 있으므로
+            * 헤더·요약·목록 세 구간의 높이가 어긋나면 경기 줄이 서로 다른
+            * 높이에서 시작해 눈이 좌우를 다시 맞춰야 한다.
+            */}
+          <div className="mprev__band">
+            {/* 승·무·패 비율을 막대 하나로 — 숫자보다 먼저 눈에 들어온다 */}
+            <div className="mprev__bar" aria-hidden="true">
+              {(['W', 'D', 'L'] as const).map((k) => {
+                const n = k === 'W' ? rec.w : k === 'D' ? rec.d : rec.l;
+                return n > 0 ? <i key={k} data-r={k} style={{ flexGrow: n }} /> : null;
+              })}
+            </div>
+            <div className="mprev__rec num">
+              <b data-r="W">{rec.w}<span>W</span></b>
+              <b data-r="D">{rec.d}<span>D</span></b>
+              <b data-r="L">{rec.l}<span>L</span></b>
+            </div>
           </div>
 
           <div className="mprev__list">

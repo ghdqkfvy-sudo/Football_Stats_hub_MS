@@ -69,8 +69,6 @@ export interface ScheduleExtras {
     /** 'all' = 역대 · 'recent' = 최근 세 시즌 */
     h2hScope?: 'all' | 'recent';
     h2hSeasons?: number;
-    /** ESPN 이 직접 적어 준 시리즈 한 줄 — "KOR leads series 1-0" */
-    h2hLine?: string;
   };
 }
 

@@ -53,12 +53,6 @@ export function seriesGames(summary) {
   return out;
 }
 
-/** "KOR leads series 1-0" 같은 ESPN 의 한 줄 요약 (없으면 '') */
-export function seriesSummary(summary) {
-  const s = (summary?.seasonseries ?? []).find((x) => String(x?.type ?? '') === 'head-to-head');
-  return String(s?.summary ?? '').trim();
-}
-
 /**
  * 여러 출처의 맞대결을 합친다.
  *
