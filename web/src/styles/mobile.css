@@ -67,3 +67,61 @@
 
   .tabs { margin-top: 4px; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 2. 글자 크기 하한 — 폰에서 읽는 글자는 11px 이상
+ *
+ *    휴대폰(390px)에서 전 탭을 돌며 11px 미만 글자를 전부 모았더니 56종이었다.
+ *    그중 "읽어야 하는" 글자(기록·날짜·장소·메모·이름)는 11px 로 올리고,
+ *    HOME/CLUB 같은 대문자 꼬리표는 10px 으로만 올린다(대문자는 같은 크기에서
+ *    더 크게 보이고, 너무 키우면 꼬리표가 본문보다 시끄러워진다).
+ *
+ *    일부러 건드리지 않은 것 — 고정 크기 원·네모 안에 든 기호들:
+ *    W/D/L 칩, 등번호, 팀 약칭 원(.mono), 포지션 꼬리표, ▶ 재생 표시.
+ *    이것들은 글자라기보다 아이콘이라 키우면 틀 밖으로 삐져나온다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* 매치데이 히어로 */
+  .mdh__venue, .mdh__foot .mdh__venue { font-size: 12px; }
+  .mdh__dday { font-size: 11px; padding: 3px 8px; }
+  .mdh__ha { font-size: 10px; }
+  .mdh__cdu i { font-size: 9.5px; }
+  .mdt__rec { font-size: 11px; }
+
+  /* 헤더 */
+  .switch__label { font-size: 10px; }
+  .srcbadge__at { font-size: 11px; }
+
+  /* 주간 캘린더 */
+  .wcal__dow { font-size: 11px; }
+  .wcal__mine b { font-size: 11px; }
+  .wcal__opp span { font-size: 11px; }
+  .wcal__mine i { font-size: 9px; }
+
+  /* 이달의 경기 결과 — 날짜 아래 요일 */
+  .ml__date i { font-size: 11px; }
+
+  /* 팀 탭 · 일정 */
+  .fxt__rec { font-size: 11px; }
+  .eyebrow { font-size: 11px; }
+  .mprev__side { font-size: 10px; }
+  .mprev__note { font-size: 11px; }
+  .mprev__md { font-size: 11px; }
+  .mprev__mw { font-size: 10px; }
+
+  /* 선수 스탯 · 포메이션 칩 — 칸이 88px 로 좁아 반 단계씩만 */
+  .chipbox__name { font-size: 10.5px; }
+  .chipbox__tag { font-size: 9px; }
+  .chipbox__stat { font-size: 10px; }
+
+  /* Future Resources */
+  .krc__lg { font-size: 11px; }
+  .krc__label { font-size: 11px; }
+  .krc__tag { font-size: 10px; }
+  .krcc__a { font-size: 11px; }
+  .krr__m { font-size: 11px; }
+
+  /* 뉴스 */
+  .ncard__kind { font-size: 10.5px; }
+  .ncard__by { font-size: 11px; }
+}
