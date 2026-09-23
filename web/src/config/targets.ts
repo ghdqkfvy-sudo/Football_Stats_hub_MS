@@ -43,6 +43,11 @@ export interface TargetTheme {
    * 자체가 흰색에 가까운 팀(뉴캐슬)은 둘이 구분되지 않아 따로 준다.
    */
   opponent?: string;
+  /**
+   * Summary(일곱 팀이 섞인 화면)에서 이 팀을 칠할 색. 없으면 accent.
+   * 흰색 팀(뉴캐슬)만 쓴다 — summaryColor() 설명 참고.
+   */
+  summary?: string;
   /** 헤더 글로우 그라디언트 */
   glow: string;
 }
@@ -241,6 +246,8 @@ export const TARGETS: Target[] = [
       onAccent: '#0B0B0C',
       // 팀 컬러가 흰색이라 상대 팀도 흰색이면 구분이 안 된다 — 하늘색으로
       opponent: '#63C9F0',
+      // Summary 에서는 반대로 뉴캐슬 자신을 하늘색으로 — 상대는 다른 팀처럼 흰색
+      summary: '#63C9F0',
       glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(230,234,242,.16), transparent 60%)',
     },
     league: 'eng.1',
@@ -348,6 +355,19 @@ export function subtitleParts(t: Target): string[] {
 }
 
 export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary);
+
+/**
+ * Summary 에서 이 팀을 칠할 색 / 상대 팀을 칠할 색.
+ *
+ * Summary 의 색 규칙은 하나다 — **우리 팀 = 팀 컬러, 상대 = 흰색.**
+ * 뉴캐슬은 팀 컬러(accent)가 흰색이라 이 규칙대로면 둘이 같아진다. 예전에는
+ * 뉴캐슬 경기만 **상대**를 하늘색으로 칠했는데, 일곱 팀이 섞인 화면에서
+ * 뉴캐슬 줄만 규칙이 뒤집혀 "하늘색 = 누구?" 를 매번 다시 읽어야 했다.
+ * 그래서 뉴캐슬 쪽을 하늘색(엠블럼의 색)으로 바꾸고 상대는 흰색으로 둔다.
+ * (팀 탭은 뉴캐슬 하나만 보는 화면이라 기존대로 둔다.)
+ */
+export const summaryColor = (t: Target) => t.theme.summary ?? t.theme.accent;
+export const SUMMARY_OPP = '#FFFFFF';
 
 export const getTarget = (id: TargetId) => TARGETS.find((t) => t.id === id)!;
 

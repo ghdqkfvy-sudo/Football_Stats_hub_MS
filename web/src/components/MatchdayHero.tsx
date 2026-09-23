@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
-import { comp, type Target } from '../config/targets';
+import { SUMMARY_OPP, comp, summaryColor, type Target } from '../config/targets';
 import { countdown, dayKey, kstFullDate, kstShortDate, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { Crest } from './Crest';
@@ -128,8 +128,8 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       /* --opp 는 앱 전역(현재 팀) 값이라 Summary 에서는 맞지 않는다.
          카드마다 그 팀의 상대 색으로 갈아 끼운다 (뉴캐슬만 하늘색). */
       style={{
-        ['--team' as string]: target.theme.accent,
-        ['--opp' as string]: target.theme.opponent ?? '#FFFFFF',
+        ['--team' as string]: summaryColor(target),
+        ['--opp' as string]: SUMMARY_OPP,
       }}
       onClick={onSelect}
       {...(onSelect ? { type: 'button' as const, 'aria-label': `${target.nameEn} 경기를 크게 보기` } : {})}
@@ -264,8 +264,8 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
       type="button"
       className="mdr"
       style={{
-        ['--team' as string]: target.theme.accent,
-        ['--opp' as string]: target.theme.opponent ?? '#FFFFFF',
+        ['--team' as string]: summaryColor(target),
+        ['--opp' as string]: SUMMARY_OPP,
       }}
       onClick={() => {
         onSelect?.();

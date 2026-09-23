@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TARGETS, comp, getTarget, markOf, type Target, type TargetId } from '../config/targets';
+import { SUMMARY_OPP, TARGETS, comp, getTarget, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeagueTable, loadSchedule } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -170,7 +170,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
    */
   const clubColors = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = markOf(t);
+    for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
     return out;
   }, []);
 
@@ -199,14 +199,14 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   const barFor = useMemo(() => {
     const map = new Map<string, string>();
     // 같은 이유로 accent — 검정 띠는 띠가 아니다
-    for (const r of results) map.set(r.match.id, targetOf(r.teamId).theme.accent);
+    for (const r of results) map.set(r.match.id, summaryColor(targetOf(r.teamId)));
     return map;
   }, [results]);
-  /* 상대 팀 색. 기본은 흰색이고, 팀 컬러가 흰색에 가까운 뉴캐슬만
-     theme.opponent(하늘색)를 쓴다 — 아니면 우리와 상대가 같은 색이 된다. */
+  /* 상대 팀 색 — Summary 에서는 늘 흰색. 흰색 팀인 뉴캐슬은 상대 대신
+     **자기** 색을 하늘색으로 바꿔 구분한다(targets 의 summaryColor). */
   const oppFor = useMemo(() => {
     const map = new Map<string, string>();
-    for (const r of results) map.set(r.match.id, targetOf(r.teamId).theme.opponent ?? '#FFFFFF');
+    for (const r of results) map.set(r.match.id, SUMMARY_OPP);
     return map;
   }, [results]);
 

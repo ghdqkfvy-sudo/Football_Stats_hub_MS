@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Target } from '../config/targets';
+import { SUMMARY_OPP, summaryColor, type Target } from '../config/targets';
 import type { Match } from '../lib/types';
 import { kstTime, todayKey } from '../lib/kst';
 import { weekKeys, weekLabel, type DayMatch } from '../lib/summary';
@@ -96,8 +96,10 @@ export function WeekCalendar({
           /* 고른 칸의 강조색은 지금 보고 있는 경기의 팀 컬러다 —
              일곱 팀이 섞인 달력이라 전역 accent 로는 누구 경기인지 안 보인다 */
           const pick = isSel
-            ? targetOf(list[Math.min(selectedIndex, Math.max(0, list.length - 1))]?.teamId ?? '')
-              ?.theme.accent
+            ? (() => {
+              const t = targetOf(list[Math.min(selectedIndex, Math.max(0, list.length - 1))]?.teamId ?? '');
+              return t ? summaryColor(t) : undefined;
+            })()
             : undefined;
           return (
             <div
@@ -134,7 +136,7 @@ export function WeekCalendar({
                       key={m.id}
                       data-on={on || undefined}
                       /* accent — brand 가 거의 검정인 팀은 띠가 안 보인다 */
-                      style={{ ['--team' as string]: t.theme.accent, ['--teamfg' as string]: t.theme.accent }}
+                      style={{ ['--team' as string]: summaryColor(t), ['--teamfg' as string]: summaryColor(t) }}
                       onClick={() => onPick(k)}
                       onMouseEnter={(e) => {
                         if (!HAS_HOVER) return;
@@ -146,8 +148,8 @@ export function WeekCalendar({
                           x: r.left + r.width / 2,
                           y: above ? r.top : r.bottom,
                           above,
-                          accent: t.theme.accent,
-                          opp: t.theme.opponent ?? '#FFFFFF',
+                          accent: summaryColor(t),
+                          opp: SUMMARY_OPP,
                         });
                       }}
                       onMouseLeave={() => setPop(null)}
