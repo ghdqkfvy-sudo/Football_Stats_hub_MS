@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './styles/global.css';
+/* 좁은 화면 전용 덮어쓰기 — global.css 뒤에 와야 이긴다 */
+import './styles/mobile.css';
 import { TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { loadSchedule, type Source } from './lib/api';
@@ -109,6 +111,14 @@ export default function App() {
 
   /* 클럽 스위처가 오른쪽 끝까지 스크롤됐는지 — 흐림(마스크)을 끄는 기준 */
   const switchRef = useRef<HTMLDivElement>(null);
+  /*
+   * 좁은 화면에서는 클럽 줄과 국가대표 줄을 한 줄 가로 스크롤로 합친다
+   * (styles/mobile.css). 그러면 리버풀·대한민국처럼 오른쪽 끝 팀을 고르면
+   * 그 칩이 화면 밖에 있게 된다 — 고른 칩을 가운데로 데려온다.
+   * 넓은 화면에서는 줄이 넘치지 않으므로 아무 일도 하지 않는다.
+   * 페이지 전체를 움직이는 scrollIntoView 대신 이 줄만 가로로 민다.
+   */
+  const rowRef = useRef<HTMLDivElement>(null);
   const [switchEnd, setSwitchEnd] = useState(true);
   const syncSwitchEnd = useCallback(() => {
     const el = switchRef.current;
@@ -123,6 +133,16 @@ export default function App() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [syncSwitchEnd, targetId]);
+
+  /* 고른 칩을 스위처 줄 가운데로 (줄이 넘칠 때만 = 좁은 화면) */
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || row.scrollWidth <= row.clientWidth + 1) return;
+    const pill = row.querySelector<HTMLElement>('.pill[aria-pressed="true"]');
+    if (!pill) return;
+    const offset = pill.getBoundingClientRect().left - row.getBoundingClientRect().left;
+    row.scrollLeft += offset - (row.clientWidth - pill.offsetWidth) / 2;
+  }, [targetId, summary]);
 
   const themeVars = useMemo(
     () =>
@@ -191,51 +211,58 @@ export default function App() {
           </div>
 
           <div className="hdr__row">
-            <div
-              className="switch"
-              data-scroll
-              /* 오른쪽 끝을 흐리게 해 "더 있다" 를 알리는데, 끝까지 스크롤한
-                 뒤에도 흐림이 남으면 마지막 칩(뉴캐슬)이 잘려 보인다.
-                 끝에 닿으면 data-end 로 흐림을 걷는다. */
-              data-end={switchEnd || undefined}
-              ref={switchRef}
-              onScroll={syncSwitchEnd}
-            >
-              <button
-                className="pill pill--sum"
-                aria-pressed={summary}
-                onClick={() => setView('summary')}
+            {/* 두 스위처를 감싸는 껍데기 — 넓은 화면에서는 display: contents 라
+                상자가 없는 것과 같다(레이아웃이 그대로). 좁은 화면에서만 이
+                껍데기가 한 줄 가로 스크롤러가 된다(styles/mobile.css).
+                출처 배지를 스크롤러 **바깥**에 두려고 따로 감싼다 — 안에 두면
+                가장자리 흐림(mask)에 배지까지 같이 지워진다. */}
+            <div className="hdr__switches" ref={rowRef}>
+              <div
+                className="switch"
+                data-scroll
+                /* 오른쪽 끝을 흐리게 해 "더 있다" 를 알리는데, 끝까지 스크롤한
+                   뒤에도 흐림이 남으면 마지막 칩(뉴캐슬)이 잘려 보인다.
+                   끝에 닿으면 data-end 로 흐림을 걷는다. */
+                data-end={switchEnd || undefined}
+                ref={switchRef}
+                onScroll={syncSwitchEnd}
               >
-                ★ SUMMARY
-              </button>
-              <span className="switch__label">CLUB</span>
-              {TARGETS.filter((t) => t.kind === 'club').map((t) => (
                 <button
-                  key={t.id}
-                  className="pill"
-                  aria-pressed={!summary && t.id === targetId}
-                  onClick={() => openTeam(t.id)}
+                  className="pill pill--sum"
+                  aria-pressed={summary}
+                  onClick={() => setView('summary')}
                 >
-                  <img src={t.crest} alt="" />
-                  {t.name}
+                  ★ SUMMARY
                 </button>
-              ))}
-            </div>
-            <div className="switch" style={{ marginLeft: 6 }}>
-              <span className="switch__label">NATIONAL</span>
-              {TARGETS.filter((t) => t.kind === 'national').map((t) => (
-                <button
-                  key={t.id}
-                  className="pill"
-                  aria-pressed={!summary && t.id === targetId}
-                  onClick={() => openTeam(t.id)}
-                >
-                  {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
-                      태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
-                  <img src={t.crest} alt="" />
-                  {t.name}
-                </button>
-              ))}
+                <span className="switch__label">CLUB</span>
+                {TARGETS.filter((t) => t.kind === 'club').map((t) => (
+                  <button
+                    key={t.id}
+                    className="pill"
+                    aria-pressed={!summary && t.id === targetId}
+                    onClick={() => openTeam(t.id)}
+                  >
+                    <img src={t.crest} alt="" />
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+              <div className="switch" style={{ marginLeft: 6 }}>
+                <span className="switch__label">NATIONAL</span>
+                {TARGETS.filter((t) => t.kind === 'national').map((t) => (
+                  <button
+                    key={t.id}
+                    className="pill"
+                    aria-pressed={!summary && t.id === targetId}
+                    onClick={() => openTeam(t.id)}
+                  >
+                    {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
+                        태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
+                    <img src={t.crest} alt="" />
+                    {t.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <span className="hdr__spacer" />
@@ -250,7 +277,9 @@ export default function App() {
               }
             >
               <span className="srcbadge__dot" />
-              {source === 'live' ? '실시간' : source === 'feed' ? '자동 갱신' : '데이터 없음'}
+              <span className="srcbadge__label">
+                {source === 'live' ? '실시간' : source === 'feed' ? '자동 갱신' : '데이터 없음'}
+              </span>
               {source !== 'live' && fetchedAt && (
                 <em className="srcbadge__at num">{ago(fetchedAt)}</em>
               )}
