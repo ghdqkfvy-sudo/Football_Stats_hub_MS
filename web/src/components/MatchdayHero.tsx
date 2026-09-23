@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
 import { comp, type Target } from '../config/targets';
-import { countdown, kstFullDate, kstShortDate, kstTime } from '../lib/kst';
+import { countdown, dayKey, kstFullDate, kstShortDate, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
@@ -25,6 +25,25 @@ const PIN = (
     <circle cx="12" cy="10" r="2.4" />
   </svg>
 );
+
+/**
+ * KST **달력 날짜** 기준 남은 일수.
+ * 시간 차이로 계산하면 "오늘 밤 23시" 와 "내일 새벽 1시" 가 둘 다 0일이 되어
+ * 어느 쪽이 오늘인지 알 수 없다. 자정 경계로 세는 편이 사람이 읽는 방식이다.
+ */
+function daysUntilKst(iso: string, now: number = Date.now()): number {
+  const a = Date.parse(`${dayKey(iso)}T00:00:00Z`);
+  const b = Date.parse(`${todayKey(now)}T00:00:00Z`);
+  return Math.round((a - b) / 86_400_000);
+}
+
+function dday(iso: string, now: number = Date.now()): { text: string; tone: 'now' | 'soon' | 'far' | 'past' } {
+  const d = daysUntilKst(iso, now);
+  if (d === 0) return { text: '오늘', tone: 'now' };
+  if (d === 1) return { text: '내일', tone: 'soon' };
+  if (d > 1) return { text: `D-${d}`, tone: d <= 3 ? 'soon' : 'far' };
+  return { text: `${-d}일 전`, tone: 'past' };
+}
 
 interface Props {
   target: Target;
@@ -90,6 +109,8 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
   const c = comp(match.competition);
   const home = match.home.id === target.espnTeamId;
   const live = match.status === 'live';
+  const done = match.status === 'finished';
+  const dd = dday(match.kickoffUtc);
   const Tag = onSelect ? 'button' : 'div';
 
   return (
@@ -142,11 +163,18 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
           {!live && <Countdown iso={match.kickoffUtc} />}
         </>
       ) : (
+        /*
+         * 작은 카드에서 제일 먼저 찾는 것은 "언제 하나" 다. 예전에는 경기장과
+         * 같은 10.5px 회색 한 줄에 섞여 있어 여섯 장을 훑어도 날짜가 안 잡혔다.
+         * 킥오프를 팀 컬러 스트립으로 떼어 내고 D-day 칩을 앞에 세운다.
+         */
         <footer className="mdh__foot">
+          <div className="mdh__kick" data-tone={dd.tone}>
+            <em className="mdh__dday">{done ? '종료' : dd.text}</em>
+            <b className="mdh__kdate num">{kstShortDate(match.kickoffUtc)}</b>
+            <b className="mdh__ktime num">{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
+          </div>
           {match.venue && <span className="mdh__venue">{PIN}{match.venue}</span>}
-          <span className="mdh__when2 num">
-            {kstShortDate(match.kickoffUtc)} {match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}
-          </span>
         </footer>
       )}
     </Tag>

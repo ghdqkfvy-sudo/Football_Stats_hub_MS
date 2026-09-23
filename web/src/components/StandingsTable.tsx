@@ -185,7 +185,13 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams }: Prop
             >
               <span className="tbl__rank num">{r.rank}</span>
               <span className="tbl__team">
-                <Crest team={r.team} size={20} />
+                {/* 여러 팀이 섞인 표(Summary)는 우리 일곱 팀 모두,
+                    한 팀만 보는 팀 탭은 선택된 그 팀만 윤곽을 밝힌다 */}
+                <Crest
+                  team={r.team}
+                  size={20}
+                  glow={focusTeams ? undefined : r.team.id === focusTeamId}
+                />
                 <b className="tbl__full">{r.team.name}</b>
                 <b className="tbl__short">{r.team.shortName}</b>
               </span>

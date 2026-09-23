@@ -314,6 +314,13 @@ export const TARGETS: Target[] = [
   },
 ];
 
+/**
+ * 우리가 추적하는 팀의 ESPN id.
+ * 엠블럼 윤곽 강조(`.crest`)를 **이 팀들에만** 준다 — 스무 줄짜리 순위표
+ * 전체에 빛을 두르면 강조가 아니라 배경이 된다.
+ */
+export const OUR_TEAM_IDS: ReadonlySet<string> = new Set(TARGETS.map((t) => t.espnTeamId));
+
 export const getTarget = (id: TargetId) => TARGETS.find((t) => t.id === id)!;
 
 /* ──────────────────────────────────────────────────────────────

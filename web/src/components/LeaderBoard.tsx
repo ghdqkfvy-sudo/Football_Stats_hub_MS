@@ -63,14 +63,19 @@ function rankRows(rows: LeaderRow[], key: Key, take: number): Ranked[] {
 const CAPS = { basic: 8, more: 15 };
 
 export function LeaderBoard({
-  rows, note, variant = 'table', teamColors,
+  rows, note, variant = 'table', teamColors, soloGlowTeamId,
 }: {
   rows: LeaderRow[];
   note?: string;
   /** table = 숫자만 (대회 순위표) · bar = 게이지 (팀 내 기록) */
   variant?: 'table' | 'bar';
-  /** 우리 팀 선수를 그 팀 컬러로 강조한다 (Summary 탭) */
+  /** 우리 팀 선수를 그 팀 컬러로 강조한다 (Summary 탭 · 팀 탭) */
   teamColors?: Record<string, string>;
+  /**
+   * 이 팀의 엠블럼만 윤곽을 밝힌다 (팀 탭).
+   * 없으면 기본 규칙 — 우리 일곱 팀 전부.
+   */
+  soloGlowTeamId?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const take = expanded ? CAPS.more : CAPS.basic;
@@ -92,7 +97,14 @@ export function LeaderBoard({
     <>
       <div className="lb3" data-variant={variant}>
         {cols.map(({ col, shown }) => (
-          <Column key={col.key} col={col} shown={shown} variant={variant} teamColors={teamColors} />
+          <Column
+            key={col.key}
+            col={col}
+            shown={shown}
+            variant={variant}
+            teamColors={teamColors}
+            soloGlowTeamId={soloGlowTeamId}
+          />
         ))}
       </div>
 
@@ -112,12 +124,13 @@ export function LeaderBoard({
 }
 
 function Column({
-  col, shown, variant, teamColors,
+  col, shown, variant, teamColors, soloGlowTeamId,
 }: {
   col: (typeof COLS)[number];
   shown: Ranked[];
   variant: 'table' | 'bar';
   teamColors?: Record<string, string>;
+  soloGlowTeamId?: string;
 }) {
   // 게이지 기준값은 그 표의 1위 — 팀 안에서의 비중으로 읽힌다
   const max = shown[0]?.r[col.key] ?? 1;
@@ -144,7 +157,15 @@ function Column({
                 : undefined}
             >
               <span className="lbc__rank num">{rk}</span>
-              {r.team ? <Crest team={r.team} size={18} /> : <span className="lbc__pad" />}
+              {r.team
+                ? (
+                  <Crest
+                    team={r.team}
+                    size={18}
+                    glow={soloGlowTeamId ? r.teamId === soloGlowTeamId : undefined}
+                  />
+                )
+                : <span className="lbc__pad" />}
               <span className="lbc__name">{r.name}</span>
               {variant === 'bar' && (
                 <span className="lbc__meter" aria-hidden="true">

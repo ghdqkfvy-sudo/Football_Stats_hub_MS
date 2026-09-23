@@ -168,6 +168,10 @@ export function StandingsTab({
             </div>
             <LeaderBoard
               rows={leaders}
+              /* 순위표와 같은 규칙 — 우리 팀 선수 줄을 팀 컬러로 세운다.
+                 대회 전체 순위에서 "우리 선수가 몇 위인가" 를 먼저 찾게 한다. */
+              teamColors={{ [target.espnTeamId]: target.theme.accent }}
+              soloGlowTeamId={target.espnTeamId}
               note={
                 withGoals < finished
                   ? '득점 상세가 제공된 경기만 집계됩니다'
