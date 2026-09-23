@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TARGETS, comp, getTarget, type Target, type TargetId } from '../config/targets';
+import { TARGETS, comp, getTarget, markOf, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeagueTable, loadSchedule } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -166,7 +166,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
    */
   const clubColors = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = t.theme.accent;
+    for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = markOf(t);
     return out;
   }, []);
 

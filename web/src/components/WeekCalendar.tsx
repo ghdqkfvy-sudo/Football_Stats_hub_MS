@@ -13,7 +13,11 @@ const WEEKDAY = ['월', '화', '수', '목', '금', '토', '일'];
 const HAS_HOVER =
   typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
-interface Pop { m: Match; teamId: string; x: number; y: number; above: boolean }
+interface Pop {
+  m: Match; teamId: string; x: number; y: number; above: boolean;
+  /** 그 경기 우리 팀 색 / 상대 색 — 포털이라 앱의 테마 변수를 못 받는다 */
+  accent: string; opp: string;
+}
 
 /**
  * 타일 옆에 뜨는 미리보기.
@@ -25,9 +29,19 @@ interface Pop { m: Match; teamId: string; x: number; y: number; above: boolean }
 function TilePop({ pop }: { pop: Pop }) {
   const W = 262;
   const x = Math.min(Math.max(pop.x - W / 2, 10), window.innerWidth - W - 10);
-  const style: React.CSSProperties = pop.above
-    ? { position: 'fixed', left: x, bottom: window.innerHeight - pop.y + 8, top: 'auto', transform: 'none' }
-    : { position: 'fixed', left: x, top: pop.y + 8, bottom: 'auto', transform: 'none' };
+  const style: React.CSSProperties = {
+    ...(pop.above
+      ? { position: 'fixed', left: x, bottom: window.innerHeight - pop.y + 8, top: 'auto', transform: 'none' }
+      : { position: 'fixed', left: x, top: pop.y + 8, bottom: 'auto', transform: 'none' }),
+    /*
+     * ⚠️ 이 카드는 포털로 document.body 에 붙는다 — 앱이 테마 변수를 심어
+     * 둔 div 바깥이다. 그래서 득점자 팀 약어가 쓰는 `--accent` 가 :root
+     * 기본값(레알 노랑)으로 떨어져, **누구 경기든 전부 레알 색**으로 떴다.
+     * 여기서 그 경기의 팀 색을 직접 얹는다.
+     */
+    ['--accent' as string]: pop.accent,
+    ['--opp' as string]: pop.opp,
+  };
   return createPortal(
     <div className="pop" style={style} role="tooltip">
       <MatchPopCard m={pop.m} focusTeamId={pop.teamId} />
@@ -132,6 +146,8 @@ export function WeekCalendar({
                           x: r.left + r.width / 2,
                           y: above ? r.top : r.bottom,
                           above,
+                          accent: t.theme.accent,
+                          opp: t.theme.opponent ?? '#FFFFFF',
                         });
                       }}
                       onMouseLeave={() => setPop(null)}
@@ -152,7 +168,9 @@ export function WeekCalendar({
                         <Crest team={opp} size={14} />
                         <span>{opp.abbr}</span>
                       </span>
-                      <span className="wcal__t num">
+                      {/* 종료 스코어와 예정 킥오프는 이 칸에서 제일 먼저 찾는 값이다 —
+                          data-done 으로 갈라 서로 다른 무게를 준다 */}
+                      <span className="wcal__t num" data-done={done || undefined}>
                         {done ? `${m.homeScore}-${m.awayScore}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
                       </span>
                     </button>

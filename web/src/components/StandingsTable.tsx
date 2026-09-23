@@ -15,6 +15,12 @@ interface Props {
    * 어느 줄이 누구인지 색으로 갈려야 한다.
    */
   focusTeams?: Record<string, string>;
+  /**
+   * 한 팀만 보는 표(팀 탭)에서 그 팀 줄을 칠할 색.
+   * 앱 전역 --accent 를 그대로 쓰면 뉴캐슬은 흰색이라 나머지 열아홉 줄과
+   * 구분이 안 된다 (config/targets 의 markOf).
+   */
+  focusColor?: string;
 }
 
 /**
@@ -87,7 +93,7 @@ function rankRange(ranks: number[]): string {
   return parts.join(' · ');
 }
 
-export function StandingsTable({ table, matches, focusTeamId, focusTeams }: Props) {
+export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusColor }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
   /*
@@ -160,7 +166,8 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams }: Prop
 
       {table.rows.map((r) => {
         const isOpen = open === r.team.id;
-        const teamColor = focusTeams?.[r.team.id];
+        const teamColor = focusTeams?.[r.team.id]
+          ?? (focusColor && r.team.id === focusTeamId ? focusColor : undefined);
         const focus = teamColor ? true : r.team.id === focusTeamId;
         const zone = zoneOf(r.rank);
         return (

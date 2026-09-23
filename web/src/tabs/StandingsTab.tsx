@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Target } from '../config/targets';
+import { markOf, type Target } from '../config/targets';
 import type { Match, StandingTable } from '../lib/types';
 import { loadLeague, type Source , loadScheduleExtras, type ScheduleExtras } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -155,6 +155,8 @@ export function StandingsTab({
               table={table}
               matches={data.matches}
               focusTeamId={target.espnTeamId}
+              /* 뉴캐슬처럼 팀 컬러가 흰색이면 보조색으로 물러난다 */
+              focusColor={markOf(target)}
             />
             <p className="tbl__hint">팀을 누르면 홈·원정 경기 결과가 펼쳐집니다.</p>
           </section>
@@ -170,7 +172,7 @@ export function StandingsTab({
               rows={leaders}
               /* 순위표와 같은 규칙 — 우리 팀 선수 줄을 팀 컬러로 세운다.
                  대회 전체 순위에서 "우리 선수가 몇 위인가" 를 먼저 찾게 한다. */
-              teamColors={{ [target.espnTeamId]: target.theme.accent }}
+              teamColors={{ [target.espnTeamId]: markOf(target) }}
               soloGlowTeamId={target.espnTeamId}
               note={
                 withGoals < finished

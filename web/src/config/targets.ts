@@ -1,4 +1,5 @@
 import type { CompetitionKey } from '../lib/types';
+import { markColor } from '../lib/mark';
 import bgRma from '../assets/bg-rma.jpg';
 import bgChe from '../assets/bg-che.jpg';
 import bgKor from '../assets/bg-kor.png';
@@ -320,6 +321,16 @@ export const TARGETS: Target[] = [
  * 전체에 빛을 두르면 강조가 아니라 배경이 된다.
  */
 export const OUR_TEAM_IDS: ReadonlySet<string> = new Set(TARGETS.map((t) => t.espnTeamId));
+
+/**
+ * 표에서 "이 줄이 우리 팀" 이라고 말할 색.
+ *
+ * 대부분 팀 컬러 그대로지만 뉴캐슬만 다르다 — 흑백 팀이라 어두운 배경에서
+ * 쓸 수 있는 쪽이 흰색뿐인데 그건 본문 글씨와 같은 색이라, 스무 줄짜리
+ * 순위표에서 우리 줄을 찾을 수가 없다. 그럴 때만 보조색으로 물러난다
+ * (lib/mark.ts · 팀 이름을 박지 않고 색만 보고 판단한다).
+ */
+export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary);
 
 export const getTarget = (id: TargetId) => TARGETS.find((t) => t.id === id)!;
 

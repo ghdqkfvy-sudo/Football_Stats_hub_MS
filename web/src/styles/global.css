@@ -2651,7 +2651,21 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .wcal__opp span {
   font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.wcal__t { font-family: var(--font-display); font-size: 11px; color: var(--text-lo); }
+/*
+ * 칸에서 제일 먼저 찾는 값인데 11px 회색이라 전혀 눈에 안 들어왔다.
+ * 종료 스코어는 흰색으로 또렷하게, 예정 킥오프는 팀 컬러로 물들여
+ * "끝난 경기" 와 "앞으로 할 경기" 가 색으로도 갈리게 한다.
+ */
+.wcal__t {
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  letter-spacing: .01em; line-height: 1.15;
+  color: color-mix(in srgb, var(--team) 55%, #FFFFFF);
+  text-shadow: 0 1px 10px rgba(4, 12, 28, .9);
+}
+.wcal__t[data-done] {
+  font-size: 13.5px; color: var(--text-hi);
+  text-shadow: 0 1px 12px rgba(4, 12, 28, .95);
+}
 
 .wcal__hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line);
   font-size: 11px; color: var(--text-lo); }
