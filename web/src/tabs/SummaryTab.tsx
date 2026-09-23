@@ -181,14 +181,15 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   const results = useMemo(() => monthResults(teamFeeds, thisMonth), [teamFeeds, thisMonth]);
   const [openId, setOpenId] = useState<string | null>(null);
   /*
-   * 폰에서는 최근 경기 몇 개만 먼저 — 한 달치를 다 그리면 화면 3장이었다.
+   * 최근 경기 몇 개만 먼저(데스크톱 10 · 폰 6) — 한 달치를 다 그리면
+   * 일곱 팀 경기가 스무 개를 넘어 페이지가 끝없이 길어진다.
    * 주간 캘린더에서 고른 날의 경기가 접힌 쪽에 있으면 저절로 다 펼친다
    * (고른 경기가 안 보이면 캘린더를 누른 보람이 없다).
    */
   const [allRes, setAllRes] = useState(false);
-  const RES_FIRST = 6;
+  const RES_FIRST = mobile ? 6 : 10;
   const hiddenPicked = !!selDay && results.slice(RES_FIRST).some((r) => dayKey(r.match.kickoffUtc) === selDay);
-  const resAll = !mobile || allRes || hiddenPicked;
+  const resAll = allRes || hiddenPicked;
   const resShown = resAll ? results : results.slice(0, RES_FIRST);
   /** 경기마다 "우리 팀" 이 다르다 — 그 팀 기준으로 승패·득점자를 읽는다 */
   const focusFor = useMemo(() => {
@@ -368,7 +369,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             onToggle={(m) => setOpenId((v) => (v === m.id ? null : m.id))}
             selectedDay={selDay}
           />
-          {mobile && results.length > RES_FIRST && !hiddenPicked && (
+          {results.length > RES_FIRST && !hiddenPicked && (
             <button className="nmore" onClick={() => setAllRes((v) => !v)}>
               {allRes
                 ? '접기'

@@ -2728,7 +2728,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 
 /* ── 우리 팀 선수 강조 (대회 선수 순위) ─────────────── */
 .lbc__row[data-mine] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.lbc__row[data-mine] .lbc__name { color: var(--text-hi); font-weight: 600; }
+.lbc__row[data-mine] .lbc__name { color: var(--accent); font-weight: 700; }
 
 /*
  * 우리 팀이 섞인 대회 순위표(Summary · 팀 탭)에서는, 남의 팀 선수의 등수와
@@ -2746,6 +2746,18 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .lb3[data-mixed] .lbc__row[data-mine] .lbc__v {
   text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
 }
+
+/* ── 이달 경기 결과 "전체 보기" (데스크톱 기본형 — 폰은 mobile.css 가 덮는다) ── */
+.nmore {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 42px; margin-top: 12px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: rgba(6,16,38,.3); color: var(--text-mid);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.nmore:hover { color: var(--text-hi); border-color: var(--line-2); background: rgba(255,255,255,.04); }
+.nmore .num { color: var(--text-lo); font-weight: 600; }
 
 /* ── 아래 팀 바로가기 ────────────────────────────────── */
 .sum__foot {
