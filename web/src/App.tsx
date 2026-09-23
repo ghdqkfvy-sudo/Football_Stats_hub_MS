@@ -16,6 +16,8 @@ import { seasonOptions } from './lib/kst';
 import { Crest } from './components/Crest';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SummaryTab } from './tabs/SummaryTab';
+import { MiniBar } from './components/MiniBar';
+import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
 
 type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans';
@@ -146,6 +148,22 @@ export default function App() {
     row.scrollLeft += offset - (row.clientWidth - pill.offsetWidth) / 2;
   }, [targetId, summary]);
 
+  /*
+   * 폰: 헤더가 화면 위로 완전히 사라지면 48px 미니 막대를 띄운다
+   * (components/MiniBar). 헤더 자체를 sticky 로 줄이면 높이가 바뀌는 순간
+   * 본문이 튀어 스크롤 위치가 흔들린다 — 그래서 별도의 고정 막대를 겹친다.
+   */
+  const mobile = useIsMobile();
+  const hdrRef = useRef<HTMLElement>(null);
+  const [hdrOut, setHdrOut] = useState(false);
+  useEffect(() => {
+    const el = hdrRef.current;
+    if (!mobile || !el) { setHdrOut(false); return; }
+    const io = new IntersectionObserver(([e]) => setHdrOut(!e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mobile]);
+
   const themeVars = useMemo(
     () =>
       ({
@@ -179,7 +197,7 @@ export default function App() {
         <div className="bgart__veil" />
       </div>
 
-      <header className="hdr">
+      <header className="hdr" ref={hdrRef}>
         <div className="shell hdr__inner">
           <div className="hdr__id">
             {summary ? (
@@ -323,6 +341,18 @@ export default function App() {
           )}
         </div>
       </header>
+
+      {mobile && (
+        <MiniBar
+          show={hdrOut}
+          summary={summary}
+          crest={target.crest}
+          name={summary ? 'Summary' : target.name}
+          tabs={tabs}
+          tab={tab}
+          onTab={(id) => setTab(id as TabId)}
+        />
+      )}
 
       <main className="shell">
         {/* key: 팀을 바꾸면 선택 날짜·펼친 행 상태와 함께 오류 상태도 초기화된다 */}

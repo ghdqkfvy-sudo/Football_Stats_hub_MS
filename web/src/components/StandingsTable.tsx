@@ -3,6 +3,7 @@ import type { Match, StandingTable, StandingZone } from '../lib/types';
 import { kstShortDate } from '../lib/kst';
 import { resultOf, teamResults } from '../lib/league';
 import { Crest } from './Crest';
+import { useIsMobile } from '../lib/useMedia';
 
 interface Props {
   table: StandingTable;
@@ -97,6 +98,49 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
   const [open, setOpen] = useState<string | null>(null);
 
   /*
+   * 폰에서는 표를 **요약**해서 보여 준다 — 스무 줄(챔스는 서른여섯 줄)을
+   * 다 그리면 표 하나가 화면 한 장을 넘는다. 남기는 줄:
+   *   · 1–4위 (선두권)
+   *   · 우리 팀 — Summary 는 일곱 팀 전부, 팀 탭은 그 팀과 앞뒤 두 팀
+   *   · 지금 펼쳐 둔 팀
+   * 사이에 빠진 줄은 "··· N팀" 한 줄로 접고, 누르면 전체가 펼쳐진다.
+   * 넓은 화면에서는 늘 전체다.
+   */
+  const mobile = useIsMobile();
+  const [full, setFull] = useState(false);
+  const focusRank = table.rows.find((r) => r.team.id === focusTeamId)?.rank;
+  const keepRow = (r: StandingTable['rows'][number]) =>
+    r.rank <= 4
+    || !!focusTeams?.[r.team.id]
+    || (!focusTeams && focusRank !== undefined && Math.abs(r.rank - focusRank) <= 2)
+    || open === r.team.id;
+  type Row = StandingTable['rows'][number];
+  type Item = { kind: 'row'; r: Row } | { kind: 'gap'; n: number; key: string };
+  /* 한두 줄짜리 틈은 "··· 1팀" 줄이 오히려 자리를 더 먹는다 — 그대로 둔다.
+     세 줄 이상 이어서 빠질 때만 한 줄로 접는다. */
+  const MIN_GAP = 3;
+  const buildItems = (squeeze: boolean): Item[] => {
+    const out: Item[] = [];
+    let buf: Row[] = [];
+    const flush = (key: string) => {
+      if (buf.length >= MIN_GAP) out.push({ kind: 'gap', n: buf.length, key });
+      else for (const r of buf) out.push({ kind: 'row', r });
+      buf = [];
+    };
+    table.rows.forEach((r, i) => {
+      if (!squeeze || keepRow(r)) { flush(`gap-${i}`); out.push({ kind: 'row', r }); }
+      else buf.push(r);
+    });
+    flush('gap-end');
+    return out;
+  };
+  const squeezed = mobile ? buildItems(true) : [];
+  const saved = squeezed.reduce((n, it) => n + (it.kind === 'gap' ? it.n - 1 : 0), 0);
+  /* 몇 줄 안 줄어들면 접는 의미가 없다 */
+  const canCompact = mobile && saved >= 4;
+  const items: Item[] = canCompact && !full ? squeezed : buildItems(false);
+
+  /*
    * 같은 설명이 붙은 순위를 모으고, **가장 높은 순위에서 이어지는 구간만**
    * 남긴다.
    *
@@ -164,7 +208,15 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
         <span className="tbl__form">FORM</span>
       </div>
 
-      {table.rows.map((r) => {
+      {items.map((it) => {
+        if (it.kind === 'gap') {
+          return (
+            <button key={it.key} className="tbl__gap" onClick={() => setFull(true)}>
+              <i aria-hidden="true">···</i> {it.n}팀 더 보기
+            </button>
+          );
+        }
+        const r = it.r;
         const isOpen = open === r.team.id;
         const teamColor = focusTeams?.[r.team.id]
           ?? (focusColor && r.team.id === focusTeamId ? focusColor : undefined);
@@ -233,6 +285,12 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
           </div>
         );
       })}
+
+      {canCompact && (
+        <button className="tbl__all" onClick={() => setFull((v) => !v)}>
+          {full ? '요약해서 보기' : `전체 순위 보기 (${table.rows.length}팀)`}
+        </button>
+      )}
     </div>
   );
 }

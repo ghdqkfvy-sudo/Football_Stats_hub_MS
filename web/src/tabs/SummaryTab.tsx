@@ -222,7 +222,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   return (
     <div className="page sum">
       {/* ── 1. 매치데이 히어로 ── */}
-      <section>
+      <section id="sum-next">
         <div className="sec__head">
           <h2 className="sec__title">다음 경기</h2>
           <span className="sec__note">가장 가까운 경기가 큰 카드 · 카드를 누르면 바뀝니다</span>
@@ -272,7 +272,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
       </section>
 
       {/* ── 2. 주간 캘린더 ── */}
-      <section>
+      <section id="sum-week">
         <div className="sec__head">
           <h2 className="sec__title">주간 일정</h2>
           <span className="sec__note">모든 날짜·시각은 한국시간(KST) 기준입니다</span>
@@ -290,7 +290,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
       </section>
 
       {/* ── 3. 대회 순위 ── */}
-      <section>
+      <section id="sum-table">
         <div className="sec__head">
           <h2 className="sec__title">대회 순위</h2>
           <span className="sec__note">
@@ -350,7 +350,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
       </section>
 
       {/* ── 4. 이달의 경기 결과 ── */}
-      <section>
+      <section id="sum-results">
         <div className="sec__head">
           <h2 className="sec__title">{Number(thisMonth.slice(5))}월 경기 결과</h2>
           <span className="sec__note">종료된 경기를 누르면 골 기록이 펼쳐집니다</span>
