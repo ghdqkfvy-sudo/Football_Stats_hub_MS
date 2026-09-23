@@ -34,6 +34,7 @@ import {
   betterPhoto, birthYearOf, kindFromUrl, matchInRoster, photoFromSportsdb,
   pickSportsdbPlayer, plausibleBirthYear, rankOf, rateLimiter, urlVerdict,
 } from './lib/photos.mjs';
+import { mergeH2H, seriesGames, seriesSummary } from './lib/h2h.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
 const rankOfBest = (b) => rankOf(b?.kind);
@@ -1137,22 +1138,43 @@ async function nextMatchPreview(events, teamId, national = false) {
     }));
   }
 
-  // 상대전적: 이번 시즌(이미 손에 있는 일정) + 지난 시즌
+  /*
+   * 상대전적 = 이번 시즌(이미 손에 있는 일정) + 지난 시즌들 + ESPN 의 시리즈.
+   *
+   * 앞의 두 개만 쓰던 때, 국가대표는 거의 항상 0경기였다. 한 상대를 십수 년에
+   * 한 번 만나기 때문이다 — 한국-에콰도르는 마지막이 2010년이라 13시즌을
+   * 거슬러 올라가도 안 잡혔고, 화면 오른쪽 상대전적 칸이 통째로 비었다.
+   * ESPN 요약의 `seasonseries` 는 그 경기를 알고 있다("KOR leads series 1-0").
+   *
+   * 순서에 뜻이 있다: 일정에서 온 경기가 **대회 이름을 갖고 있으므로** 앞에
+   * 두고, 시리즈는 일정에 없는 옛 경기만 보태게 뒤에 둔다.
+   */
   const thisSeason = events
     .map((ev) => compactGame(ev, teamId))
     .filter((g) => g && g.done);
-  const h2h = [...older, ...thisSeason]
-    .filter((g) => g.homeId === oppId || g.awayId === oppId)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const fromSchedule = [...older, ...thisSeason]
+    .filter((g) => g.homeId === oppId || g.awayId === oppId);
+  const h2h = mergeH2H(fromSchedule, seriesGames(sum));
+  const h2hLine = seriesSummary(sum);
+  const seasons = national ? 13 : 3;
+
+  /* 라벨은 **실제로 보여 주는 것**에서 나와야 한다. 우리가 뒤진 시즌 창보다
+     오래된 경기가 하나라도 섞였으면(= 시리즈가 주워 온 것) '역대' 고,
+     아니면 '최근 n시즌' 이다. 클럽이라도 옛 컵 경기가 딸려 오면 '최근 세
+     시즌 5경기' 는 거짓말이 된다. */
+  const windowStart = SEASON - (seasons - 1);
+  const oldest = h2h.length ? Number(String(h2h[h2h.length - 1].date).slice(0, 4)) : NaN;
+  const beyondWindow = Number.isFinite(oldest) && oldest < windowStart;
 
   return {
     eventId: String(upcoming.id),
     opponentId: oppId,
     lastFive,
     h2h,
-    /* 화면이 "최근 두 시즌" 과 "역대" 를 구분해 적을 수 있게 */
-    h2hScope: national ? 'all' : 'recent',
-    h2hSeasons: national ? 13 : 3,
+    h2hScope: national || beyondWindow ? 'all' : 'recent',
+    h2hSeasons: seasons,
+    /* ESPN 이 직접 적어 준 한 줄 — "KOR leads series 1-0" */
+    h2hLine,
   };
 }
 

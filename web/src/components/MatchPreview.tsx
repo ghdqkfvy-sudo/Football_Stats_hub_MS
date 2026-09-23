@@ -18,8 +18,10 @@ interface Props {
   focusTeamId: string;
   lastFive: Record<string, LastFiveGame[]>;
   h2h: H2HGame[];
-  /** 'all' 이면 "역대 n경기", 아니면 "최근 두 시즌 n경기" */
+  /** 'all' 이면 "역대 n경기", 아니면 "최근 세 시즌 n경기" */
   h2hScope?: 'all' | 'recent';
+  /** ESPN 이 직접 적어 준 한 줄 — "KOR leads series 1-0" */
+  h2hLine?: string;
 }
 
 function recordOf(games: { result?: string }[]) {
@@ -34,7 +36,7 @@ function recordOf(games: { result?: string }[]) {
   return { w, d, l };
 }
 
-export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Props) {
+export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope, h2hLine }: Props) {
   const ourFive = lastFive[focusTeamId] ?? [];
   const oppId = match.home.id === focusTeamId ? match.away.id : match.home.id;
   const theirFive = lastFive[oppId] ?? [];
@@ -53,7 +55,8 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
   const rec = recordOf(meetings);
 
   return (
-    <div className="mprev">
+    /* 맞대결 기록이 없으면 오른쪽 268px 칸이 빈 상자로 남는다 — 한 칸으로 접는다 */
+    <div className="mprev" data-h2h={meetings.length > 0}>
       {/* 위 카드와 같은 순서 — 홈 / 원정 */}
       <div className="mprev__forms">
         <FormColumn
@@ -79,6 +82,10 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
             </span>
           </div>
 
+          {/* ESPN 이 시리즈를 직접 요약해 주면 그대로 옮긴다 —
+              우리가 모은 경기 수보다 넓은 범위를 볼 때가 있다 */}
+          {h2hLine && <p className="mprev__line">{h2hLine}</p>}
+
           {/* 승·무·패 비율을 막대 하나로 — 숫자보다 먼저 눈에 들어온다 */}
           <div className="mprev__bar" aria-hidden="true">
             {(['W', 'D', 'L'] as const).map((k) => {
@@ -100,7 +107,7 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
                 <i className="fchip" data-r={g.result}>{g.result}</i>
                 <span className="mprev__md num">{ymd(g.date)}</span>
                 <span className="mprev__mw" data-side={g.home ? 'H' : 'A'}>
-                  {g.home ? 'Home' : 'Away'}
+                  {g.home ? 'HOME' : 'AWAY'}
                 </span>
                 <Score a={g.ours} b={g.theirs} res={g.result} />
               </div>

@@ -2049,6 +2049,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 12px;
   margin-top: 12px;
 }
+/* 맞대결 기록이 하나도 없으면 오른쪽 268px 가 그냥 빈칸으로 남는다.
+   그럴 땐 한 칸으로 접는다 — 빈 상자는 정보가 아니다. */
+.mprev[data-h2h='false'] { grid-template-columns: minmax(0, 1fr); }
 .mprev__forms {
   display: grid; grid-template-columns: 1fr 1fr;
   border: 1px solid var(--line); border-radius: var(--r-lg);
@@ -2137,6 +2140,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .mprev__h2hh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .mprev__note { font-size: 10px; color: var(--text-lo); }
+/* ESPN 이 적어 준 시리즈 한 줄 — 우리가 센 경기 수보다 넓을 수 있다 */
+.mprev__line {
+  margin: 0 0 9px; font-size: 11px; color: var(--text-mid); letter-spacing: -.01em;
+}
+
 .mprev__bar { display: flex; height: 9px; border-radius: 999px; overflow: hidden; margin: 10px 0 8px; gap: 2px; }
 .mprev__bar i { min-width: 5px; }
 .mprev__bar i[data-r='W'] { background: var(--win); }
@@ -2552,13 +2560,24 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 .wcal__m:hover { background: color-mix(in srgb, var(--team) 34%, transparent); }
 /* 팀 캘린더의 선택된 막대(.bar[data-sel])와 같은 리듬 —
-   왼쪽 팀 컬러 띠가 숨 쉬면서 "이 경기를 보고 있다" 를 말한다. */
-.wcal__m[data-on] { animation: wcalPulse 1.9s cubic-bezier(.4,0,.6,1) infinite; }
+   왼쪽 팀 컬러 띠가 숨 쉬면서 "이 경기를 보고 있다" 를 말한다.
+   막대는 6px 라 빛만으로 충분했지만 이 타일은 덩치가 커서, 같은 세기로는
+   거의 안 보인다. 퍼지는 링 + 더 센 글로우 + 아주 작은 확대를 겹친다. */
+.wcal__m[data-on] {
+  animation: wcalPulse 1.7s cubic-bezier(.4,0,.6,1) infinite;
+  position: relative; z-index: 2; transform-origin: left center;
+}
 @keyframes wcalPulse {
-  /* 왼쪽 띠(border-left)는 그대로 두고 **빛만** 숨 쉬게 한다.
-     box-shadow 로 띠를 한 번 더 그리면 3px 띠가 6px 로 두꺼워 보인다. */
-  0%, 100% { box-shadow: 0 0 0 color-mix(in srgb, var(--team) 0%, transparent); }
-  50%      { box-shadow: 0 0 18px color-mix(in srgb, var(--team) 75%, transparent); }
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--team) 52%, transparent),
+                0 0 10px color-mix(in srgb, var(--team) 40%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--team) 24%, transparent),
+                0 0 28px color-mix(in srgb, var(--team) 95%, transparent);
+    transform: scale(1.035);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .wcal__m[data-on] { animation: none; }
@@ -2631,10 +2650,15 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 
 /* 이달의 결과: 우리 팀 옆 HOME/AWAY 배지 */
+/* AWAY 라고 어둡게 둘 이유가 없다 — 원정도 똑같이 읽혀야 하는 정보다.
+   HOME 은 팀 컬러로 채우고, AWAY 는 **밝은 중립색**으로 또렷하게 둔다.
+   (색이 다른 것만으로 홈·원정은 충분히 갈린다) */
 .ml__ha {
   font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .06em;
   padding: 2px 6px; border-radius: 4px; flex: none;
-  color: var(--text-lo); border: 1px solid var(--line-2);
+  color: var(--text-hi);
+  border: 1px solid color-mix(in srgb, var(--text-hi) 26%, transparent);
+  background: rgba(255, 255, 255, .07);
 }
 .ml__ha[data-home] {
   color: var(--c); border-color: color-mix(in srgb, var(--c) 50%, transparent);
