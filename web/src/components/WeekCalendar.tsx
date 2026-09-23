@@ -45,6 +45,12 @@ export function WeekCalendar({
           const list = byDay.get(k) ?? [];
           const isToday = k === today;
           const isSel = k === selectedDay;
+          /* 고른 칸의 강조색은 지금 보고 있는 경기의 팀 컬러다 —
+             일곱 팀이 섞인 달력이라 전역 accent 로는 누구 경기인지 안 보인다 */
+          const pick = isSel
+            ? targetOf(list[Math.min(selectedIndex, Math.max(0, list.length - 1))]?.teamId ?? '')
+              ?.theme.accent
+            : undefined;
           return (
             <div
               className="wcal__cell"
@@ -53,9 +59,14 @@ export function WeekCalendar({
               data-sel={isSel || undefined}
               data-empty={list.length === 0 || undefined}
               data-weekend={i >= 5 || undefined}
+              style={pick ? ({ ['--pick']: pick } as React.CSSProperties) : undefined}
             >
               <div className="wcal__head">
                 <span className="wcal__dow">{WEEKDAY[i]}</span>
+                {/* 월간 캘린더와 같은 펄스닷.
+                    날짜 숫자 위에 겹치지 않도록 머리줄 안에 흐름대로 놓는다. */}
+                {isSel && list.length > 0 && <span className="wcal__pulse" aria-hidden="true" />}
+                <span className="wcal__spread" />
                 <span className="wcal__date num" data-today={isToday || undefined}>
                   {Number(k.slice(8, 10))}
                 </span>

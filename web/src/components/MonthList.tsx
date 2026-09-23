@@ -25,6 +25,12 @@ interface Props {
    * "누구 경기인가" 가 먼저 읽혀야 한다.
    */
   barColorOf?: (m: Match) => string | undefined;
+  /**
+   * 그 경기에서 **상대 팀**을 칠할 색 (Summary).
+   * 기본은 흰색이지만, 팀 컬러 자체가 흰색에 가까운 뉴캐슬은 둘이 갈리지
+   * 않아 따로 준다 (targets 의 theme.opponent).
+   */
+  oppColorOf?: (m: Match) => string | undefined;
 }
 
 const CLOCK = (
@@ -36,7 +42,7 @@ const CLOCK = (
 
 export function MonthList({
   matches, focusTeamId, nextMatchId, loadingGoals, openId, onToggle, selectedDay,
-  focusFor, barColorOf,
+  focusFor, barColorOf, oppColorOf,
 }: Props) {
   const palette = usePalette();
 
@@ -79,6 +85,12 @@ export function MonthList({
         const isOpen = openId === m.id;
         const onSelectedDay = selectedDay !== null && dayKey(m.kickoffUtc) === selectedDay;
         const c = barColorOf?.(m) ?? palette.color(m.competition);
+        /* 펼친 득점 기록도 이 경기의 우리 팀 색으로 읽히게 한다.
+           Summary 는 일곱 팀이 섞여 있어 앱 전역 --accent 로는 "누가 우리인지"
+           가 표현되지 않는다. 상대 색(--opp)도 팀별로 갈아 끼운다. */
+        const teamVars = barColorOf
+          ? { ['--accent']: c, ['--opp']: oppColorOf?.(m) ?? '#FFFFFF' }
+          : null;
 
         return (
           <div
@@ -88,7 +100,7 @@ export function MonthList({
             data-open={isOpen}
             data-next={m.id === nextMatchId}
             data-sel={onSelectedDay}
-            style={{ ['--c' as string]: c }}
+            style={{ ['--c' as string]: c, ...(teamVars ?? {}) } as React.CSSProperties}
           >
             <button
               className="ml__row"
@@ -124,8 +136,13 @@ export function MonthList({
                   </span>
 
                   {done ? (
+                    /* 스코어는 승패색이 아니라 **누구 골인가**로 칠한다 —
+                       우리 득점은 팀 컬러, 상대 득점은 흰색(뉴캐슬은 하늘색).
+                       승패는 오른쪽 W/D/L 칩이 따로 말해 준다. */
                     <span className="ml__score num" data-res={res ?? undefined}>
-                      {ours.usScore}<i>-</i>{ours.oppScore}
+                      <b className="ml__su">{ours.usScore}</b>
+                      <i>-</i>
+                      <b className="ml__so">{ours.oppScore}</b>
                     </span>
                   ) : (
                     <span className="ml__vs">vs</span>
@@ -135,6 +152,10 @@ export function MonthList({
                     <Crest team={ours.opp} size={22} />
                     <b className="ml__long">{ours.opp.shortName || ours.opp.abbr}</b>
                     <b className="ml__short">{ours.opp.abbr}</b>
+                    {/* 승패는 한 글자 칩으로 — 스무 줄을 훑을 때 색만 봐도 잡힌다 */}
+                    {done && res
+                      ? <i className="fchip ml__res" data-r={res}>{res}</i>
+                      : <i className="ml__res" aria-hidden="true" />}
                   </span>
                 </span>
               ) : (
@@ -145,8 +166,12 @@ export function MonthList({
                   </span>
 
                   {done ? (
+                    /* 팀 탭도 같은 규칙 — 우리 득점은 팀 컬러, 상대는 흰색.
+                       여기서는 홈-원정 순서를 지키므로 색으로만 가른다. */
                     <span className="ml__score num" data-res={res ?? undefined}>
-                      {m.homeScore}<i>-</i>{m.awayScore}
+                      <b className={m.home.id === mine ? 'ml__su' : 'ml__so'}>{m.homeScore}</b>
+                      <i>-</i>
+                      <b className={m.home.id === mine ? 'ml__so' : 'ml__su'}>{m.awayScore}</b>
                     </span>
                   ) : (
                     <span className="ml__vs">vs</span>

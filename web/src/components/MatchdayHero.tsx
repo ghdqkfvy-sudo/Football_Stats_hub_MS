@@ -117,7 +117,12 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
     <Tag
       className="mdh__card"
       data-hero={hero || undefined}
-      style={{ ['--team' as string]: target.theme.accent }}
+      /* --opp 는 앱 전역(현재 팀) 값이라 Summary 에서는 맞지 않는다.
+         카드마다 그 팀의 상대 색으로 갈아 끼운다 (뉴캐슬만 하늘색). */
+      style={{
+        ['--team' as string]: target.theme.accent,
+        ['--opp' as string]: target.theme.opponent ?? '#FFFFFF',
+      }}
       onClick={onSelect}
       {...(onSelect ? { type: 'button' as const, 'aria-label': `${target.nameEn} 경기를 크게 보기` } : {})}
     >
@@ -143,8 +148,16 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       <div className="mdh__fx">
         <Side team={match.home} focus={home} standing={standingOf?.(match.home.id)} big={hero} />
         <div className="mdh__vs">
-          {match.status === 'finished'
-            ? <span className="num">{match.homeScore}<i>-</i>{match.awayScore}</span>
+          {done
+            ? (
+              /* 이달의 결과와 같은 규칙 — 우리 득점은 팀 컬러, 상대는 흰색.
+                 순서는 홈-원정 그대로 두고 색으로만 가른다. */
+              <span className="num">
+                <b className={home ? 'mdh__su' : 'mdh__so'}>{match.homeScore}</b>
+                <i>-</i>
+                <b className={home ? 'mdh__so' : 'mdh__su'}>{match.awayScore}</b>
+              </span>
+            )
             : <span className="num">VS</span>}
         </div>
         <Side team={match.away} focus={!home} standing={standingOf?.(match.away.id)} big={hero} />

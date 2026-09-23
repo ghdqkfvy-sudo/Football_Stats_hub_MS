@@ -170,6 +170,13 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     for (const r of results) map.set(r.match.id, targetOf(r.teamId).theme.accent);
     return map;
   }, [results]);
+  /* 상대 팀 색. 기본은 흰색이고, 팀 컬러가 흰색에 가까운 뉴캐슬만
+     theme.opponent(하늘색)를 쓴다 — 아니면 우리와 상대가 같은 색이 된다. */
+  const oppFor = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of results) map.set(r.match.id, targetOf(r.teamId).theme.opponent ?? '#FFFFFF');
+    return map;
+  }, [results]);
 
   if (loading && !board.length) {
     return (
@@ -308,6 +315,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             focusTeamId=""
             focusFor={(m) => focusFor.get(m.id) ?? ''}
             barColorOf={(m) => barFor.get(m.id)}
+            oppColorOf={(m) => oppFor.get(m.id)}
             loadingGoals={EMPTY}
             openId={openId}
             onToggle={(m) => setOpenId((v) => (v === m.id ? null : m.id))}
