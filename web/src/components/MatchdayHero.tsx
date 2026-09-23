@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
 import { SUMMARY_OPP, comp, summaryColor, type Target } from '../config/targets';
-import { countdown, dayKey, kstFullDate, kstShortDate, kstTime, todayKey } from '../lib/kst';
+import { countdown, dayKey, kstFullDate, kstParts, kstShortDate, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
@@ -256,6 +256,7 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
   const live = match.status === 'live';
   const done = match.status === 'finished';
   const dd = dday(match.kickoffUtc);
+  const kp = kstParts(match.kickoffUtc);
   const ours = (home ? match.homeScore : match.awayScore) ?? 0;
   const theirs = (home ? match.awayScore : match.homeScore) ?? 0;
 
@@ -304,9 +305,14 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         ) : (
           <em className="mdr__dday" data-tone={dd.tone}>{dd.text}</em>
         )}
+        {/* 날짜가 이 줄에서 제일 먼저 찾는 값이다 — 맨 위에 크게, 주말은
+            요일 색으로(토 파랑 · 일 빨강). 그 아래에 D-day 칩과 킥오프 시각. */}
         <span className="mdr__dt num">
-          {kstShortDate(match.kickoffUtc)}
-          {!done && <b>{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>}
+          <span className="mdr__date">
+            <b>{kp.month}.{kp.date}</b>
+            <i data-wd={kp.weekday}>{kp.weekdayKo}</i>
+          </span>
+          {!done && <b className="mdr__time">{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>}
         </span>
       </span>
     </button>

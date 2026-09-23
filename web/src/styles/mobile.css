@@ -282,7 +282,13 @@
     padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--text-mid);
   }
   .mdr__ha[data-home] { color: var(--team); border-color: color-mix(in srgb, var(--team) 50%, transparent); }
-  .mdr__when { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  /* 오른쪽 칸: 1줄 = 날짜(크게), 2줄 = D-day 칩 · 킥오프 시각 (끝난 경기는 스코어) */
+  .mdr__when {
+    display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end;
+    align-items: center; column-gap: 7px; row-gap: 5px;
+  }
+  .mdr__when > :first-child { grid-row: 2; grid-column: 1; }
+  .mdr__when > .mdr__score:first-child { grid-column: 1 / -1; }
   .mdr__dday {
     font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
     color: var(--team); background: color-mix(in srgb, var(--team) 20%, transparent);
@@ -297,8 +303,21 @@
   .mdr__score { font-family: var(--font-display); font-size: 17px; color: var(--text-hi); }
   .mdr__score i { font-style: normal; opacity: .5; margin: 0 2px; }
   .mdr__score[data-r='L'] { color: var(--text-mid); }
-  .mdr__dt { display: flex; align-items: baseline; gap: 6px; font-size: 11px; color: var(--text-lo); white-space: nowrap; }
-  .mdr__dt b {
+  .mdr__dt { display: contents; }
+  .mdr__date {
+    grid-row: 1; grid-column: 1 / -1;
+    display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap;
+  }
+  .mdr__date b {
+    font-family: var(--font-display); font-size: 16px; font-weight: 800;
+    letter-spacing: -.01em; color: var(--text-hi);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--team) 45%, transparent);
+  }
+  .mdr__date i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--text-mid); }
+  .mdr__date i[data-wd='6'] { color: #8FB8FF; }
+  .mdr__date i[data-wd='0'] { color: #FF8DA1; }
+  .mdr__time {
+    grid-row: 2; grid-column: 2;
     font-family: var(--font-display); font-size: 15px; font-weight: 700;
     color: color-mix(in srgb, var(--team) 50%, #FFFFFF);
   }
