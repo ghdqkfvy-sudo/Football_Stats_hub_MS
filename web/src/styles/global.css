@@ -2431,6 +2431,19 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 .mdh__soon { font-family: var(--font-display); font-size: 22px; color: var(--team); }
 
+/* 끝난 경기가 히어로에 올라왔을 때 — 카운트다운 자리에 결과 한 줄 */
+.mdh__cd[data-done] { justify-content: center; }
+.mdh__fin {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--text-mid);
+}
+.mdh__fin b {
+  font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1;
+  letter-spacing: 0; color: var(--team);
+  text-shadow: 0 0 24px color-mix(in srgb, var(--team) 45%, transparent);
+}
+.mdh__fin b i { font-style: normal; margin: 0 4px; color: var(--text-lo); font-weight: 500; }
+
 /* 히어로 카드의 펄스닷 — 팀 캘린더에서 선택된 막대가 숨 쉬는 것과 같은 리듬.
    "지금 크게 보고 있는 경기" 라는 표시다. LIVE 일 때는 LIVE 배지가 이미
    깜빡이므로 겹치지 않게 내보내지 않는다. */

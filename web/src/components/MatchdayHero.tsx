@@ -148,7 +148,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
               살아 있음을 펄스로 알린다. 배지 **안**에 두는 이유는 좁은
               화면에서 머리줄이 접힐 때 점만 홀로 떨어지지 않게 하기 위해서다.
               LIVE 일 때는 LIVE 배지가 이미 깜빡이므로 내보내지 않는다. */}
-          {hero && !live && <span className="mdh__pulse" aria-hidden="true" />}
+          {hero && !live && !done && <span className="mdh__pulse" aria-hidden="true" />}
         </span>
         <span className="mdh__comp">
           <CompCrest k={match.competition} size={hero ? 16 : 13} />
@@ -181,13 +181,25 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
           <div className="mdh__when">
             <div className="mdh__date">{kstFullDate(match.kickoffUtc)}</div>
             <div className="mdh__time">
-              <span className="mdh__ico">{ALARM}</span>
+              {!done && <span className="mdh__ico">{ALARM}</span>}
               <b>{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
               {!match.timeTBD && <em>KST</em>}
             </div>
             {match.venue && <div className="mdh__venue">{PIN}{match.venue}</div>}
           </div>
-          {!live && <Countdown iso={match.kickoffUtc} />}
+          {/* 주간 캘린더에서 지난 경기를 고르면 히어로에 끝난 경기가 올라온다.
+              그때 카운트다운을 그리면 "0일 00:00:00" 이나 "곧 시작" 이 뜬다 —
+              대신 결과 한 줄을 놓는다. */}
+          {done
+            ? (
+              <div className="mdh__cd" data-done="true">
+                <span className="mdh__fin">
+                  경기 종료
+                  <b className="num">{match.homeScore}<i>-</i>{match.awayScore}</b>
+                </span>
+              </div>
+            )
+            : !live && <Countdown iso={match.kickoffUtc} />}
         </>
       ) : (
         /*

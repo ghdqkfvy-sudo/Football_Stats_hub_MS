@@ -57,13 +57,28 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
 
   /* ── 매치데이 히어로 ──────────────────────────────── */
   const board = useMemo(() => nextUpBoard(teamFeeds), [teamFeeds]);
-  /** 사용자가 카드나 날짜로 고른 팀 — 없으면 가장 가까운 경기의 팀 */
-  const [pickedTeam, setPickedTeam] = useState<string | null>(null);
-  const heroId = (pickedTeam && board.some((b) => b.teamId === pickedTeam))
-    ? pickedTeam
-    : board[0]?.teamId ?? null;
-  const hero = board.find((b) => b.teamId === heroId);
-  const rest = board.filter((b) => b.teamId !== heroId);
+
+  /*
+   * 사용자가 고른 **경기 하나**. 예전에는 팀 id 만 들고 있었는데, 히어로는
+   * 늘 `board`(팀별 *다음* 경기)에서 찾았다. 그래서 주간 캘린더에서 다음
+   * 경기 **이후**의 경기를 눌러도 히어로는 그 팀의 다음 경기 그대로였고,
+   * 이미 그 팀이 히어로면 아무 일도 안 일어난 것처럼 보였다.
+   * 이제 누른 경기를 그대로 띄운다.
+   *
+   * 저장은 id 로 한다 — Match 객체를 들고 있으면 데이터가 갱신될 때
+   * 옛 객체가 화면에 남는다. 매번 피드에서 다시 찾는다.
+   */
+  const [picked, setPicked] = useState<{ teamId: string; matchId: string } | null>(null);
+  const pickedUp = useMemo(() => {
+    if (!picked) return null;
+    const m = teamFeeds.find((f) => f.id === picked.teamId)?.matches
+      .find((x) => x.id === picked.matchId);
+    return m ? { teamId: picked.teamId, match: m } : null;
+  }, [picked, teamFeeds]);
+
+  const hero = pickedUp ?? board[0] ?? null;
+  /* 히어로로 올라간 팀은 아래 카드에서 뺀다 — 같은 팀이 두 번 나오면 헷갈린다 */
+  const rest = board.filter((b) => b.teamId !== hero?.teamId);
 
   /* ── 주간 캘린더 ──────────────────────────────────── */
   const byDay = useMemo(() => matchesByDay(teamFeeds), [teamFeeds]);
@@ -93,21 +108,10 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     setSelDay(k);
     setSelIdx(i);
 
-    /*
-     * ⚠️ 여기서 캘린더가 엉뚱한 주로 날아가던 버그가 있었다.
-     *
-     * `board` 는 팀별 **다음 경기**만 담는다. 그래서 지난 경기를 누르면
-     * 히어로는 누른 그 경기가 아니라 그 팀의 다음 경기가 된다. 아래
-     * 이펙트는 "히어로가 바뀌었다" 고 보고 **다음 경기가 있는 주로**
-     * 캘린더를 옮겨 버렸다 — 방금 누른 자리에서 튕겨 나가는 것처럼 보인다.
-     *
-     * 예전 가드는 누른 경기 id 를 적어 뒀는데, 이펙트가 보는 값은 히어로
-     * 경기 id 라 서로 달라 가드가 걸리지 않았다. 실제로 히어로가 될 경기의
-     * id 를 미리 적어 둔다.
-     */
-    const teamId = list[i].teamId;
-    lastHero.current = board.find((b) => b.teamId === teamId)?.match.id ?? list[i].match.id;
-    setPickedTeam(teamId);
+    /* 히어로는 이제 **누른 그 경기**다. 미리 적어 두면 아래 이펙트가
+       "히어로가 바뀌었다" 며 주를 옮기지 않는다 — 방금 누른 자리에 있어야 한다. */
+    lastHero.current = list[i].match.id;
+    setPicked({ teamId: list[i].teamId, matchId: list[i].match.id });
   };
 
   /* ── 대회 순위 ────────────────────────────────────── */
@@ -226,7 +230,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
                   target={targetOf(b.teamId)}
                   match={b.match}
                   standingOf={standingOf}
-                  onSelect={() => setPickedTeam(b.teamId)}
+                  onSelect={() => setPicked({ teamId: b.teamId, matchId: b.match.id })}
                 />
               ))}
             </div>
