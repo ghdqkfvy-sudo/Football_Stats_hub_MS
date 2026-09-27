@@ -153,6 +153,7 @@ function FutureCard({
     competition: gm.competition,
     result: gm.result,
     opponent: gm.opponent,
+    opponentId: gm.opponentId,
     score: gm.score,
     started: gm.started,
     minutes: gm.minutes,

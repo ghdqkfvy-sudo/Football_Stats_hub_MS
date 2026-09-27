@@ -1903,7 +1903,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   align-items: center; gap: 8px; padding: 7px 0; font-size: 11.5px; color: var(--text-mid);
 }
 .krr__c { width: 3px; height: 15px; border-radius: 2px; }
-.krr__opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* "vs [상대 엠블럼] 상대팀" — 엠블럼은 줄지 않고 이름만 말줄임 */
+.krr__opp { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.krr__opp i { font-style: normal; color: var(--text-lo); flex: none; }
+.krr__opp > img, .krr__opp > .mono { flex: none; }
+.krr__opp b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .krr__sc { text-align: right; font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-hi); }
 .krr__m { grid-column: 3 / -1; font-size: 10.5px; color: var(--accent); text-align: right; }
 .krr__gg, .krr__aa {

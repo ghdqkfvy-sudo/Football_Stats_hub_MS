@@ -38,6 +38,8 @@ export interface RecentLine {
   competition?: string;
   result?: 'W' | 'D' | 'L';
   opponent: string;
+  /** ESPN 팀 id — 상대 엠블럼 */
+  opponentId?: string;
   score?: string;
   /** 선발 여부 — undefined 면 "확인 못 했다"(0분으로 꾸미지 않는다) */
   started?: boolean;
@@ -262,7 +264,22 @@ function RecentPanel({
           <div className="krr__g" key={i}>
             {gm.result ? <i className="fchip" data-r={gm.result}>{gm.result}</i> : <i />}
             <i className="krr__c" style={{ background: palette.color(gm.competition ?? '') }} />
-            <span className="krr__opp">vs {gm.opponent || '—'}</span>
+            <span className="krr__opp">
+              <i>vs</i>
+              {gm.opponentId && gm.opponentId !== '0' && (
+                <Crest
+                  team={{
+                    id: gm.opponentId,
+                    name: gm.opponent,
+                    shortName: gm.opponent,
+                    abbr: gm.opponent.slice(0, 3).toUpperCase(),
+                    logo: CREST(gm.opponentId),
+                  }}
+                  size={16}
+                />
+              )}
+              <b>{gm.opponent || '—'}</b>
+            </span>
             <span className="krr__sc num">{gm.score ?? ''}</span>
             <span className="krr__m num">
               {/* 선발/교체·출전시간은 경기 로스터에서 온 실제 값일 때만 적는다.
