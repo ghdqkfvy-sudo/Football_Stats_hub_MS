@@ -33,9 +33,16 @@ export function Headshot({
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  /*
+   * 실패는 **그 주소에 대해서만** 기억한다(Crest 와 같은 규칙).
+   * 예전에는 한 번 실패하면 영영 글자 배지였다 — Future Resources 는 카드가
+   * 피드보다 먼저 그려져서, 처음엔 사진 주소가 없어 관용 ESPN 주소를 시도하다
+   * 404 가 났고, 곧이어 피드가 진짜 사진 주소를 줘도 다시 시도하지 않았다.
+   */
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
   const url = src || headshot(id);
+  const failed = !!url && failedUrl === url;
 
   if (failed || !url) {
     return (
@@ -51,11 +58,12 @@ export function Headshot({
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
       <img
+        key={url}
         src={url}
         alt=""
         loading="lazy"
         data-kind={kind ?? undefined}
-        onError={() => setFailed(true)}
+        onError={() => setFailedUrl(url)}
       />
       {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
     </span>
