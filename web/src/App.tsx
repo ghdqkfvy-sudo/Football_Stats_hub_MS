@@ -267,7 +267,7 @@ export default function App() {
                     onClick={() => openTeam(t.id)}
                     aria-label={t.name}
                   >
-                    <img src={t.crest} alt="" />
+                    <img src={t.crest} alt="" className={t.darkCrest ? 'crest' : undefined} />
                     <span className="pill__name">{t.name}</span>
                   </button>
                 ))}
@@ -347,6 +347,7 @@ export default function App() {
           show={hdrOut}
           summary={summary}
           crest={target.crest}
+          darkCrest={!!target.darkCrest}
           name={summary ? 'Summary' : target.name}
           tabs={tabs}
           tab={tab}

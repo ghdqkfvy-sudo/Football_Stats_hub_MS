@@ -72,6 +72,12 @@ export interface Target {
   subtitle?: string;
   crest: string;
   /**
+   * 엠블럼이 통째로 어두운 팀(토트넘 남색 수탉). 헤더 팀 전환 알약처럼
+   * <Crest> 를 쓰지 않는 작은 자리에도 흰 윤곽(.crest)을 둘러
+   * 어두운 배경에서 형체가 보이게 한다 — Summary 엠블럼과 같은 효과.
+   */
+  darkCrest?: boolean;
+  /**
    * 배경 아트워크. 없으면 팀 컬러 그라디언트로 떨어진다 —
    * 사진을 구하지 못한 팀 때문에 팀 추가가 막히지 않게 한다.
    */
@@ -209,6 +215,7 @@ export const TARGETS: Target[] = [
     nameEn: 'Tottenham Hotspur',
     abbr: 'TOT',
     crest: CREST('367'),
+    darkCrest: true,
     bg: bgTot,
     bgKind: 'photo',
     theme: {

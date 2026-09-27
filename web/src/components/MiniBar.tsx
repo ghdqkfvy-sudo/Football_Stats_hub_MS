@@ -20,6 +20,7 @@ interface Props {
   show: boolean;
   summary: boolean;
   crest: string;
+  darkCrest: boolean;
   name: string;
   tabs: { id: string; label: string; short?: string }[];
   tab: string;
@@ -28,11 +29,13 @@ interface Props {
 
 const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-export function MiniBar({ show, summary, crest, name, tabs, tab, onTab }: Props) {
+export function MiniBar({ show, summary, crest, darkCrest, name, tabs, tab, onTab }: Props) {
   return (
     <div className="mbar" data-show={show || undefined} inert={!show}>
       <button className="mbar__id" onClick={toTop} aria-label={`${name} · 맨 위로`}>
-        {summary ? <span className="mbar__star">★</span> : <img src={crest} alt="" />}
+        {summary
+          ? <span className="mbar__star">★</span>
+          : <img src={crest} alt="" className={darkCrest ? 'crest' : undefined} />}
       </button>
 
       {summary ? (
