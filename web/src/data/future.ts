@@ -114,12 +114,6 @@ export const FUTURE: FuturePlayer[] = [
 
   /* ── Manchester United ──────────────────────────── */
   {
-    id: '276221', name: 'Mason Greenwood', parentTeamId: '360', kind: 'sellon',
-    club: 'Fenerbahce', league: 'tur.1', pos: 'F',
-    note: '50% 셀온 (사용자 제보). 제보는 마르세유였지만 ESPN 현 소속은 Fenerbahce — 화면은 ESPN 을 따른다',
-    checked: '2026-09-28',
-  },
-  {
     id: '215340', name: 'André Onana', parentTeamId: '360', kind: 'loan',
     club: 'Trabzonspor', league: 'tur.1', pos: 'G', checked: '2026-09-28',
   },
