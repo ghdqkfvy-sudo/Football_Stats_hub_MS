@@ -74,7 +74,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-18';
+const CODE_VERSION = 'snap-19';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -1487,6 +1487,42 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
   };
 }
 
+/**
+ * FIFA 남자 랭킹 — 위키백과 Module:SportsRankings/data/FIFA_World_Rankings.
+ * 줄마다 `{ "Korea Republic", 32, -7, 1558.72 }` (이름, 순위, 변동, 점수) 형식이다.
+ * 이름은 FIFA 표기(Korea Republic · IR Iran · USA …)라 앱 쪽에서 ESPN 표기와
+ * 맞춘다(web/src/lib/fifa.ts). 150개국 미만이면 형식이 바뀐 것으로 보고 버린다.
+ */
+async function fifaRanking() {
+  const url = 'https://en.wikipedia.org/w/index.php?title=Module:SportsRankings/data/FIFA_World_Rankings&action=raw';
+  let text = '';
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': 'k-stats-hub-snapshot/1.0 (github actions)' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    text = await res.text();
+  } catch (e) {
+    console.error(`  ✗ ${url} — ${e.message}`);
+    return null;
+  }
+  const ranks = {};
+  for (const m of text.matchAll(/\{\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(-?\d+)\s*,\s*([\d.]+)\s*\}/g)) {
+    ranks[m[1]] = Number(m[2]);
+  }
+  if (Object.keys(ranks).length < 150) return null;
+  const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const up = text.match(/data\.updated\s*=\s*\{\s*day\s*=\s*(\d+)\s*,\s*month\s*=\s*'(\w+)'\s*,\s*year\s*=\s*(\d+)/);
+  const mi = up ? MONTHS.indexOf(up[2].toLowerCase()) : -1;
+  const updated = up && mi >= 0
+    ? `${up[3]}-${String(mi + 1).padStart(2, '0')}-${String(up[1]).padStart(2, '0')}`
+    : '';
+  return {
+    updated,
+    source: "FIFA/Coca-Cola Men's World Ranking (Wikipedia Module:SportsRankings/data/FIFA_World_Rankings)",
+    fetchedAt: new Date().toISOString(),
+    ranks,
+  };
+}
+
 async function main() {
   await mkdir(OUT, { recursive: true });
   console.log(`스냅샷 시작 → ${OUT}`);
@@ -1902,6 +1938,21 @@ async function main() {
       note('코리안리거', '0명 — 기존 파일 유지');
     } else {
       note('코리안리거', '0명이고 기존 파일도 없음');
+    }
+  }
+
+  /* ── FIFA 랭킹 (slow) ─────────────────────────────────
+     국가대표 히어로의 팀명 아래 "FIFA 32위". 공식 API 는 인증·날짜 id 가
+     필요해 위키백과가 공식 발표마다 갱신하는 데이터 모듈을 읽는다
+     (출처·기준일을 파일에 같이 적는다). 실패하면 기존 파일을 그대로 둔다 —
+     한 달에 한 번 바뀌는 값이라 며칠 늦어도 틀린 값은 아니다. */
+  if (wants('slow')) {
+    const r = await fifaRanking();
+    if (r) {
+      await save('fifa-ranking.json', r);
+      console.log(`    FIFA 랭킹 ${Object.keys(r.ranks).length}개국 (${r.updated} 기준)`);
+    } else {
+      console.error('  ! FIFA 랭킹: 받지 못함 — 기존 파일 유지');
     }
   }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFifaRank } from '../lib/fifa';
 import type { Match, StandingTable } from '../lib/types';
 import type { Target } from '../config/targets';
 import { dayKey, monthKey } from '../lib/kst';
@@ -108,6 +109,8 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
   const leagueTable = tables[leagueKey] ?? null;
   const matchTable = matchKey ? (tables[matchKey] ?? null) : null;
 
+  /* 국가대표는 순위표가 없다 — 대신 FIFA 랭킹을 팀명 아래에 */
+  const { fifaOf } = useFifaRank();
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<Match | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -194,7 +197,12 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
 
   return (
     <div className="page">
-      {heroMatch && <NextMatchHero match={heroMatch} focusTeamId={target.espnTeamId} standingOf={standingOf} />}
+      {heroMatch && <NextMatchHero
+          match={heroMatch}
+          focusTeamId={target.espnTeamId}
+          standingOf={standingOf}
+          fifaOf={target.kind === 'national' ? fifaOf : undefined}
+        />}
       {heroMatch && extras?.preview?.eventId === heroMatch.id && (
         <MatchPreview
           match={heroMatch}

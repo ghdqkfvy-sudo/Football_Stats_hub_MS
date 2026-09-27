@@ -1830,3 +1830,12 @@ CSS 로 못 하는 것만 `lib/useMedia.ts`(`useIsMobile`, 기준 640px)로 고�
 풀기 **전에** 태그를 지우고 있었다.
 **되돌리기**: `rollback-mobile.bat` 을 실행하면 `1`(2차만 · 기본) 또는 `2`(1차+2차)를 고른다.
 이미 되돌린 커밋은 건너뛴다. 2차 직전 지점은 로컬 태그 `backup/pre-mobile-ux2` 다.
+
+### FIFA 랭킹 (국가대표 히어로)
+
+국가대표 경기에는 순위표가 없어서 팀명 아래에 **FIFA 남자 랭킹**을 적는다
+(팀 탭 히어로 · Summary 다음 경기 카드). 스냅샷(slow)이 위키백과
+`Module:SportsRankings/data/FIFA_World_Rankings` 를 읽어 `fifa-ranking.json`
+(기준일 `updated` 포함)으로 저장한다 — FIFA 공식 API 는 날짜 id 와 인증이 필요하다.
+파일의 이름은 FIFA 표기(Korea Republic · IR Iran · USA)라 `web/src/lib/fifa.ts` 가
+ESPN 표기(South Korea · Iran · United States)와 별칭으로 맞춘다. 못 맞춘 나라는 비워 둔다.

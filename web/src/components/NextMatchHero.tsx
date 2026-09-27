@@ -4,6 +4,7 @@ import { countdown, kstFullDate, kstTime } from '../lib/kst';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { usePalette } from '../lib/palette';
+import type { FifaOf } from '../lib/fifa';
 
 /** 히어로에 붙는 팀 성적 요약 — 리그 순위와 승/무/패 */
 export interface TeamStanding {
@@ -19,6 +20,8 @@ interface Props {
   focusTeamId: string;
   /** 팀순위 데이터에서 주입 — 없으면 해당 줄을 비운다 */
   standingOf?: (teamId: string) => TeamStanding | undefined;
+  /** 국가대표 경기일 때만 — 팀명 아래 "FIFA 32위" */
+  fifaOf?: FifaOf;
 }
 
 const PIN = (
@@ -49,11 +52,12 @@ const ALARM = (
  * (이 화면은 1초마다 카운트다운으로 리렌더된다 — 매초 두 번씩 버린 셈이다).
  */
 function TeamTile({
-  t, focus, standing,
+  t, focus, standing, fifa,
 }: {
   t: Match['home'];
   focus: boolean;
   standing?: TeamStanding;
+  fifa?: number;
 }) {
   return (
     <div className="fxt" data-focus={focus}>
@@ -68,11 +72,16 @@ function TeamTile({
           {standing.win}W {standing.draw}D {standing.loss}L
         </div>
       )}
+      {!standing && fifa !== undefined && (
+        <div className="fxt__rec num" title="FIFA 남자 랭킹">
+          FIFA <b>{fifa}위</b>
+        </div>
+      )}
     </div>
   );
 }
 
-export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
+export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf }: Props) {
   const palette = usePalette();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -107,7 +116,7 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
       </div>
 
       <div className="hero__fx">
-        <TeamTile t={match.home} focus={match.home.id === focusTeamId} standing={standingOf?.(match.home.id)} />
+        <TeamTile t={match.home} focus={match.home.id === focusTeamId} standing={standingOf?.(match.home.id)} fifa={fifaOf?.(match.home)} />
         <div className="fxvs">
           {done || live ? (
             <span className="num">
@@ -119,7 +128,7 @@ export function NextMatchHero({ match, focusTeamId, standingOf }: Props) {
             'VS'
           )}
         </div>
-        <TeamTile t={match.away} focus={match.away.id === focusTeamId} standing={standingOf?.(match.away.id)} />
+        <TeamTile t={match.away} focus={match.away.id === focusTeamId} standing={standingOf?.(match.away.id)} fifa={fifaOf?.(match.away)} />
       </div>
 
       <div className="hero__when">
