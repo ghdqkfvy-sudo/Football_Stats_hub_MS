@@ -311,8 +311,9 @@
   .mdr__date:last-child { grid-column: 1 / -1; }
   /* 날짜 · 요일 · 시각은 **같은 글꼴 · 같은 크기 · 같은 굵기** — 색으로만 가른다
      (날짜 흰색 · 요일 회색, 토 파랑 · 일 빨강 · 시각 팀 컬러) */
+  /* 본문 글꼴(Archivo)에는 한글이 없어 요일만 다른 글꼴로 떨어졌다 — 셋 다 Noto Sans KR */
   .mdr__date b, .mdr__date i, .mdr__time {
-    font-family: var(--font-body); font-size: 13px; font-weight: 700;
+    font-family: 'Noto Sans KR', var(--font-body); font-size: 13px; font-weight: 700;
     font-style: normal; letter-spacing: 0; line-height: 1;
   }
   .mdr__date b { color: var(--text-hi); }

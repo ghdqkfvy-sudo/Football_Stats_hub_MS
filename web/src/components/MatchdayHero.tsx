@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
 import { SUMMARY_OPP, comp, summaryColor, type Target } from '../config/targets';
-import { countdown, dayKey, kstFullDate, kstParts, kstShortDate, kstTime, todayKey } from '../lib/kst';
+import { countdown, dayKey, kstFullDate, kstParts, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
+import { useFifaRank } from '../lib/fifa';
 
 /**
  * Summary 의 매치데이 카드.
@@ -89,11 +90,13 @@ function Countdown({ iso }: { iso: string }) {
 
 /** 한 팀 — 엠블럼 타일 + 이름 + 순위·승무패 */
 function Side({
-  team, focus, standing, big,
+  team, focus, standing, fifa, big,
 }: {
   team: Match['home'];
   focus: boolean;
   standing?: TeamStanding;
+  /** 국가대표 경기면 FIFA 랭킹 (순위표가 없으므로) */
+  fifa?: number;
   big: boolean;
 }) {
   return (
@@ -109,6 +112,9 @@ function Side({
           {standing.win}W {standing.draw}D {standing.loss}L
         </span>
       )}
+      {!standing && fifa !== undefined && (
+        <span className="mdt__rec num" title="FIFA 남자 랭킹">FIFA <b>{fifa}위</b></span>
+      )}
     </div>
   );
 }
@@ -120,6 +126,10 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
   const done = match.status === 'finished';
   const dd = dday(match.kickoffUtc);
   const Tag = onSelect ? 'button' : 'div';
+  const kp = kstParts(match.kickoffUtc);
+  /* 국가대표(대한민국) 경기에는 순위표 대신 FIFA 랭킹 — 팀 탭 히어로와 같다 */
+  const { fifaOf } = useFifaRank();
+  const fifa = (t: Match['home']) => (target.kind === 'national' ? fifaOf(t) : undefined);
 
   return (
     <Tag
@@ -159,7 +169,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       </header>
 
       <div className="mdh__fx">
-        <Side team={match.home} focus={home} standing={standingOf?.(match.home.id)} big={hero} />
+        <Side team={match.home} focus={home} standing={standingOf?.(match.home.id)} fifa={fifa(match.home)} big={hero} />
         <div className="mdh__vs">
           {done
             ? (
@@ -173,7 +183,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
             )
             : <span className="num">VS</span>}
         </div>
-        <Side team={match.away} focus={!home} standing={standingOf?.(match.away.id)} big={hero} />
+        <Side team={match.away} focus={!home} standing={standingOf?.(match.away.id)} fifa={fifa(match.away)} big={hero} />
       </div>
 
       {hero ? (
@@ -210,7 +220,11 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
         <footer className="mdh__foot">
           <div className="mdh__kick" data-tone={dd.tone}>
             <em className="mdh__dday">{done ? '종료' : dd.text}</em>
-            <b className="mdh__kdate num">{kstShortDate(match.kickoffUtc)}</b>
+            {/* 날짜 · 요일 · 시각은 같은 글꼴 · 같은 크기 — 색으로만 가른다 */}
+            <b className="mdh__kdate num">
+              {kp.month}.{kp.date}
+              <i data-wd={kp.weekday}>{kp.weekdayKo}</i>
+            </b>
             <b className="mdh__ktime num">{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
           </div>
           {match.venue && <span className="mdh__venue">{PIN}{match.venue}</span>}

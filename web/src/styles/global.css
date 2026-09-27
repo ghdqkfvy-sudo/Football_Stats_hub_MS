@@ -2607,15 +2607,21 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   color: var(--text-mid);
   background: transparent; border-color: var(--line-2);
 }
-.mdh__kdate {
-  font-family: var(--font-body); font-size: 13px; font-weight: 700;
-  color: var(--text-hi); letter-spacing: -.01em; white-space: nowrap;
+.mdh__kdate, .mdh__ktime {
+  /*
+   * 날짜 · 요일 · 시각을 **한 글꼴**로.
+   * 본문 글꼴(Archivo)에는 한글이 없어서 요일 "토" 만 Noto Sans KR 로 떨어졌고,
+   * 시각은 디스플레이 글꼴 17px 이었다 — 한 줄에 글꼴이 셋이라 크기와
+   * 굵기가 제각각으로 보였다. 셋 다 Noto Sans KR 13px 로 맞추고 색으로만 가른다.
+   */
+  font-family: 'Noto Sans KR', var(--font-body); font-size: 13px; font-weight: 700;
+  line-height: 1; letter-spacing: 0; white-space: nowrap;
 }
-.mdh__ktime {
-  font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1;
-  color: var(--team); letter-spacing: -.01em; white-space: nowrap;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--team) 45%, transparent);
-}
+.mdh__kdate { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-hi); }
+.mdh__kdate i { font-style: normal; color: var(--text-mid); }
+.mdh__kdate i[data-wd='6'] { color: #8FB8FF; }
+.mdh__kdate i[data-wd='0'] { color: #FF8DA1; }
+.mdh__ktime { color: color-mix(in srgb, var(--team) 55%, #FFFFFF); }
 
 /* ── 주간 캘린더 ─────────────────────────────────────── */
 .wcal { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
