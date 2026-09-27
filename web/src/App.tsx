@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import './styles/global.css';
 /* 좁은 화면 전용 덮어쓰기 — global.css 뒤에 와야 이긴다 */
 import './styles/mobile.css';
-import { TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
+import { OUR_TEAM_IDS, TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { loadSchedule, type Source } from './lib/api';
 import { ScheduleTab } from './tabs/ScheduleTab';
@@ -13,7 +13,7 @@ import { NewsTab } from './tabs/NewsTab';
 import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
-import { Crest } from './components/Crest';
+import { Crest, CrestGlowScope } from './components/Crest';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SummaryTab } from './tabs/SummaryTab';
 import { MiniBar } from './components/MiniBar';
@@ -164,6 +164,12 @@ export default function App() {
     return () => io.disconnect();
   }, [mobile]);
 
+  /* 엠블럼 윤곽 범위 — Summary 는 우리 일곱 팀, 팀 탭은 그 팀만 (components/Crest) */
+  const glowScope = useMemo<ReadonlySet<string>>(
+    () => (summary ? OUR_TEAM_IDS : new Set([target.espnTeamId])),
+    [summary, target.espnTeamId],
+  );
+
   const themeVars = useMemo(
     () =>
       ({
@@ -179,6 +185,7 @@ export default function App() {
 
   return (
     <PaletteProvider target={target}>
+    <CrestGlowScope.Provider value={glowScope}>
     <div style={themeVars}>
       {/* 팀 배경 아트워크 — 콘텐츠 뒤에서 어둡게 깔린다 */}
       <div className="bgart" data-kind={summary ? 'summary' : target.bgKind} aria-hidden="true">
@@ -378,6 +385,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
     </div>
+    </CrestGlowScope.Provider>
     </PaletteProvider>
   );
 }

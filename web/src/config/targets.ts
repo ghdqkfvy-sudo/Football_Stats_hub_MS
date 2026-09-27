@@ -338,6 +338,10 @@ export const TARGETS: Target[] = [
  * 전체에 빛을 두르면 강조가 아니라 배경이 된다.
  */
 export const OUR_TEAM_IDS: ReadonlySet<string> = new Set(TARGETS.map((t) => t.espnTeamId));
+/** 엠블럼이 통째로 어두운 팀 — 어느 화면이든(상대 팀일 때도) 흰 윤곽을 준다 */
+export const DARK_CREST_IDS: ReadonlySet<string> = new Set(
+  TARGETS.filter((t) => t.darkCrest).map((t) => t.espnTeamId),
+);
 
 /**
  * 표에서 "이 줄이 우리 팀" 이라고 말할 색.

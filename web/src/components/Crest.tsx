@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import type { TeamRef } from '../lib/types';
 import { tintOf } from '../config/crestTint';
-import { OUR_TEAM_IDS } from '../config/targets';
+import { DARK_CREST_IDS, OUR_TEAM_IDS } from '../config/targets';
+
+/**
+ * 이 화면에서 흰 윤곽을 줄 팀들.
+ * Summary 는 우리 일곱 팀 전부, 팀 탭은 **그 팀 하나**(App 이 바꿔 끼운다).
+ * 예전에는 어느 화면이든 일곱 팀 전부였다 — 첼시 탭 일정표에서 상대인
+ * 맨유·리버풀까지 빛나 "우리 팀" 강조가 흐려졌다.
+ * 엠블럼이 통째로 어두운 팀(토트넘)은 이와 상관없이 늘 윤곽을 준다(DARK_CREST_IDS).
+ */
+export const CrestGlowScope = createContext<ReadonlySet<string>>(OUR_TEAM_IDS);
 
 /**
  * 엠블럼. 기본은 ESPN CDN 이미지이고, 로드에 실패하면 팀 컬러 배지로 폴백한다.
@@ -22,6 +31,7 @@ export function Crest({ team, size = 24, className = '', glow }: {
      예전에는 한 번 실패하면 그 자리에 다른 팀이 와도 계속 글자 배지로
      떨어졌다(팀을 바꿔도 컴포넌트는 같은 자리에 남아 상태가 살아 있었다).
      그래서 대한민국으로 바꿔도 태극 문양 대신 'KOR' 글자가 떴다. */
+  const scope = useContext(CrestGlowScope);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const failed = !!team.logo && failedSrc === team.logo;
   const label = team.abbr || team.shortName.replace(/\s/g, '').slice(0, 3);
@@ -49,7 +59,7 @@ export function Crest({ team, size = 24, className = '', glow }: {
      리버풀 간판처럼 어두운 픽셀이 100% 인 엠블럼이 어두운 배경에 묻히는 것을
      막는다(global.css 참고). 상대 팀까지 전부 두르면 강조가 사라지므로
      기본은 우리 일곱 팀만이다. */
-  const lit = glow ?? OUR_TEAM_IDS.has(team.id);
+  const lit = DARK_CREST_IDS.has(team.id) || (glow ?? scope.has(team.id));
   return (
     <img
       className={`${lit ? 'crest' : ''} ${className}`.trim()}
