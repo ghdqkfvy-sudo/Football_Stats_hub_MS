@@ -390,6 +390,39 @@ export async function loadNews(
 
 /* ── Future Resources (임대·바이백·셀온) ───────────────── */
 
+/**
+ * 조항 선수 전원 — 코리안리거와 **같은 모양**(KoreanPlayer[]).
+ *
+ * future.json 은 2026-09-28 부터 코리안리거 수집기로 만든 players 배열이다
+ * (format: 2 — 헤드샷 · 소속 엠블럼 · 나이 · 대회별 줄). 그 전 파일(players 가
+ * id → 리그 합계 맵)이 남아 있으면 같은 모양으로 옮겨 담는다 — 새 파일이
+ * 뜨기 전 한 시간 동안 카드가 비지 않게.
+ */
+export async function loadFuturePlayers(): Promise<Loaded<KoreanPlayer[]>> {
+  return load<KoreanPlayer[]>({
+    feedFile: 'future.json',
+    pick: (json) => {
+      const ps = json?.players;
+      if (Array.isArray(ps)) return ps as KoreanPlayer[];
+      if (!ps || typeof ps !== 'object') return [];
+      return Object.entries(ps as Record<string, FutureStat>).map(([id, v]): KoreanPlayer => ({
+        id, name: '', nameKo: '', pos: 'M', age: 0,
+        clubId: '0', club: v.club ?? '', league: v.league ?? '', leagueName: v.league ?? '',
+        stats: v.apps ? [{
+          competition: v.league ?? '', label: '리그',
+          apps: v.apps, starts: v.starts ?? v.apps, minutes: v.minutes ?? 0,
+          goals: v.goals, assists: v.assists, yellow: 0, red: 0,
+        }] : [],
+        recent: (v.recent ?? []).map((g) => ({
+          competition: v.league ?? '', opponent: g.opponent, score: g.score ?? '',
+          goals: g.goals, assists: g.assists, opponentId: '',
+        } as unknown as KoreanPlayer['recent'][number])),
+      }));
+    },
+    fallback: [],
+  });
+}
+
 export interface FutureStat {
   club?: string;
   /** 지금 뛰는 리그 — 선수가 옮기면 큐레이션 파일보다 이 값이 맞다 */

@@ -111,6 +111,62 @@ export const FUTURE: FuturePlayer[] = [
     id: '231718', name: 'Axel Disasi', parentTeamId: '363', kind: 'loan',
     club: 'Crystal Palace', league: 'eng.1', pos: 'D',
   },
+
+  /* ── Manchester United ──────────────────────────── */
+  {
+    id: '276221', name: 'Mason Greenwood', parentTeamId: '360', kind: 'sellon',
+    club: 'Fenerbahce', league: 'tur.1', pos: 'F',
+    note: '50% 셀온 (사용자 제보). 제보는 마르세유였지만 ESPN 현 소속은 Fenerbahce — 화면은 ESPN 을 따른다',
+    checked: '2026-09-28',
+  },
+  {
+    id: '215340', name: 'André Onana', parentTeamId: '360', kind: 'loan',
+    club: 'Trabzonspor', league: 'tur.1', pos: 'G', checked: '2026-09-28',
+  },
+
+  /* ── Tottenham Hotspur ──────────────────────────── */
+  {
+    id: '204082', name: 'Guglielmo Vicario', parentTeamId: '367', kind: 'loan',
+    club: 'Juventus', league: 'ita.1', pos: 'G', note: '1시즌 임대', checked: '2026-09-28',
+  },
+  {
+    id: '297337', name: 'Pape Matar Sarr', parentTeamId: '367', kind: 'loan',
+    club: 'Juventus', league: 'ita.1', pos: 'M', note: '1시즌 임대', checked: '2026-09-28',
+  },
+  {
+    id: '365332', name: 'Mikey Moore', parentTeamId: '367', kind: 'loan',
+    club: 'FC Cologne', league: 'ger.1', pos: 'F', note: '1시즌 임대', checked: '2026-09-28',
+  },
+  {
+    id: '310216', name: 'Radu Drăgușin', parentTeamId: '367', kind: 'loan',
+    club: 'Fiorentina', league: 'ita.1', pos: 'D', checked: '2026-09-28',
+  },
+  {
+    id: '250543', name: 'Kevin Danso', parentTeamId: '367', kind: 'loan',
+    club: 'Sunderland', league: 'eng.1', pos: 'D', checked: '2026-09-28',
+  },
+  {
+    id: '257256', name: 'Manor Solomon', parentTeamId: '367', kind: 'sellon',
+    club: 'West Ham United', league: 'eng.2', pos: 'F', checked: '2026-09-28',
+  },
+  {
+    id: '364962', name: 'Luka Vušković', parentTeamId: '367', kind: 'sellon',
+    club: 'Brighton & Hove Albion', league: 'eng.1', pos: 'D', checked: '2026-09-28',
+  },
+
+  /* ── Newcastle United ───────────────────────────── */
+  {
+    id: '261047', name: 'Sandro Tonali', parentTeamId: '361', kind: 'sellon',
+    club: 'Tottenham Hotspur', league: 'eng.1', pos: 'M', checked: '2026-09-28',
+  },
+  {
+    id: '268782', name: 'Anthony Gordon', parentTeamId: '361', kind: 'sellon',
+    club: 'Barcelona', league: 'esp.1', pos: 'F', checked: '2026-09-28',
+  },
+  {
+    id: '218522', name: 'Bruno Guimarães', parentTeamId: '361', kind: 'sellon',
+    club: 'Arsenal', league: 'eng.1', pos: 'M', checked: '2026-09-28',
+  },
 ];
 
 /** 그 팀의 조항 선수들 (등록 순서 그대로) */

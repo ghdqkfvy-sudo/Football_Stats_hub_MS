@@ -74,7 +74,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-19';
+const CODE_VERSION = 'snap-20';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -121,6 +121,13 @@ const FUTURE = [
   // Chelsea
   ['314858', 'eng.1'], ['227784', 'ita.1'], ['325555', 'eng.1'],
   ['299911', 'eng.1'], ['231718', 'eng.1'],
+  // Manchester United
+  ['276221', 'tur.1'], ['215340', 'tur.1'],
+  // Tottenham Hotspur
+  ['204082', 'ita.1'], ['297337', 'ita.1'], ['365332', 'ger.1'], ['310216', 'ita.1'],
+  ['250543', 'eng.1'], ['257256', 'eng.2'], ['364962', 'eng.1'],
+  // Newcastle United
+  ['261047', 'eng.1'], ['268782', 'esp.1'], ['218522', 'eng.1'],
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1350,7 +1357,7 @@ function leagueLogoOf(slug) {
   return p;
 }
 
-async function koreanPlayer(id, nameKo, carriedPhoto) {
+async function koreanPlayer(id, nameKo, carriedPhoto, fallbackLeague = '') {
   const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
   if (!prof) return null;
 
@@ -1366,7 +1373,7 @@ async function koreanPlayer(id, nameKo, carriedPhoto) {
   const league =
     String(prof?.defaultLeague?.$ref ?? '').match(/leagues\/([\w.]+)/)?.[1] ??
     String(teamRef ?? '').match(/leagues\/([\w.]+)/)?.[1] ??
-    '';
+    fallbackLeague;
   const leagueName = String(team?.groups?.name ?? '') || league;
   if (!league) console.error(`  ! ${nameKo}(${id}) 소속 리그를 못 찾음 — 대회 기록 건너뜀`);
 
@@ -1875,47 +1882,20 @@ async function main() {
      * 든 경기까지** 세서 과대 집계였다(코리안리거에서 이미 고친 문제인데
      * 이 경로에는 반영되지 않았다).
      */
-    const players = {};
-    await pool(FUTURE, 3, async ([id, lg]) => {
-      /* 현 소속팀 — 선수가 옮겨도 화면이 따라가게 core 프로필에서 받는다 */
-      const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
-      const teamRef = prof?.defaultTeam?.$ref ?? prof?.team?.$ref;
-      const team = teamRef ? await get(teamRef) : null;
-      const clubId = String(team?.id ?? '0');
-
-      /* 지금 뛰는 리그는 프로필이 알려 준다 — 큐레이션 파일의 리그가
-         낡아도(이적) 화면이 따라간다. 없으면 적어 둔 값을 쓴다. */
-      const league =
-        String(prof?.defaultLeague?.$ref ?? '').match(/leagues\/([\w.]+)/)?.[1] ?? lg;
-
-      const totals = seasonTotals(await get(seasonStatsUrl(league, SEASON, id)));
-      const recent = await athleteRecent({
-        get, league, season: SEASON, athleteId: String(id),
-        meta: await clubMeta(clubId), take: 3,
-      });
-
-      if (!totals.apps && !recent.length) return;   // 이번 시즌 기록이 아직 없다
-
-      players[id] = {
-        club: team?.displayName ? String(team.displayName) : undefined,
-        league,
-        apps: totals.apps,
-        starts: totals.starts,
-        goals: totals.goals,
-        assists: totals.assists,
-        minutes: totals.minutes,
-        recent: recent.map((r) => ({
-          date: r.date,
-          opponent: r.opponent,
-          score: r.score || undefined,
-          goals: r.goals,
-          assists: r.assists,
-        })),
-      };
-    });
-    if (Object.keys(players).length) {
-      await save('future.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
-      console.log(`    퓨처 리소스 ${Object.keys(players).length}/${FUTURE.length}명`);
+    /*
+     * 2026-09-28 부터 **코리안리거와 같은 수집기(koreanPlayer)** 를 쓴다.
+     * 예전에는 리그 합계와 최근 경기만 받아서 카드에 헤드샷·소속 엠블럼·나이·
+     * 대회별(챔스·유로파·컨퍼런스) 줄이 없었다 — 같은 모양의 카드인데 한쪽만
+     * 비어 보였다. 이제 두 탭이 같은 데이터 모양(players 배열)을 쓴다.
+     * 사진은 코리안리거처럼 지난 회차 값을 이어받는다.
+     */
+    const carried = await prevPhotos('future.json');
+    const got = await pool(FUTURE, 3, ([id, lg]) =>
+      koreanPlayer(id, '', carried.get(String(id)), lg));
+    const players = got.filter(Boolean);
+    if (players.length) {
+      await save('future.json', { format: 2, players, season: SEASON, fetchedAt: new Date().toISOString() });
+      console.log(`    퓨처 리소스 ${players.length}/${FUTURE.length}명`);
     } else if (await fileExists('future.json')) {
       note('퓨처 리소스', '0명 — 기존 파일 유지');
     } else {

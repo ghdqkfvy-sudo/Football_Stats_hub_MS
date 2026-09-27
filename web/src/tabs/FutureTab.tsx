@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Target } from '../config/targets';
 import { CLAUSE_COLOR, CLAUSE_LABEL, futureFor, type ClauseKind, type FuturePlayer } from '../data/future';
-import { loadFutureStat, type FutureStat } from '../lib/api';
-import { usePalette } from '../lib/palette';
+import { loadFuturePlayers } from '../lib/api';
+import type { KoreanPlayer } from '../types/feedTypes';
+import { visibleComps } from '../lib/comps';
 import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
 
 const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -16,26 +17,19 @@ const CLAUSE_DESC: Record<ClauseKind, string> = {
 
 export function FutureTab({ target }: { target: Target }) {
   const rows = futureFor(target.espnTeamId);
-  const [stats, setStats] = useState<Record<string, FutureStat | null>>({});
+  /* undefined = 아직 받는 중, 없는 키 = 이번 시즌 기록/프로필을 못 받음 */
+  const [feedById, setFeedById] = useState<Record<string, KoreanPlayer> | undefined>(undefined);
   const [filter, setFilter] = useState<ClauseKind | 'ALL'>('ALL');
   const [openId, setOpenId] = useState<string | null>(null);
 
+  /* 코리안리거와 같은 피드 모양 — 한 파일에 전원이 들어 있어 한 번만 받는다 */
   useEffect(() => {
     let alive = true;
-    setStats({});
-    /* 예전에는 여기서 프록시가 없으면 그냥 돌아갔다. 그런데 loadFutureStat
-       자체가 정적 피드(future.json) 폴백을 갖고 있어서, 프록시가 없는 배포
-       (GitHub Pages)에서는 기록이 영영 안 뜨는 상태였다. */
-    for (const p of rows) {
-      loadFutureStat(p.league, p.id).then((s) => {
-        if (alive) setStats((m) => ({ ...m, [p.id]: s }));
-      });
-    }
-    return () => {
-      alive = false;
-    };
-    // rows 는 target 에서 파생되므로 target 하나만 본다
-  }, [target.espnTeamId]);
+    loadFuturePlayers().then((r) => {
+      if (alive) setFeedById(Object.fromEntries(r.data.map((x) => [String(x.id), x])));
+    });
+    return () => { alive = false; };
+  }, []);
 
   if (!rows.length) {
     return (
@@ -104,7 +98,7 @@ export function FutureTab({ target }: { target: Target }) {
                     <FutureCard
                       key={p.id}
                       p={p}
-                      stat={stats[p.id]}
+                      feed={feedById === undefined ? undefined : feedById[p.id] ?? null}
                       open={openId === p.id}
                       onHover={(v) => setOpenId(v ? p.id : null)}
                     />
@@ -127,57 +121,70 @@ export function FutureTab({ target }: { target: Target }) {
   );
 }
 
+/**
+ * 조항 선수 카드 — **코리안리거 탭과 같은 카드**(헤드샷 · 소속 엠블럼 · 나이 ·
+ * 리그 앰블럼 · 대회별 출전 줄(챔스·유로파·컨퍼런스 포함) · 최근 3경기).
+ * 다른 점은 오른쪽 위 조항 배지(바이백·셀온·임대) 하나다.
+ */
 function FutureCard({
-  p, stat, open, onHover,
+  p, feed, open, onHover,
 }: {
   p: FuturePlayer;
-  stat?: FutureStat | null;
+  /** undefined = 받는 중 · null = 피드에 없음 */
+  feed?: KoreanPlayer | null;
   open: boolean;
   onHover: (v: boolean) => void;
 }) {
-  const palette = usePalette();
-  /* 지금 뛰는 리그·팀은 조회 결과가 알려 준다 — 큐레이션 파일의 값이
+  /* 지금 뛰는 리그·팀은 피드(ESPN 프로필)가 알려 준다 — 큐레이션 파일의 값이
      낡아도(이적) 화면은 따라간다. */
-  const league = stat?.league ?? p.league;
-  const club = stat?.club ?? p.club;
-
-  const comps: CompLine[] = stat && stat.apps > 0
-    ? [{
-      competition: league,
-      label: palette.name(league) === league ? league : palette.name(league),
-      apps: stat.apps,
-      starts: stat.starts ?? 0,
-      goals: stat.goals,
-      assists: stat.assists,
-    }]
+  const league = feed?.league || p.league;
+  const comps: CompLine[] = feed
+    ? visibleComps(feed.stats, league).map((s) => ({
+      competition: s.competition,
+      label: s.label,
+      logo: s.logo,
+      apps: s.apps,
+      starts: s.starts,
+      goals: s.goals,
+      assists: s.assists,
+    }))
     : [];
-
-  const recent: RecentLine[] = (stat?.recent ?? []).map((g): RecentLine => ({
-    competition: league,
-    opponent: g.opponent,
-    score: g.score,
-    goals: g.goals,
-    assists: g.assists,
+  const recent: RecentLine[] = (feed?.recent ?? []).map((gm) => ({
+    competition: gm.competition,
+    result: gm.result,
+    opponent: gm.opponent,
+    score: gm.score,
+    started: gm.started,
+    minutes: gm.minutes,
+    subIn: gm.subIn,
+    goals: gm.goals,
+    assists: gm.assists,
+    yellow: gm.yellow,
   }));
 
   return (
     <StatCard
       id={p.id}
       name={p.name}
-      posLabel={p.pos ? POS[p.pos] : undefined}
+      posLabel={POS[feed?.pos && feed.clubId !== '0' ? feed.pos : p.pos ?? 'M']}
+      photo={feed?.photo}
+      photoKind={feed?.photoKind}
       fallbackLabel={p.name.slice(0, 1)}
-      club={club}
+      clubId={feed?.clubId && feed.clubId !== '0' ? feed.clubId : undefined}
+      club={feed?.club || p.club}
+      age={feed?.age || undefined}
       league={league}
-      leagueName={palette.name(league)}
+      leagueName={feed?.leagueName || league}
+      leagueLogo={feed?.leagueLogo}
       comps={comps}
       recent={recent}
       tag={CLAUSE_LABEL[p.kind]}
       emptyNote={
-        stat === undefined
+        feed === undefined
           ? '기록을 불러오는 중입니다.'
           : '이번 시즌 출전 기록이 아직 없습니다.'
       }
-      recentNote="이번 시즌 출전한 경기가 아직 없습니다."
+      recentNote="경기별 기록은 소속 클럽의 경기 라인업에서 가져옵니다. 다음 갱신 회차에 채워집니다."
       open={open}
       onHover={onHover}
     />
