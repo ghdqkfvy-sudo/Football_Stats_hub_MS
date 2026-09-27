@@ -7,6 +7,14 @@ import { Crest } from './Crest';
 import { Headshot } from './Headshot';
 
 /**
+ * 진짜 마우스가 있는 기기인지. 터치 기기에서는 "호버"가 없어서 예전에는
+ * 탭 = focus 로 펼쳤는데, 다시 탭해도 초점이 그대로라 **접히지 않았다.**
+ * 터치에서는 탭(click)으로 펼침/접힘을 번갈아 하고, 호버·초점 핸들러는 쓰지 않는다.
+ */
+const HAS_HOVER =
+  typeof window !== 'undefined' && !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+
+/**
  * 선수 카드 — 코리안리거 탭과 Future Resources 탭이 **같은 양식**을 쓴다.
  *
  * 예전에는 두 탭이 각자 다른 카드를 그렸다(Future 는 숫자 네 칸짜리 타일).
@@ -108,11 +116,22 @@ export function StatCard({
     <article
       className="krc"
       style={{ ['--club' as string]: bg, ['--clubfg' as string]: fg }}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
+      {...(HAS_HOVER
+        ? {
+          onMouseEnter: () => onHover(true),
+          onMouseLeave: () => onHover(false),
+          onFocus: () => onHover(true),
+          onBlur: () => onHover(false),
+        }
+        : {
+          onClick: () => onHover(!open),
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onHover(!open); }
+          },
+          role: 'button',
+          'aria-expanded': open,
+        })}
       tabIndex={0}
-      onFocus={() => onHover(true)}
-      onBlur={() => onHover(false)}
     >
       <div className="krc__top">
         <Headshot
