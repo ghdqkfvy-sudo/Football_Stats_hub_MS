@@ -305,8 +305,8 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         ) : (
           <em className="mdr__dday" data-tone={dd.tone}>{dd.text}</em>
         )}
-        {/* 날짜가 이 줄에서 제일 먼저 찾는 값이다 — 맨 위에 크게, 주말은
-            요일 색으로(토 파랑 · 일 빨강). 그 아래에 D-day 칩과 킥오프 시각. */}
+        {/* 1줄: D-day 칩(끝난 경기는 스코어) · 2줄: 날짜·요일(같은 크기, 주말은
+            요일 색 — 토 파랑 · 일 빨강)과 킥오프 시각. */}
         <span className="mdr__dt num">
           <span className="mdr__date">
             <b>{kp.month}.{kp.date}</b>
