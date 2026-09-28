@@ -4,6 +4,8 @@ import './styles/global.css';
 import './styles/mobile.css';
 /* 전환 애니메이션 — 모든 규칙이 reduced-motion 에서 꺼진다 */
 import './styles/motion.css';
+/* 스크롤 막대(MiniBar)의 데스크톱 모양 — mobile.css 의 폰 모양 위에 얹는다 */
+import './styles/topbar.css';
 import { OUR_TEAM_IDS, TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { loadSchedule, type Source } from './lib/api';
@@ -256,11 +258,11 @@ export default function App() {
   const [hdrOut, setHdrOut] = useState(false);
   useEffect(() => {
     const el = hdrRef.current;
-    if (!mobile || !el) { setHdrOut(false); return; }
+    if (!el) { setHdrOut(false); return; }
     const io = new IntersectionObserver(([e]) => setHdrOut(!e.isIntersecting));
     io.observe(el);
     return () => io.disconnect();
-  }, [mobile]);
+  }, []);
 
   /* 엠블럼 윤곽 범위 — Summary 는 우리 일곱 팀, 팀 탭은 그 팀만 (components/Crest) */
   const glowScope = useMemo<ReadonlySet<string>>(
@@ -454,18 +456,21 @@ export default function App() {
         </div>
       </header>
 
-      {mobile && (
-        <MiniBar
-          show={hdrOut}
-          summary={summary}
-          crest={target.crest}
-          darkCrest={!!target.darkCrest}
-          name={summary ? 'Summary' : target.name}
-          tabs={tabs}
-          tab={tab}
-          onTab={(id) => goTab(id as TabId)}
-        />
-      )}
+      {/* 헤더가 화면 위로 사라지면 위에 붙는 막대 — 폰·데스크톱 공통(styles/topbar.css) */}
+      <MiniBar
+        show={hdrOut}
+        summary={summary}
+        crest={target.crest}
+        darkCrest={!!target.darkCrest}
+        name={summary ? 'Summary' : target.name}
+        tabs={tabs}
+        tab={tab}
+        onTab={(id) => goTab(id as TabId)}
+        teams={mobile ? undefined : TARGETS.map((t) => ({ id: t.id, name: t.name, crest: t.crest, darkCrest: t.darkCrest }))}
+        activeTeamId={summary ? null : targetId}
+        onTeam={(id) => openTeam(id as TargetId)}
+        onSummary={openSummary}
+      />
 
       <main className="shell">
         {/* key: 팀을 바꾸면 선택 날짜·펼친 행 상태와 함께 오류 상태도 초기화된다 */}

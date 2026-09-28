@@ -25,11 +25,18 @@ interface Props {
   tabs: { id: string; label: string; short?: string }[];
   tab: string;
   onTab: (id: string) => void;
+  /** 데스크톱 막대의 팀 전환 엠블럼 줄 (폰에서는 CSS 가 숨긴다) */
+  teams?: { id: string; name: string; crest: string; darkCrest?: boolean }[];
+  activeTeamId?: string | null;
+  onTeam?: (id: string) => void;
+  onSummary?: () => void;
 }
 
 const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-export function MiniBar({ show, summary, crest, darkCrest, name, tabs, tab, onTab }: Props) {
+export function MiniBar({
+  show, summary, crest, darkCrest, name, tabs, tab, onTab, teams, activeTeamId, onTeam, onSummary,
+}: Props) {
   return (
     <div className="mbar" data-show={show || undefined} inert={!show}>
       <button className="mbar__id" onClick={toTop} aria-label={`${name} · 맨 위로`}>
@@ -37,6 +44,8 @@ export function MiniBar({ show, summary, crest, darkCrest, name, tabs, tab, onTa
           ? <span className="mbar__star">★</span>
           : <img src={crest} alt="" className={darkCrest ? 'crest' : undefined} />}
       </button>
+      {/* 넓은 화면에서만 — 지금 어느 팀 화면인지 */}
+      <b className="mbar__name">{name}</b>
 
       {summary ? (
         <nav className="mbar__nav" aria-label="Summary 구역">
@@ -70,10 +79,43 @@ export function MiniBar({ show, summary, crest, darkCrest, name, tabs, tab, onTa
                 });
               }}
             >
-              {t.short ?? t.label}
+              {/* 넓은 화면은 전체 이름, 좁은 화면(≤980px)은 짧은 이름 — styles/topbar.css */}
+              {t.short ? (
+                <>
+                  <span className="mbar__full">{t.label}</span>
+                  <span className="mbar__short">{t.short}</span>
+                </>
+              ) : t.label}
             </button>
           ))}
         </nav>
+      )}
+
+      {/* 넓은 화면에서만 — 스크롤한 자리에서 바로 다른 팀으로 */}
+      {teams && (
+        <div className="mbar__teams" role="group" aria-label="팀 전환">
+          <button
+            className="mbar__team mbar__team--sum"
+            aria-pressed={summary}
+            aria-label="Summary"
+            title="Summary"
+            onClick={onSummary}
+          >
+            ★
+          </button>
+          {teams.map((t) => (
+            <button
+              key={t.id}
+              className="mbar__team"
+              aria-pressed={!summary && t.id === activeTeamId}
+              aria-label={t.name}
+              title={t.name}
+              onClick={() => onTeam?.(t.id)}
+            >
+              <img src={t.crest} alt="" className={t.darkCrest ? 'crest' : undefined} />
+            </button>
+          ))}
+        </div>
       )}
 
       <button className="mbar__top" onClick={toTop} aria-label="맨 위로">↑</button>

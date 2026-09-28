@@ -1,0 +1,100 @@
+/*
+ * 스크롤 막대(components/MiniBar) — 데스크톱 모양.
+ *
+ * 헤더(약 230px)를 통째로 고정하면 노트북 화면의 1/4 이 늘 가려진다. 대신 헤더가
+ * 화면 위로 **완전히** 사라졌을 때만 52px 막대를 겹친다:
+ *
+ *   [엠블럼] 팀명 │ 일정 · 순위 · 선수 · Future · 뉴스 │ ★ ● ● ● ● ● ● ●  ↑
+ *
+ * 폰 모양은 mobile.css(≤640px)에 있다. 이 파일은 그보다 넓은 화면만 다룬다 —
+ * 폰에서는 이름·팀 줄을 숨기기만 한다.
+ */
+@media (max-width: 640px) {
+  .mbar__name, .mbar__teams { display: none; }
+}
+/* 탭 이름: 넓으면 "팀 순위 · 선수 스탯 · Future Resources", 좁으면 "순위 · 선수 · Future" */
+.mbar__short { display: none; }
+@media (max-width: 980px) {
+  .mbar__full { display: none; }
+  .mbar__short { display: inline; }
+}
+
+@media (min-width: 641px) {
+  .mbar {
+    position: fixed; z-index: 60; left: 0; right: 0; top: 0;
+    display: flex; align-items: center; gap: 10px;
+    height: 54px;
+    /* 본문(.shell, 최대 1280px)과 같은 좌우 선에 맞춘다 */
+    padding-inline: max(20px, calc((100vw - var(--shell)) / 2 + 20px));
+    background: rgba(7, 12, 26, .84);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
+    transform: translateY(-105%); transition: transform .24s ease;
+  }
+  .mbar[data-show] { transform: none; }
+
+  .mbar__id, .mbar__top {
+    flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+    border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+    color: var(--text-mid); font: inherit; cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .mbar__id:hover, .mbar__top:hover { color: var(--text-hi); border-color: var(--line-2); }
+  .mbar__id img { width: 22px; height: 22px; object-fit: contain; }
+  .mbar__star { font-size: 16px; color: var(--accent); }
+  .mbar__top { font-size: 16px; font-weight: 700; }
+
+  .mbar__name {
+    flex: none; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text-hi);
+    padding-right: 12px; margin-right: 2px; border-right: 1px solid var(--line);
+  }
+
+  .mbar__nav { flex: 0 1 auto; min-width: 0; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .mbar__nav::-webkit-scrollbar { display: none; }
+  .mbar__b {
+    position: relative; flex: none; height: 54px; padding: 0 13px;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text-lo);
+    white-space: nowrap; cursor: pointer; transition: color .15s;
+  }
+  .mbar__b:hover { color: var(--text-mid); }
+  .mbar__b[aria-selected='true'] { color: var(--text-hi); }
+  .mbar__b[aria-selected='true']::after {
+    content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2.5px;
+    border-radius: 2px 2px 0 0; background: var(--accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .mbar__teams { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: none; }
+  .mbar__team {
+    display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+    border: 1px solid transparent; background: transparent; cursor: pointer;
+    color: var(--text-mid); font-size: 15px; transition: border-color .15s, background .15s;
+  }
+  .mbar__team img { width: 22px; height: 22px; object-fit: contain; opacity: .78; transition: opacity .15s; }
+  .mbar__team:hover { background: rgba(255,255,255,.05); }
+  .mbar__team:hover img { opacity: 1; }
+  .mbar__team[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .mbar__team[aria-pressed='true'] img { opacity: 1; }
+  .mbar__team--sum[aria-pressed='true'] { color: var(--accent); }
+  .mbar__teams + .mbar__top { margin-left: 6px; }
+
+  /* Summary 구역 바로가기로 뛰었을 때 제목이 막대 밑에 깔리지 않게 */
+  #sum-next, #sum-week, #sum-table, #sum-results { scroll-margin-top: 66px; }
+
+  /* 막대에 엠블럼 8개 + 탭 5개가 다 못 들어가는 폭(641–900px)에서는 팀 이름을 뺀다 */
+}
+@media (min-width: 641px) and (max-width: 980px) {
+  .mbar__name { display: none; }
+  .mbar__b { padding: 0 9px; font-size: 13px; }
+  .mbar__team { width: 30px; height: 30px; }
+  .mbar__team img { width: 19px; height: 19px; }
+}
+@media (min-width: 641px) and (prefers-reduced-motion: reduce) {
+  .mbar { transition: none; }
+}
