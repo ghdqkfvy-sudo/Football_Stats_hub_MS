@@ -3,6 +3,7 @@ import type { Match } from '../lib/types';
 import { dayKey, kstTime, monthGrid, todayKey } from '../lib/kst';
 import { usePalette } from '../lib/palette';
 import { MatchPopCard } from './MatchPop';
+import { Swap, type SwapDir } from './Swap';
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -75,6 +76,15 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
     }
   }, [box, settled]);
 
+  /* 달을 넘기면 달력이 그 방향에서 미끄러져 들어온다 (다음 달 → 오른쪽에서) */
+  const ym = year * 12 + month;
+  const lastYm = useRef(ym);
+  const monthDir = useMemo<SwapDir>(() => {
+    const d: SwapDir = ym > lastYm.current ? 'next' : ym < lastYm.current ? 'prev' : 'fade';
+    lastYm.current = ym;
+    return d;
+  }, [ym]);
+
   const step = (delta: number) => {
     const m = month + delta;
     if (m < 1) onMove(year - 1, 12);
@@ -104,6 +114,7 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
         ))}
       </div>
 
+      <Swap k={ym} dir={monthDir}>
       <div className="cal__grid" ref={gridRef}>
         {/* 선택 하이라이트 — 노란 음영 + 펄스닷이 한 덩어리로 움직인다 */}
         {box && (
@@ -201,6 +212,7 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
           );
         })}
       </div>
+      </Swap>
     </div>
   );
 }

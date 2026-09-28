@@ -4,6 +4,7 @@ import { loadNews, type Source } from '../lib/api';
 import type { Article } from '../types/feedTypes';
 import { kstShortDate, kstTime } from '../lib/kst';
 import { useIsMobile } from '../lib/useMedia';
+import { Swap } from '../components/Swap';
 
 const KIND: Record<string, string> = {
   HeadlineNews: '뉴스',
@@ -145,6 +146,8 @@ export function NewsTab({ target }: { target: Target }) {
           </div>
         )}
 
+        {/* 필터를 바꾸면 목록이 한 번 페이드로 바뀐다 ("더보기" 로 늘어날 때는 그대로) */}
+        <Swap k={filter}>
         {lead && <Card a={lead} now={now} lead />}
 
         {rest.length > 0 && (
@@ -154,6 +157,7 @@ export function NewsTab({ target }: { target: Target }) {
             ))}
           </div>
         )}
+        </Swap>
 
         {hidden > 0 && (
           <button className="nmore" onClick={() => setShown((n) => n + MOBILE_PAGE)}>

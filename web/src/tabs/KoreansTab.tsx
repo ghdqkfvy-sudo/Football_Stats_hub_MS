@@ -5,6 +5,7 @@ import { loadKoreans, type Source } from '../lib/api';
 import { visibleComps } from '../lib/comps';
 import { usePalette } from '../lib/palette';
 import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
+import { Swap } from '../components/Swap';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -160,6 +161,7 @@ export function KoreansTab() {
           ))}
         </nav>
 
+        <Swap k={league}>
         <div className="kr__grid">
           {list.map((p) => (
             <StatCard
@@ -205,6 +207,7 @@ export function KoreansTab() {
             />
           ))}
         </div>
+        </Swap>
       </section>
     </div>
   );

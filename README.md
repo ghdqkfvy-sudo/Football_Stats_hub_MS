@@ -1839,3 +1839,15 @@ CSS 로 못 하는 것만 `lib/useMedia.ts`(`useIsMobile`, 기준 640px)로 고�
 (기준일 `updated` 포함)으로 저장한다 — FIFA 공식 API 는 날짜 id 와 인증이 필요하다.
 파일의 이름은 FIFA 표기(Korea Republic · IR Iran · USA)라 `web/src/lib/fifa.ts` 가
 ESPN 표기(South Korea · Iran · United States)와 별칭으로 맞춘다. 못 맞춘 나라는 비워 둔다.
+
+### 전환 애니메이션 · 주소(해시) 라우팅 (2026-09-28)
+
+- **전환**: `styles/motion.css` + `components/Swap.tsx`. 메인 영역(`.view`)은 탭 순서대로
+  좌우에서, 팀·Summary 전환은 아래에서 들어온다. 대회 선택·필터·주/월 이동은 `<Swap k=…>`
+  로 감싼 부분만 한 번 전환된다(같은 값으로 다시 그려질 때는 움직이지 않는다).
+  fill-mode 는 `backwards` — 끝난 뒤 transform 이 남으면 fixed 자식(호버 카드)의 기준이 틀어진다.
+  `prefers-reduced-motion` 이면 전부 끈다.
+- **주소**: `#/chelsea/standings` (`lib/route.ts`). 새로고침·링크 공유·폰 뒤로 가기가 화면을 따라간다.
+- Summary 선수 순위는 경량 표(table-*.json)에 선수 기록이 없으면 고른 대회의 전체 파일을 뒤늦게 받는다.
+- 조항 선수가 없는 팀은 Future 탭을 숨긴다.
+- 되돌릴 지점: 로컬 태그 `backup/pre-polish`.

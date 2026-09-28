@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SUMMARY_OPP, TARGETS, comp, getTarget, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
-import { loadLeagueTable, loadSchedule } from '../lib/api';
+import { loadLeague, loadLeagueTable, loadSchedule } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { dayKey, monthKey, todayKey } from '../lib/kst';
 import {
@@ -16,6 +16,7 @@ import { StandingsTable } from '../components/StandingsTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 import { MonthList } from '../components/MonthList';
+import { Swap, dirOf, type SwapDir } from '../components/Swap';
 
 /**
  * Summary — 앱에 들어오면 처음 보이는 화면.
@@ -120,6 +121,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
 
   /* ── 대회 순위 ────────────────────────────────────── */
   const [active, setActive] = useState<CompetitionKey>('eng.1');
+  const [compDir, setCompDir] = useState<SwapDir>('fade');
+  const pickComp = (c: CompetitionKey) => {
+    if (c === active) return;
+    setCompDir(dirOf(COMPS.indexOf(active), COMPS.indexOf(c)));
+    setActive(c);
+  };
   const [tables, setTables] = useState<Record<string, { table: StandingTable | null; matches: Match[] } | null>>({});
   const asked = useRef(new Set<string>());
 
@@ -174,7 +181,29 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     return out;
   }, []);
 
-  const leaders = useMemo(() => (league ? deriveLeaders(league.matches) : []), [league]);
+  /*
+   * 선수 순위는 경기별 선수 기록(__stats)에서 만든다. 순위표 경량 파일
+   * (table-*.json)에는 그 값이 없어서 이 자리가 늘 "아직 집계되지 않았습니다"
+   * 였다. 경량 파일로 못 만들면 **고른 대회 하나만** 전체 파일을 뒤늦게 받는다
+   * (첫 화면 그리기를 방해하지 않게 조금 늦춰서).
+   */
+  const [fullMatches, setFullMatches] = useState<Record<string, Match[]>>({});
+  const slimLeaders = useMemo(() => (league ? deriveLeaders(league.matches) : []), [league]);
+  const leaders = useMemo(
+    () => (slimLeaders.length ? slimLeaders : deriveLeaders(fullMatches[active] ?? [])),
+    [slimLeaders, fullMatches, active],
+  );
+  const needFull = !!league?.table && !slimLeaders.length && !fullMatches[active];
+  useEffect(() => {
+    if (!needFull) return;
+    let alive = true;
+    const t = setTimeout(() => {
+      loadLeague(active, comp(active).name).then((r) => {
+        if (alive) setFullMatches((f) => ({ ...f, [active]: r.data.matches }));
+      });
+    }, 500);
+    return () => { alive = false; clearTimeout(t); };
+  }, [needFull, active]);
 
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
@@ -308,7 +337,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               className="comps__b"
               aria-pressed={c === active}
               style={{ ['--c' as string]: comp(c).color }}
-              onClick={() => setActive(c)}
+              onClick={() => pickComp(c)}
             >
               <CompCrest k={c} size={17} />
               {comp(c).name}
@@ -316,6 +345,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
           ))}
         </nav>
 
+        <Swap k={`${active}:${league ? 1 : 0}`} dir={compDir}>
         {!league ? (
           <div className="skel" style={{ height: 420 }} />
         ) : league.table ? (
@@ -332,13 +362,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             </div>
             {leaders.length ? (
               <LeaderBoard rows={leaders} teamColors={clubColors} />
+            ) : needFull ? (
+              <div className="skel" style={{ height: 320 }} />
             ) : (
               <div className="empty">
                 <h3>선수 기록이 아직 집계되지 않았습니다</h3>
-                <p>
-                  선수 순위는 경기별 기록(<code>__stats</code>)에서 만들어집니다.
-                  순위표 전용 경량 파일에 그 값이 들어오는 다음 수집 회차부터 채워집니다.
-                </p>
+                <p>경기별 선수 기록이 들어오면 여기에 득점 · 도움 순위가 만들어집니다.</p>
               </div>
             )}
           </>
@@ -348,6 +377,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             <p>아직 개막 전이거나 토너먼트 대회라 ESPN 에 순위 데이터가 없습니다.</p>
           </div>
         )}
+        </Swap>
       </section>
 
       {/* ── 4. 이달의 경기 결과 ── */}

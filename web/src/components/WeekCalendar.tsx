@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SUMMARY_OPP, summaryColor, type Target } from '../config/targets';
 import type { Match } from '../lib/types';
@@ -6,6 +6,7 @@ import { kstTime, todayKey } from '../lib/kst';
 import { weekKeys, weekLabel, type DayMatch } from '../lib/summary';
 import { Crest } from './Crest';
 import { MatchPopCard } from './MatchPop';
+import { Swap, type SwapDir } from './Swap';
 
 const WEEKDAY = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -75,6 +76,14 @@ export function WeekCalendar({
   const today = todayKey();
   const [pop, setPop] = useState<Pop | null>(null);
 
+  /* 주를 넘기면 그 방향에서 미끄러져 들어온다 (다음 주 → 오른쪽에서) */
+  const lastKey = useRef(startKey);
+  const weekDir = useMemo<SwapDir>(() => {
+    const d: SwapDir = startKey > lastKey.current ? 'next' : startKey < lastKey.current ? 'prev' : 'fade';
+    lastKey.current = startKey;
+    return d;
+  }, [startKey]);
+
   /* 주가 바뀌면 떠 있던 미리보기는 더 이상 그 자리의 경기가 아니다 */
   useEffect(() => { setPop(null); }, [startKey]);
 
@@ -88,6 +97,7 @@ export function WeekCalendar({
         <button className="wcal__today" onClick={onToday}>오늘</button>
       </div>
 
+      <Swap k={startKey} dir={weekDir}>
       <div className="wcal__grid">
         {keys.map((k, i) => {
           const list = byDay.get(k) ?? [];
@@ -183,6 +193,8 @@ export function WeekCalendar({
           );
         })}
       </div>
+
+      </Swap>
 
       {pop && <TilePop pop={pop} />}
 

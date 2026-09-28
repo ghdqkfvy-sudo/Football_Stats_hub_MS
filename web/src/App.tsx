@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import './styles/global.css';
 /* 좁은 화면 전용 덮어쓰기 — global.css 뒤에 와야 이긴다 */
 import './styles/mobile.css';
+/* 전환 애니메이션 — 모든 규칙이 reduced-motion 에서 꺼진다 */
+import './styles/motion.css';
 import { OUR_TEAM_IDS, TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { loadSchedule, type Source } from './lib/api';
@@ -16,6 +18,9 @@ import { seasonOptions } from './lib/kst';
 import { Crest, CrestGlowScope } from './components/Crest';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SummaryTab } from './tabs/SummaryTab';
+import { dirOf, type SwapDir } from './components/Swap';
+import { futureFor } from './data/future';
+import { formatRoute, parseRoute } from './lib/route';
 import { MiniBar } from './components/MiniBar';
 import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
@@ -63,16 +68,43 @@ export default function App() {
    * Summary 는 팀에 속하지 않는 화면이라 팀 탭 목록에 넣을 수 없다.
    * 팀 스위처 왼쪽의 칩으로 두고, 앱에 들어오면 여기서 시작한다.
    */
-  const [view, setView] = useState<'summary' | 'team'>('summary');
-  const [targetId, setTargetId] = useState<TargetId>('real-madrid');
+  /* 첫 화면은 주소(#/chelsea/standings)가 말해 준다 — lib/route.ts */
+  const [view, setView] = useState<'summary' | 'team'>(() =>
+    (TARGETS.some((t) => t.id === parseRoute().targetId) ? 'team' : 'summary'));
+  const [targetId, setTargetId] = useState<TargetId>(() => {
+    const id = parseRoute().targetId;
+    return (TARGETS.some((t) => t.id === id) ? id : 'real-madrid') as TargetId;
+  });
   const target = getTarget(targetId);
   const summary = view === 'summary';
 
+  /*
+   * 메인 영역 전환의 방향(styles/motion.css).
+   * 탭은 순서가 있으니 오른쪽 탭으로 가면 오른쪽에서, 왼쪽 탭이면 왼쪽에서
+   * 들어온다. 팀·Summary 전환은 "다른 화면" 이라 아래에서 떠오른다.
+   */
+  const [motion, setMotion] = useState<SwapDir>('fade');
+
+  /* 다른 화면으로 넘어가면 맨 위에서 시작한다 — Summary 맨 아래 "팀 바로가기" 를
+     누르면 예전에는 새 팀 화면의 한가운데(같은 스크롤 깊이)에 떨어졌다 */
+  const toTop = () => {
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  };
+
   /** 팀을 고르면 그 팀 화면으로 넘어간다 */
   const openTeam = useCallback((id: TargetId) => {
+    if (id === targetId && view === 'team') return;
+    setMotion('rise');
     setTargetId(id);
     setView('team');
-  }, []);
+    toTop();
+  }, [targetId, view]);
+  const openSummary = useCallback(() => {
+    if (view === 'summary') return;
+    setMotion('rise');
+    setView('summary');
+    toTop();
+  }, [view]);
   /*
    * ⚠️ 예전에는 시즌을 고르는 단추가 두 개 있었다. 그런데 그 값은 헤더
    * 글자에만 쓰여서, 다음 시즌을 눌러도 라벨만 바뀌고 일정·순위는 그대로였다
@@ -81,11 +113,77 @@ export default function App() {
    */
   const season = SEASONS[0].label;
 
-  const tabs = target.kind === 'club' ? CLUB_TABS : NATIONAL_TABS;
-  const [tab, setTab] = useState<TabId>(tabs[0].id);
+  /* 조항 선수가 한 명도 없는 팀(리버풀)에는 Future 탭을 두지 않는다 —
+     눌러 봐야 "등록되어 있지 않습니다" 뿐이다 */
+  const tabs = useMemo(
+    () => (target.kind === 'club'
+      ? CLUB_TABS.filter((t) => t.id !== 'future' || futureFor(target.espnTeamId).length > 0)
+      : NATIONAL_TABS),
+    [target.kind, target.espnTeamId],
+  );
+  const [tab, setTab] = useState<TabId>(() => (parseRoute().tab as TabId | null) ?? tabs[0].id);
+  const goTab = useCallback((id: TabId) => {
+    if (id === tab) return;
+    setMotion(dirOf(tabs.findIndex((t) => t.id === tab), tabs.findIndex((t) => t.id === id)));
+    setTab(id);
+  }, [tabs, tab]);
+
+  /* 헤더 탭 밑줄 — 고른 탭 아래로 미끄러진다(motion.css .tabs__ink) */
+  const tabsRef = useRef<HTMLElement>(null);
+  const [ink, setInk] = useState<{ x: number; w: number } | null>(null);
+  useLayoutEffect(() => {
+    const nav = tabsRef.current;
+    if (!nav) { setInk(null); return; }
+    const place = () => {
+      const on = nav.querySelector<HTMLElement>('.tab[aria-selected="true"]');
+      if (!on) return;
+      /* 탭 글자 폭만큼(양옆 여백 제외) — 예전 ::after 와 같은 길이 */
+      const pad = on.offsetWidth > 60 ? 10 : on.offsetWidth * 0.14;
+      setInk({ x: on.offsetLeft + pad - nav.scrollLeft, w: on.offsetWidth - pad * 2 });
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(nav);
+    nav.addEventListener('scroll', place, { passive: true });
+    return () => { ro.disconnect(); nav.removeEventListener('scroll', place); };
+  }, [tab, tabs, summary]);
   useEffect(() => {
     if (!tabs.some((t) => t.id === tab)) setTab(tabs[0].id);
   }, [tabs, tab]);
+
+  /*
+   * 화면 상태 → 주소. 사용자가 옮겨 다닐 때마다 기록을 하나씩 쌓아
+   * 폰의 뒤로 가기가 직전 화면으로 돌아가게 한다(첫 진입은 바꿔치기만).
+   * 뒤로/앞으로 가기로 온 변화는 이미 주소가 맞으므로 다시 쌓지 않는다.
+   */
+  const tabOk = tabs.some((t) => t.id === tab);
+  useEffect(() => {
+    if (!tabOk) return;                      // 잘못된 탭 → 위 이펙트가 고친 뒤에 적는다
+    const want = formatRoute(summary ? null : targetId, summary ? null : tab);
+    if (location.hash !== want) {
+      if (!location.hash || location.hash === '#') history.replaceState(null, '', want);
+      else history.pushState(null, '', want);
+    }
+    const label = tabs.find((t) => t.id === tab)?.label;
+    document.title = summary ? 'MS Stats Hub' : `${target.name} · ${label} — MS Stats Hub`;
+  }, [summary, targetId, tab, tabOk, tabs, target.name]);
+
+  /* 주소 → 화면 상태 (뒤로/앞으로 가기, 링크로 연 해시가 바뀔 때) */
+  useEffect(() => {
+    const onPop = () => {
+      const r = parseRoute();
+      setMotion('fade');
+      if (r.targetId && TARGETS.some((t) => t.id === r.targetId)) {
+        setTargetId(r.targetId as TargetId);
+        setView('team');
+        if (r.tab) setTab(r.tab as TabId);
+      } else {
+        setView('summary');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [source, setSource] = useState<Source>('none');
@@ -257,7 +355,7 @@ export default function App() {
                 <button
                   className="pill pill--sum"
                   aria-pressed={summary}
-                  onClick={() => setView('summary')}
+                  onClick={openSummary}
                   aria-label="Summary"
                 >
                   {/* 폰에서는 글자를 숨기고 ★ 만 남긴다(styles/mobile.css) */}
@@ -325,14 +423,14 @@ export default function App() {
 
           {/* 요약 화면에는 팀별 탭이 없다 — 한 화면에 다 들어 있다 */}
           {!summary && (
-            <nav className="tabs" role="tablist">
+            <nav className="tabs" role="tablist" ref={tabsRef} data-ink={ink ? true : undefined}>
               {tabs.map((t) => (
                 <button
                   key={t.id}
                   className="tab"
                   role="tab"
                   aria-selected={t.id === tab}
-                  onClick={() => setTab(t.id)}
+                  onClick={() => goTab(t.id)}
                 >
                   {t.short ? (
                     <>
@@ -344,6 +442,13 @@ export default function App() {
                   )}
                 </button>
               ))}
+              {ink && (
+                <span
+                  className="tabs__ink"
+                  aria-hidden="true"
+                  style={{ width: ink.w, transform: `translateX(${ink.x}px)` }}
+                />
+              )}
             </nav>
           )}
         </div>
@@ -358,7 +463,7 @@ export default function App() {
           name={summary ? 'Summary' : target.name}
           tabs={tabs}
           tab={tab}
-          onTab={(id) => setTab(id as TabId)}
+          onTab={(id) => goTab(id as TabId)}
         />
       )}
 
@@ -368,6 +473,8 @@ export default function App() {
           key={summary ? 'summary' : `${target.id}-${tab}`}
           label={summary ? '요약' : tabs.find((t) => t.id === tab)?.label}
         >
+          {/* key 가 ErrorBoundary 와 같아 탭·팀이 바뀔 때만 새로 그려진다 → 전환이 한 번 돈다 */}
+          <div className="view" data-dir={motion}>
           {summary && <SummaryTab onOpenTeam={openTeam} />}
           {!summary && tab === 'schedule' && (
             <ScheduleTab
@@ -382,6 +489,7 @@ export default function App() {
           {!summary && tab === 'koreans' && <KoreansTab />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
           {!summary && tab === 'future' && <FutureTab target={target} />}
+          </div>
         </ErrorBoundary>
       </main>
     </div>

@@ -5,6 +5,7 @@ import { Headshot } from './Headshot';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { kstShortDate } from '../lib/kst';
+import { Swap } from './Swap';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 const FILTERS: { id: string; label: string }[] = [
@@ -148,6 +149,8 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
       </div>
 
       <div className="pt__list" ref={listRef}>
+        {/* 포지션 필터를 바꾸면 목록이 한 번 페이드로 바뀐다 (정렬만 바꿀 때는 그대로) */}
+        <Swap k={filter}>
         {rows.map((p) => (
           <div
             className="pt__row"
@@ -182,6 +185,7 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
           </div>
         ))}
         {rows.length === 0 && <p className="nogoal" style={{ padding: 16 }}>해당 포지션 기록이 없습니다.</p>}
+        </Swap>
       </div>
 
       {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={closeCard} />}

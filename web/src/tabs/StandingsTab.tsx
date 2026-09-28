@@ -8,6 +8,7 @@ import { StandingsTable } from '../components/StandingsTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 import { CupPath } from '../components/CupPath';
+import { Swap, dirOf, type SwapDir } from '../components/Swap';
 
 /** 순위가 안 맞아 보일 때 제일 먼저 필요한 정보는 "언제 뜬 값인가" 다 */
 const SRC: Record<Source, string> = {
@@ -25,6 +26,12 @@ export function StandingsTab({
 }) {
   const palette = usePalette();
   const [active, setActive] = useState<string>(target.league ?? target.competitions[0]);
+  const [compDir, setCompDir] = useState<SwapDir>('fade');
+  const pickComp = (c: string) => {
+    if (c === active) return;
+    setCompDir(dirOf(target.competitions.indexOf(active), target.competitions.indexOf(c)));
+    setActive(c);
+  };
   const [cache, setCache] = useState<
     Record<string, { table?: StandingTable; matches: Match[]; source: Source; fetchedAt: string }>
   >({});
@@ -95,7 +102,7 @@ export function StandingsTab({
             className="comps__b"
             aria-pressed={c === active}
             style={{ ['--c' as string]: palette.color(c) }}
-            onClick={() => setActive(c)}
+            onClick={() => pickComp(c)}
           >
             <CompCrest k={c} size={17} />
             {palette.name(c)}
@@ -103,6 +110,8 @@ export function StandingsTab({
         ))}
       </nav>
 
+      {/* 대회를 바꾸면(그리고 표가 도착하면) 아래 내용이 한 번 미끄러져 들어온다 */}
+      <Swap k={`${active}:${data ? 1 : 0}`} dir={compDir} className="swap--stack">
       {loading && !data && (
         <>
           <div className="skel" style={{ height: 44 }} />
@@ -183,6 +192,7 @@ export function StandingsTab({
           </section>
         </>
       )}
+      </Swap>
     </div>
   );
 }

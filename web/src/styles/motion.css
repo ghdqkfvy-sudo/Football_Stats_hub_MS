@@ -1,0 +1,53 @@
+/*
+ * 전환 애니메이션 — 화면 내용이 "바뀌는" 곳에서만, 짧게.
+ *
+ *   .view   메인 영역 전체 (탭 · 팀 · Summary 전환)            App.tsx
+ *   .swap   화면 안의 부분 교체 (대회 선택 · 필터 · 주/월 이동)   components/Swap.tsx
+ *   .tabs__ink  헤더 탭 밑줄이 옆 탭으로 미끄러진다              App.tsx
+ *
+ * ⚠️ fill-mode 는 `backwards` 다(both 아님). 끝난 뒤에도 transform 이 남으면
+ * 그 상자가 position: fixed 자식(호버 카드·시트)의 기준이 되어 위치가 틀어진다.
+ * 끝나면 transform 이 완전히 사라지게 둔다.
+ *
+ * 움직임을 줄이라고 설정한 사용자(prefers-reduced-motion)에게는 전부 끈다.
+ */
+@keyframes swapFade { from { opacity: 0; } }
+@keyframes swapNext { from { opacity: 0; transform: translateX(18px); } }
+@keyframes swapPrev { from { opacity: 0; transform: translateX(-18px); } }
+@keyframes swapRise { from { opacity: 0; transform: translateY(10px); } }
+
+.view, .swap { animation: swapFade .22s ease-out backwards; }
+.view[data-dir='next'], .swap[data-dir='next'] { animation: swapNext .3s cubic-bezier(.2, .8, .3, 1) backwards; }
+.view[data-dir='prev'], .swap[data-dir='prev'] { animation: swapPrev .3s cubic-bezier(.2, .8, .3, 1) backwards; }
+.view[data-dir='rise'], .swap[data-dir='rise'] { animation: swapRise .34s cubic-bezier(.2, .8, .3, 1) backwards; }
+
+/* 여러 섹션을 한 번에 감쌀 때 — 부모(.page)의 섹션 간격을 그대로 이어받는다 */
+.swap--stack { display: flex; flex-direction: column; gap: inherit; }
+/* 옆으로 미끄러지는 동안 잠깐 화면 밖으로 삐져나간 폭이 가로 스크롤을 만들지 않게 */
+body { overflow-x: clip; }
+
+/* 헤더 탭 밑줄 — 탭마다 따로 그리던 밑줄(::after) 대신 하나를 옮긴다 */
+.tabs { position: relative; }
+.tabs[data-ink] .tab[aria-selected='true']::after { opacity: 0; }
+.tabs__ink {
+  position: absolute; left: 0; bottom: 0; height: 2.5px; border-radius: 2px 2px 0 0;
+  background: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+  pointer-events: none;
+  transition: transform .32s cubic-bezier(.2, .8, .3, 1), width .32s cubic-bezier(.2, .8, .3, 1), background .2s;
+}
+
+/* 모바일 서브탭(득점/도움/공격포인트) — 고른 표가 나타날 때 */
+@media (max-width: 900px) {
+  .lb3[data-active] > .lbc { animation: swapFade .22s ease-out backwards; }
+}
+
+/* 폰: 선수 카드 아래로 펼치는 최근 경기 (넓은 화면은 떠오르는 패널이라 이미 페이드가 있다) */
+@media (max-width: 640px) {
+  .krr[data-open='true'] > :not(.krr__h) { animation: swapRise .26s cubic-bezier(.2, .8, .3, 1) backwards; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view, .swap, .lb3[data-active] > .lbc, .krr[data-open='true'] > :not(.krr__h) { animation: none !important; }
+  .tabs__ink { transition: none; }
+}

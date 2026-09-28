@@ -5,6 +5,7 @@ import { loadFuturePlayers } from '../lib/api';
 import type { KoreanPlayer } from '../types/feedTypes';
 import { visibleComps } from '../lib/comps';
 import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
+import { Swap } from '../components/Swap';
 
 const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -79,6 +80,7 @@ export function FutureTab({ target }: { target: Target }) {
 
         {/* 조항 종류별로 영역을 갈라 놓는다 — 배지 색만으로는 카드가 섞여
             "누가 바이백이고 누가 임대인지" 를 매번 다시 읽어야 했다. */}
+        <Swap k={filter}>
         {(['buyback', 'sellon', 'loan'] as const)
           .filter((k) => filter === 'ALL' || filter === k)
           .map((k) => {
@@ -107,6 +109,7 @@ export function FutureTab({ target }: { target: Target }) {
               </section>
             );
           })}
+        </Swap>
 
         <p className="fnote">
           이적 조항은 ESPN 을 포함한 어떤 무료 API 에도 없습니다. 그래서 여기서는
