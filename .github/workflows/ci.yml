@@ -60,6 +60,39 @@ jobs:
         working-directory: web
         run: npm run build
 
+  # 진짜 브라우저로 전 팀 × 전 탭을 데스크톱·폰 폭에서 열어 본다 (web/e2e/smoke.mjs).
+  # 타입 검사·단위 테스트로는 안 보이던 사고 — 헤드샷 통째로 깨짐, 섹션이 조용히 빈칸,
+  # 가로 넘침, 한 탭이 흰 화면 — 을 사람이 화면을 보기 전에 잡는다.
+  ui-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 의존성 설치
+        working-directory: web
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
+      - name: 브라우저 설치 (chromium)
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: 빌드
+        working-directory: web
+        run: npm run build
+      - name: 미리보기 서버
+        working-directory: web
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+      - name: 화면 스모크
+        working-directory: web
+        run: node e2e/smoke.mjs http://127.0.0.1:4173/
+
   # 같은 목록이 코드 두 곳에 있다 — 어긋나면 데이터 파일 이름이 안 맞아
   # 화면이 조용히 "데이터 없음" 으로 떨어진다. 사람이 기억하는 대신 확인한다.
   lists-in-sync:

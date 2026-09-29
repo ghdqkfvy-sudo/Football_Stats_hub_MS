@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<
     if (!error) return this.props.children;
     return (
       <div className="page">
-        <div className="empty">
+        <div className="empty" data-error-boundary>
           <h3>{this.props.label ? `${this.props.label} 화면을 그리지 못했습니다` : '화면을 그리지 못했습니다'}</h3>
           <p>
             받아 온 데이터가 예상과 다른 모양이라 이 화면만 멈췄습니다. 다른 탭은 그대로 쓸 수 있습니다.

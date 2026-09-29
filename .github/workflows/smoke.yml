@@ -1,0 +1,41 @@
+name: 화면 스모크 (배포된 사이트)
+
+# ⚠️ 왜 따로 있나: 데이터는 봇이 10분·1시간마다 커밋하는데, 그 커밋에는 CI(ci.yml)가
+# 돌지 않는다(paths-ignore). 그래서 코드는 멀쩡한데 **데이터 쪽이** 화면을 깨뜨리는
+# 사고 — 외부 이미지 호스트가 바뀌어 헤드샷이 전부 깨짐, 피드가 비어 섹션이 빈칸 — 는
+# 사람이 화면을 보고서야 알았다. 배포된 실제 사이트를 주기적으로 열어 본다.
+# 실패하면 GitHub 가 저장소 주인에게 메일을 보낸다.
+on:
+  schedule:
+    - cron: '23 */3 * * *'      # 3시간마다
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-live
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 의존성 설치
+        working-directory: web
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
+      - name: 브라우저 설치 (chromium)
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: 화면 스모크 — 배포된 사이트
+        working-directory: web
+        run: node e2e/smoke.mjs https://ghdqkfvy-sudo.github.io/Football_Stats_hub_MS/
