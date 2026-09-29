@@ -4,6 +4,7 @@ import {
   betterPhoto, birthYearOf, choosePhoto, dueForReverify, isBadPhoto, kindFromUrl, matchInRoster,
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
   rateLimiter, urlVerdict,
+  canonicalPhotoUrl,
 } from './photos.mjs';
 
 /** 테스트를 고정하기 위한 '오늘' — 2026-09-23 */
@@ -256,8 +257,8 @@ test('dueForReverify — 숫자가 없는 id 는 건드리지 않는다', () => 
 
 /* ── 최종 사진 고르기 ──────────────────────────────────── */
 
-const CUT = { url: 'https://www.thesportsdb.com/images/media/player/cutout/x.png', kind: 'cutout' };
-const THUMB = { url: 'https://www.thesportsdb.com/images/media/player/thumb/x.jpg', kind: 'thumb' };
+const CUT = { url: 'https://r2.thesportsdb.com/images/media/player/cutout/x.png', kind: 'cutout' };
+const THUMB = { url: 'https://r2.thesportsdb.com/images/media/player/thumb/x.jpg', kind: 'thumb' };
 const ESPN = { url: 'https://a.espncdn.com/i/headshots/soccer/players/full/1.png', kind: 'espn' };
 const WIKI = { url: 'https://upload.wikimedia.org/x.jpg', kind: 'wiki' };
 
@@ -286,7 +287,7 @@ test('choosePhoto — 위키를 들고 있다가 컷아웃을 받으면 올라�
 });
 
 test('choosePhoto — 같은 등급이면 흔들지 않는다', () => {
-  const other = { url: 'https://www.thesportsdb.com/images/media/player/cutout/y.png', kind: 'cutout' };
+  const other = { url: 'https://r2.thesportsdb.com/images/media/player/cutout/y.png', kind: 'cutout' };
   assert.deepEqual(choosePhoto({ prev: CUT, tsdb: other, espn: undefined }).photo, CUT);
 });
 
@@ -336,4 +337,24 @@ test('choosePhoto — 이어받은 것이 오답이면 못 물어본 회차라�
 
 test('choosePhoto — 오답을 들고 있어도 멀쩡한 새 사진은 받는다', () => {
   assert.deepEqual(choosePhoto({ prev: SAVIOLA, tsdb: CUT, espn: undefined }).photo, CUT);
+});
+
+
+test('canonicalPhotoUrl — www.thesportsdb.com 이미지는 r2 로 (브라우저에서 www 는 안 뜬다, 2026-09-28)', () => {
+  assert.equal(
+    canonicalPhotoUrl('https://www.thesportsdb.com/images/media/player/cutout/a.png'),
+    'https://r2.thesportsdb.com/images/media/player/cutout/a.png',
+  );
+  assert.equal(
+    canonicalPhotoUrl('https://thesportsdb.com/images/media/player/thumb/b.jpg'),
+    'https://r2.thesportsdb.com/images/media/player/thumb/b.jpg',
+  );
+  // 다른 호스트·API 주소는 건드리지 않는다
+  assert.equal(canonicalPhotoUrl('https://a.espncdn.com/i/headshots/soccer/players/full/1.png'), 'https://a.espncdn.com/i/headshots/soccer/players/full/1.png');
+  assert.equal(canonicalPhotoUrl('https://www.thesportsdb.com/api/v1/json/3/x'), 'https://www.thesportsdb.com/api/v1/json/3/x');
+});
+
+test('betterPhoto — 옛 www 주소로 이어받은 사진도 r2 주소로 나온다', () => {
+  const old = { url: 'https://www.thesportsdb.com/images/media/player/cutout/z.png', kind: 'cutout' };
+  assert.equal(betterPhoto(old, null).url, 'https://r2.thesportsdb.com/images/media/player/cutout/z.png');
 });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { headshot } from '../config/koreans';
+import { canonicalPhotoUrl } from '../lib/photoUrl';
 
 /**
  * 선수 헤드샷.
@@ -41,13 +42,15 @@ export function Headshot({
    */
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
-  const url = src || headshot(id);
+  const url = canonicalPhotoUrl(src) || headshot(id);
   const failed = !!url && failedUrl === url;
 
   if (failed || !url) {
     return (
       <span
         className={`hs hs--fallback ${className}`}
+        /* 주소가 있었는데 못 불러온 경우 — 화면 스모크(e2e/smoke.mjs)가 "사진 없음" 과 구분해 센다 */
+        data-failed={failed ? url : undefined}
         style={{ width: size, height: size, fontSize: Math.max(10, size * (fallback.length > 2 ? 0.3 : 0.42)) }}
         aria-hidden="true"
       >

@@ -54,6 +54,24 @@ export function isBadPhoto(url) {
   return !!file && BAD_PHOTO_FILES.has(file);
 }
 
+/**
+ * TheSportsDB 이미지 주소를 지금 살아 있는 호스트로.
+ *
+ * ⚠️ 2026-09-28 확인: `www.thesportsdb.com/images/...` 는 브라우저에서 **로드되지 않는다**
+ * (같은 파일이 `r2.thesportsdb.com/images/...` 에서는 뜬다). API 가 아직 www 주소를
+ * 주는 선수가 있어서 맨유·뉴캐슬·토트넘 헤드샷이 통째로 깨졌다.
+ * 파일 이름은 같으므로 호스트만 바꾼다.
+ */
+export function canonicalPhotoUrl(url) {
+  return String(url ?? '').replace(/^https?:\/\/(www\.)?thesportsdb\.com\/images\//, 'https://r2.thesportsdb.com/images/');
+}
+/* 주소가 그대로면 같은 객체를 돌려준다 — 부르는 쪽이 "바뀌었나" 를 === 로 본다 */
+const canon = (p) => {
+  if (!p?.url) return p;
+  const url = canonicalPhotoUrl(p.url);
+  return url === p.url ? p : { ...p, url };
+};
+
 /** 출처 등급 — 숫자가 클수록 좋은 사진이다 */
 export const PHOTO_RANK = { cutout: 4, thumb: 3, espn: 2, wiki: 1 };
 
@@ -66,8 +84,8 @@ export const rankOf = (kind) => PHOTO_RANK[kind] ?? 0;
 export function betterPhoto(current, candidate) {
   /* 오답은 후보로도, 이어받기로도 통과시키지 않는다.
      사진이 바뀌는 길은 전부 이 함수를 지나므로 여기 한 곳이면 된다. */
-  const cur = current?.url && !isBadPhoto(current.url) ? current : null;
-  const cand = candidate?.url && !isBadPhoto(candidate.url) ? candidate : null;
+  const cur = current?.url && !isBadPhoto(current.url) ? canon(current) : null;
+  const cand = candidate?.url && !isBadPhoto(candidate.url) ? canon(candidate) : null;
   if (!cand) return cur;
   if (!cur) return cand;
   return rankOf(cand.kind) > rankOf(cur.kind) ? cand : cur;

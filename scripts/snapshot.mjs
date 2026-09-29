@@ -33,7 +33,7 @@ import {
 import {
   betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
-  rankOf, rateLimiter, urlVerdict,
+  rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 
@@ -851,7 +851,7 @@ async function loadPrevPhotos(fileName) {
   const map = new Map();
   const put = (id, url, kind) => {
     if (!url) return;
-    map.set(String(id), { url: String(url), kind: kind ?? kindFromUrl(url) });
+    map.set(String(id), { url: canonicalPhotoUrl(url), kind: kind ?? kindFromUrl(url) });
   };
   let text = null;
   try {
