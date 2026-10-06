@@ -87,8 +87,10 @@ jobs:
       - name: 미리보기 서버
         working-directory: web
         run: |
-          npx vite preview --port 4173 --strictPort &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          # --host 를 안 주면 localhost(::1) 에만 떠서 127.0.0.1 접속이 거부된다.
+          npx vite preview --port 4173 --strictPort --host 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          echo '미리보기 서버가 30초 안에 뜨지 않았다' >&2; exit 1
       - name: 화면 스모크
         working-directory: web
         run: node e2e/smoke.mjs http://127.0.0.1:4173/
