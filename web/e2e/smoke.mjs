@@ -50,7 +50,7 @@ async function checkView(page, where, kind) {
       const n = document.querySelectorAll(sel).length;
       if (n < min) out.missing.push(`${label} ${n}/${min}`);
     }
-    out.photos = [...new Set([...document.querySelectorAll('.hs img')].map((i) => i.getAttribute('src')).filter(Boolean))];
+    out.photos = [...new Set([...document.querySelectorAll('.hs img:not([data-guess])')].map((i) => i.getAttribute('src')).filter(Boolean))];
     /* 이미 화면에서 실패해 글자 배지로 떨어진 것(Headshot 이 data-failed 로 남긴다) */
     out.failed = [...new Set([...document.querySelectorAll('.hs[data-failed]')].map((e) => e.getAttribute('data-failed')))];
     out.errorBox = !!document.querySelector('[data-error-boundary]');

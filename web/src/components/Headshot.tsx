@@ -42,15 +42,19 @@ export function Headshot({
    */
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
-  const url = canonicalPhotoUrl(src) || headshot(id);
+  const confirmed = canonicalPhotoUrl(src);
+  const url = confirmed || headshot(id);
   const failed = !!url && failedUrl === url;
 
   if (failed || !url) {
     return (
       <span
         className={`hs hs--fallback ${className}`}
-        /* 주소가 있었는데 못 불러온 경우 — 화면 스모크(e2e/smoke.mjs)가 "사진 없음" 과 구분해 센다 */
-        data-failed={failed ? url : undefined}
+        /*
+         * 스냅샷이 확인한 주소를 못 불러온 경우만 — 화면 스모크(e2e/smoke.mjs)가 "사진 없음" 과 구분해 센다.
+         * 관용 주소 추측이 404 난 건 원본에 사진이 없는 선수라 정상이다.
+         */
+        data-failed={failed && confirmed ? url : undefined}
         style={{ width: size, height: size, fontSize: Math.max(10, size * (fallback.length > 2 ? 0.3 : 0.42)) }}
         aria-hidden="true"
       >
@@ -66,6 +70,8 @@ export function Headshot({
         alt=""
         loading="lazy"
         data-kind={kind ?? undefined}
+        /* 추측 주소 — 404 가 정상일 수 있어 스모크가 세지 않는다 */
+        data-guess={confirmed ? undefined : ''}
         onError={() => setFailedUrl(url)}
       />
       {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
