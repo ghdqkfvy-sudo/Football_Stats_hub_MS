@@ -211,6 +211,27 @@ export function StatCard({
         {tag && <span className="krc__tag">{tag}</span>}
       </div>
 
+      {national && (
+        /* A매치는 소속팀 정보와 클럽 대회 기록 **사이**에 둔다 — 선수 소개 바로 다음에
+           "대표팀에서는 어떤가" 가 읽힌다. 클럽 합계와는 섞지 않는다(섞어 더하면
+           "공격 포인트" 가 무엇의 합인지 흐려진다). 대표팀 색 띠로 갈라 놓는다. */
+        <div className="krc__nat" title={`${national.year}년 A매치 · 선발 ${national.starts}`}>
+          {national.crest
+            ? <img className="krc__natc" src={national.crest} alt="" width={16} height={16} />
+            : <i className="krc__natc" />}
+          <span className="krc__natl">
+            A매치 <em className="num">{national.year}</em>
+          </span>
+          <span className="krc__nata num">
+            {national.apps}경기 <em>(선발 {national.starts})</em>
+          </span>
+          <span className="krcc__ga num">
+            <b data-k="g" data-on={national.goals > 0}><i>G</i>{national.goals}</b>
+            <b data-k="a" data-on={national.assists > 0}><i>A</i>{national.assists}</b>
+          </span>
+        </div>
+      )}
+
       {comps.length === 0 ? (
         <p className="krc__none">{emptyNote ?? '이번 시즌 출전 기록이 아직 없습니다.'}</p>
       ) : (
@@ -259,26 +280,6 @@ export function StatCard({
             </span>
           </div>
         </>
-      )}
-
-      {national && (
-        /* A매치는 클럽 합계와 **다른 줄**이다 — 섞어 더하면 "공격 포인트" 가 무엇의
-           합인지 흐려진다. 대표팀 색 띠와 엠블럼으로 클럽 기록과 갈라 놓는다. */
-        <div className="krc__nat" title={`${national.year}년 A매치 · 선발 ${national.starts}`}>
-          {national.crest
-            ? <img className="krc__natc" src={national.crest} alt="" width={16} height={16} />
-            : <i className="krc__natc" />}
-          <span className="krc__natl">
-            A매치 <em className="num">{national.year}</em>
-          </span>
-          <span className="krc__nata num">
-            {national.apps}경기 <em>(선발 {national.starts})</em>
-          </span>
-          <span className="krcc__ga num">
-            <b data-k="g" data-on={national.goals > 0}><i>G</i>{national.goals}</b>
-            <b data-k="a" data-on={national.assists > 0}><i>A</i>{national.assists}</b>
-          </span>
-        </div>
       )}
 
       {national ? (

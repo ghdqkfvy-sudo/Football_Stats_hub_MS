@@ -332,41 +332,52 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* 끝난 경기 — 팀 엠블럼 아래에 그 팀의 득점자·도움 */
 .hgoals {
-  display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr); gap: 0 14px;
-  width: min(560px, 100%); margin: -2px auto 0; align-items: start;
+  display: grid; grid-template-columns: minmax(0,1fr) 22px minmax(0,1fr); gap: 0 10px;
+  width: min(600px, 100%); margin: 0 auto; align-items: stretch;
+  padding: 10px 0 2px; border-top: 1px solid var(--line);
 }
-.hgoals__side { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.hgoals__side[data-side='home'] { align-items: flex-end; text-align: right; }
-.hgoals__side[data-side='away'] { align-items: flex-start; text-align: left; }
-.hgoals__side li { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
-.hgoals__side[data-side='home'] li { align-items: flex-end; }
-.hgoals__who { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; }
-.hgoals__side[data-side='home'] .hgoals__who { flex-direction: row-reverse; }
-.hgoals__who b {
-  font-size: 14px; font-weight: 700; color: var(--text-hi);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.hgoals__side { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+/* 한 골 — [시간 고정폭] [득점자 / 도움]. 홈은 좌우를 뒤집어 시간이 가운데 축에 붙는다 */
+.hg { display: grid; grid-template-columns: 40px minmax(0,1fr); gap: 10px; align-items: start; }
+.hgoals__side[data-side='home'] .hg { grid-template-columns: minmax(0,1fr) 40px; }
+.hgoals__side[data-side='home'] .hg__t { order: 2; }
+.hgoals__side[data-side='home'] .hg__body { order: 1; align-items: flex-end; text-align: right; }
+.hg__t {
+  justify-self: stretch; text-align: center; padding: 2px 0; border-radius: 5px;
+  font-family: var(--font-display); font-size: 12.5px; font-weight: 700; line-height: 1.25;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.hg--left .hg__t { background: none; }
+.hg__body { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.hg__s { display: flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; }
+.hgoals__side[data-side='home'] .hg__s { flex-direction: row-reverse; }
+.hg__s b {
+  font-size: 14px; font-weight: 700; color: var(--text-hi); line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
-}
-.hgoals__who i {
-  font-style: normal; font-family: var(--font-display); font-size: 13px; font-weight: 700;
-  color: var(--accent); flex: none;
 }
 .hgoals__tag {
   font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .05em; flex: none;
   padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.1); color: var(--text-mid);
 }
 .hgoals__tag[data-og] { background: rgba(255,92,113,.16); color: #FF8A99; }
-.hgoals__a {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-mid);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+.hg__a {
+  display: flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0;
+  font-size: 11.5px; color: var(--text-mid); line-height: 1.2;
 }
-.hgoals__a i {
-  font-style: normal; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;
+.hgoals__side[data-side='home'] .hg__a { flex-direction: row-reverse; }
+.hg__a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.hg__a i {
+  flex: none; font-style: normal; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;
   color: #7FE3FF; background: rgba(127,227,255,.12); border: 1px solid rgba(127,227,255,.32);
 }
-.hgoals__a[data-guess] { opacity: .7; }
-.hgoals__left .hgoals__a { color: var(--text-lo); }
-.hgoals__mid { display: grid; place-items: center; height: 20px; color: var(--text-lo); }
+.hg__a[data-guess] { opacity: .7; }
+.hg--left .hg__a { color: var(--text-lo); }
+/* 가운데 축 — 공 아이콘 아래로 얇은 세로선 */
+.hgoals__mid {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-lo);
+}
+.hgoals__mid::after { content: ''; flex: 1; width: 1px; background: var(--line); }
 .hgoals__none { margin: -2px 0 0; text-align: center; font-size: 12px; color: var(--text-lo); }
 
 /* 킥오프 */
@@ -1994,9 +2005,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 @media (max-width: 640px) {
-  .hgoals { gap: 0 8px; grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr); }
-  .hgoals__who b { font-size: 12.5px; }
-  .hgoals__a { font-size: 11px; }
+  .hgoals { gap: 0 6px; grid-template-columns: minmax(0,1fr) 14px minmax(0,1fr); }
+  .hg { grid-template-columns: 34px minmax(0,1fr); gap: 6px; }
+  .hgoals__side[data-side='home'] .hg { grid-template-columns: minmax(0,1fr) 34px; }
+  .hg__t { font-size: 11.5px; }
+  .hg__s b { font-size: 12.5px; }
+  .hg__a { font-size: 11px; }
   .kr__totals { grid-template-columns: repeat(2, 1fr); }
   .kr__grid { grid-template-columns: 1fr; }
   .krcc { grid-template-columns: 16px 30px minmax(20px,1fr) auto 68px 24px; gap: 6px; }

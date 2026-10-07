@@ -114,29 +114,41 @@ function HeroGoals({ match, loading }: { match: Match; loading?: boolean }) {
 
   const { inferred, leftover } = resolveAssists(match.goals, match.playerStats);
   const rows = match.goals.map((g, i) => ({ g, assist: g.assist ?? inferred.get(i)?.name, guess: !g.assist }));
+  /*
+   * 한 골 = [시간] [득점자 / 그 아래 도움] 두 칸.
+   * 시간은 고정폭 칸에 넣어 가운데 축 쪽에 **세로 한 줄로** 맞춘다 — 예전에는 시간이
+   * 이름 길이에 따라 들쭉날쭉 붙어 있어서, 눈이 골마다 시간을 다시 찾아야 했다.
+   * 도움은 득점자 이름과 **같은 가장자리**에 맞춰 바로 아랫줄에 둔다.
+   * 홈은 거울처럼 뒤집는다(이름 ← 시간 | 축 | 시간 → 이름).
+   */
   const side = (teamId: string, key: 'home' | 'away') => (
     <ul className="hgoals__side" data-side={key}>
       {rows.filter((r) => r.g.teamId === teamId).map((r, i) => (
-        <li key={i}>
-          <span className="hgoals__who">
-            <b>{r.g.scorer}</b>
-            {r.g.penalty && <em className="hgoals__tag">PK</em>}
-            {r.g.ownGoal && <em className="hgoals__tag" data-og>OG</em>}
-            <i className="num">{r.g.clock}</i>
-          </span>
-          {r.assist && (
-            <span className="hgoals__a" data-guess={r.guess || undefined}
-              title={r.guess ? '출전 시간으로 좁힌 추정 도움' : undefined}>
-              <i>A</i>{r.assist}
+        <li className="hg" key={i}>
+          <span className="hg__t num">{r.g.clock}</span>
+          <span className="hg__body">
+            <span className="hg__s">
+              <b>{r.g.scorer}</b>
+              {r.g.penalty && <em className="hgoals__tag">PK</em>}
+              {r.g.ownGoal && <em className="hgoals__tag" data-og>OG</em>}
             </span>
-          )}
+            {r.assist && (
+              <span className="hg__a" data-guess={r.guess || undefined}
+                title={r.guess ? '출전 시간으로 좁힌 추정 도움' : undefined}>
+                <i>A</i><span>{r.assist}</span>
+              </span>
+            )}
+          </span>
         </li>
       ))}
       {leftover.filter((x) => x.teamId === teamId).map((x, i) => (
-        /* 어느 골인지까지는 확인되지 않은 도움 */
-        <li key={`l${i}`} className="hgoals__left">
-          <span className="hgoals__a" title="어느 골인지까지는 확인되지 않은 도움">
-            <i>A</i>{x.name}{x.a > 1 ? ` ×${x.a}` : ''}
+        /* 어느 골인지까지는 확인되지 않은 도움 — 시간 칸은 비워 둔다 */
+        <li className="hg hg--left" key={`l${i}`}>
+          <span className="hg__t" />
+          <span className="hg__body">
+            <span className="hg__a" title="어느 골인지까지는 확인되지 않은 도움">
+              <i>A</i><span>{x.name}{x.a > 1 ? ` ×${x.a}` : ''}</span>
+            </span>
           </span>
         </li>
       ))}
