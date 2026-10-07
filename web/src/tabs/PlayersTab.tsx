@@ -111,7 +111,14 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             selectedId={pinnedId}
             onSelect={setPinnedId}
           />
-          <PlayerTable players={ordered} activeId={activeId} onHover={setHoverId} />
+          <PlayerTable
+            players={ordered}
+            activeId={activeId}
+            onHover={setHoverId}
+            /* 카드의 ✕ 는 고정 선택까지 푼다 — 호버만 지우면 activeId 가 고정 선수로
+               그대로 남아, 같은 선수를 다시 눌러도 카드가 열리지 않았다 */
+            onClose={() => { setHoverId(null); setPinnedId(null); }}
+          />
         </div>
       </section>
 

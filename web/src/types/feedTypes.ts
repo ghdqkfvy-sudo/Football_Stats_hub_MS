@@ -134,4 +134,16 @@ export interface KoreanPlayer {
   leagueLogo?: string;
   stats: KoreanStat[];
   recent: KoreanGame[];
+  /** A매치 — 스냅샷이 대표팀 경기 라인업에서 모은다 (scripts/lib/national.mjs) */
+  national?: KoreanNational;
+}
+
+/** 대표팀 기록 — 합계는 그해(year) 경기만, 최근 경기는 연도 무관 마지막 3경기 */
+export interface KoreanNational {
+  year: number;
+  apps: number;
+  starts: number;
+  goals: number;
+  assists: number;
+  recent: KoreanGame[];
 }

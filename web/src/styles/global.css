@@ -327,6 +327,48 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 2px 16px rgba(4,12,28,.9);
 }
 
+/* 목록에서 경기를 고르면 여기로 스크롤한다 — 위에 붙는 탭 막대만큼 띄운다 */
+.hero__anchor { scroll-margin-top: 72px; }
+
+/* 끝난 경기 — 팀 엠블럼 아래에 그 팀의 득점자·도움 */
+.hgoals {
+  display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr); gap: 0 14px;
+  width: min(560px, 100%); margin: -2px auto 0; align-items: start;
+}
+.hgoals__side { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.hgoals__side[data-side='home'] { align-items: flex-end; text-align: right; }
+.hgoals__side[data-side='away'] { align-items: flex-start; text-align: left; }
+.hgoals__side li { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 100%; }
+.hgoals__side[data-side='home'] li { align-items: flex-end; }
+.hgoals__who { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; }
+.hgoals__side[data-side='home'] .hgoals__who { flex-direction: row-reverse; }
+.hgoals__who b {
+  font-size: 14px; font-weight: 700; color: var(--text-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 12px rgba(4,12,28,.9);
+}
+.hgoals__who i {
+  font-style: normal; font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  color: var(--accent); flex: none;
+}
+.hgoals__tag {
+  font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .05em; flex: none;
+  padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.1); color: var(--text-mid);
+}
+.hgoals__tag[data-og] { background: rgba(255,92,113,.16); color: #FF8A99; }
+.hgoals__a {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-mid);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+.hgoals__a i {
+  font-style: normal; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;
+  color: #7FE3FF; background: rgba(127,227,255,.12); border: 1px solid rgba(127,227,255,.32);
+}
+.hgoals__a[data-guess] { opacity: .7; }
+.hgoals__left .hgoals__a { color: var(--text-lo); }
+.hgoals__mid { display: grid; place-items: center; height: 20px; color: var(--text-lo); }
+.hgoals__none { margin: -2px 0 0; text-align: center; font-size: 12px; color: var(--text-lo); }
+
 /* 킥오프 */
 .hero__when { text-align: center; }
 .when__date {
@@ -1537,10 +1579,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* 포지션 배지 색 — 피치의 자리 색(LINE_COLOR)과 같은 체계로 맞춘다
    FW 빨강 · MF 청록 · DF 파랑 · GK 금색 */
-.pt__who em[data-pos='F'], .pcard__pos[data-pos='F'] { --pos: #FF4D5E; }
-.pt__who em[data-pos='M'], .pcard__pos[data-pos='M'] { --pos: #3FD7C0; }
-.pt__who em[data-pos='D'], .pcard__pos[data-pos='D'] { --pos: #4C8DFF; }
-.pt__who em[data-pos='G'], .pcard__pos[data-pos='G'] { --pos: #F5A524; }
+.pt__who em[data-pos='F'], .pcard__pos[data-pos='F'], .krc__id em[data-pos='F'] { --pos: #FF4D5E; }
+.pt__who em[data-pos='M'], .pcard__pos[data-pos='M'], .krc__id em[data-pos='M'] { --pos: #3FD7C0; }
+.pt__who em[data-pos='D'], .pcard__pos[data-pos='D'], .krc__id em[data-pos='D'] { --pos: #4C8DFF; }
+.pt__who em[data-pos='G'], .pcard__pos[data-pos='G'], .krc__id em[data-pos='G'] { --pos: #F5A524; }
 .pt__who em[data-pos] {
   color: var(--pos);
   border-color: color-mix(in srgb, var(--pos) 45%, transparent);
@@ -1791,6 +1833,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: 2px 6px; border-radius: 4px; color: var(--clubfg);
   background: color-mix(in srgb, var(--club) 80%, transparent);
 }
+/* 포지션 배지 — 카드 색(리그/클럽)이 아니라 포지션 색. 선수 스탯 표와 같은 체계 */
+.krc__id em[data-pos] {
+  color: var(--pos);
+  background: color-mix(in srgb, var(--pos) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pos) 45%, transparent);
+}
 .krc__club {
   display: flex; align-items: center; gap: 6px; margin-top: 5px;
   font-size: 11.5px; color: var(--text-mid);
@@ -1878,11 +1926,25 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .krc__sum b[data-k='p'][data-on='true'] {
   color: var(--on-accent); background: var(--accent); border-color: transparent;
 }
+/* A매치 — 클럽 합계 아래 별도 띠. 태극 두 색으로 클럽 기록과 갈라 놓는다 */
+.krc__nat {
+  display: grid; grid-template-columns: 16px auto minmax(0,1fr) auto; align-items: center; gap: 8px;
+  margin-top: 10px; padding: 7px 10px; border-radius: 10px;
+  background: linear-gradient(90deg, rgba(205,46,58,.16), rgba(0,71,160,.16));
+  border: 1px solid var(--line); font-size: 11.5px; color: var(--text-mid);
+}
+.krc__natc { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
+.krc__natl { color: var(--text-hi); font-weight: 600; white-space: nowrap; }
+.krc__natl em { font-style: normal; font-weight: 500; color: var(--text-lo); margin-left: 3px; }
+.krc__nata { justify-self: end; font-size: 10.5px; color: var(--text-lo); white-space: nowrap; }
+.krc__nata em { font-style: normal; opacity: .75; }
 .krc__none { margin: 14px 0 2px; font-size: 12px; color: var(--text-lo); line-height: 1.6; }
 
 /* 최근 3경기 호버 패널 */
 .krr {
-  position: absolute; z-index: 60; left: 50%; top: 52px; transform: translateX(-50%);
+  position: absolute; z-index: 60; left: 50%; top: 52px;
+  /* --krr-shift: 화면 밖으로 나가면 StatCard 가 재서 안쪽으로 민다 */
+  transform: translateX(calc(-50% + var(--krr-shift, 0px)));
   width: min(330px, 96%); padding: 13px 14px;
   border: 1px solid var(--line-2); border-radius: var(--r-md);
   background: color-mix(in srgb, var(--ink-1000) 96%, transparent);
@@ -1891,6 +1953,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   opacity: 0; visibility: hidden; transition: opacity .14s;
 }
 .krr[data-open='true'] { opacity: 1; visibility: visible; }
+/* 코리안리거 — 클럽(왼쪽) · 국가대표(오른쪽) 두 칸 */
+.krr--split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  width: min(660px, calc(100vw - 24px));
+}
+/* 닫혀 있을 때는 자리도 차지하지 않게 — 투명해도 660px 상자가 오른쪽 열 카드 밖으로
+   나가 페이지에 가로 스크롤을 만들었다(위치 보정은 열릴 때만 한다) */
+.krr--split:not([data-open='true']) { display: none; }
+.krr__col { min-width: 0; }
+.krr__col + .krr__col { border-left: 1px solid var(--line); padding-left: 16px; }
 .krr__h {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
   margin-bottom: 10px; padding-bottom: 9px; border-bottom: 1px solid var(--line);
@@ -1922,6 +1994,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 @media (max-width: 640px) {
+  .hgoals { gap: 0 8px; grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr); }
+  .hgoals__who b { font-size: 12.5px; }
+  .hgoals__a { font-size: 11px; }
   .kr__totals { grid-template-columns: repeat(2, 1fr); }
   .kr__grid { grid-template-columns: 1fr; }
   .krcc { grid-template-columns: 16px 30px minmax(20px,1fr) auto 68px 24px; gap: 6px; }
@@ -1932,6 +2007,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     opacity: 1; visibility: visible; box-shadow: none;
     background: rgba(255,255,255,.03); border-color: var(--line);
   }
+  /* 폰 폭에 두 칸은 좁다 — 클럽 위, 국가대표 아래로 쌓는다 */
+  .krr--split { grid-template-columns: 1fr; gap: 10px; width: auto; }
+  .krr--split:not([data-open='true']) { display: grid; }
+  .krr__col + .krr__col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 10px; }
 }
 
 /* ══ 뉴스 ══════════════════════════════════════════════════
@@ -2250,6 +2329,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   background: color-mix(in srgb, var(--draw) 12%, transparent);
 }
 
+.mprev__none {
+  margin: 14px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--text-lo);
+}
 .mprev__h2h {
   padding: 13px 15px;
   border: 1px solid var(--line); border-radius: var(--r-lg);

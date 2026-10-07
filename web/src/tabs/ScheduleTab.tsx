@@ -156,12 +156,39 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
     setSelectedDay(first ? dayKey(first.kickoffUtc) : null);
   };
 
-  const toggleRow = (m: Match) => {
-    if (m.status !== 'finished') return;
-    const nextId = openId === m.id ? null : m.id;
-    setOpenId(nextId);
-    if (nextId && !m.goalsLoaded) fetchGoals(m);
+  /**
+   * 목록에서 경기를 고르면 **화면 전체가 그 경기로 맞춰진다** — 히어로가 그 경기로
+   * 바뀌고(끝난 경기면 득점자·도움까지), 캘린더도 그 날짜가 선택된다.
+   * 예전에는 미래 경기를 눌러도 아무 일이 없었고, 지난 경기는 목록 안에서만
+   * 펼쳐져 위의 히어로와 따로 놀았다.
+   */
+  const heroRef = useRef<HTMLDivElement>(null);
+  const focusMatch = (m: Match) => {
+    setPinned(true);
+    const [y, mo] = monthKey(m.kickoffUtc).split('-').map(Number);
+    setCursor({ y, m: mo });
+    setSelectedDay(dayKey(m.kickoffUtc));
+    if (m.status === 'finished' && !m.goalsLoaded) fetchGoals(m);
+    requestAnimationFrame(() => heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
+
+  const toggleRow = (m: Match) => {
+    if (m.status === 'finished') {
+      const nextId = openId === m.id ? null : m.id;
+      setOpenId(nextId);
+      if (nextId && !m.goalsLoaded) fetchGoals(m);
+      /* 접을 때는 히어로를 건드리지 않는다 — 펼칠 때만 그 경기로 맞춘다 */
+      if (nextId) focusMatch(m);
+      return;
+    }
+    focusMatch(m);
+  };
+
+  /* 히어로에 끝난 경기가 올라오면(캘린더에서 날짜를 골라도) 득점 상세를 받는다 */
+  useEffect(() => {
+    if (heroMatch?.status === 'finished' && !heroMatch.goalsLoaded) fetchGoals(heroMatch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroMatch?.id, heroMatch?.goalsLoaded]);
 
   const monthMatches = useMemo(() => {
     if (!cursor) return [];
@@ -197,12 +224,18 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
 
   return (
     <div className="page">
-      {heroMatch && <NextMatchHero
-          match={heroMatch}
-          focusTeamId={target.espnTeamId}
-          standingOf={standingOf}
-          fifaOf={target.kind === 'national' ? fifaOf : undefined}
-        />}
+      {heroMatch && (
+        <div ref={heroRef} className="hero__anchor">
+          <NextMatchHero
+            match={heroMatch}
+            focusTeamId={target.espnTeamId}
+            standingOf={standingOf}
+            fifaOf={target.kind === 'national' ? fifaOf : undefined}
+            goalsLoading={pending.has(heroMatch.id)}
+            notNext={!!next && heroMatch.id !== next.id}
+          />
+        </div>
+      )}
       {heroMatch && extras?.preview?.eventId === heroMatch.id && (
         <MatchPreview
           match={heroMatch}
@@ -256,7 +289,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
       <section>
         <div className="sec__head">
           <h2 className="sec__title">{cursor?.m}월 경기</h2>
-          <span className="sec__note">종료된 경기를 누르면 골 기록이 펼쳐집니다</span>
+          <span className="sec__note">경기를 누르면 위 히어로에 그 경기가 뜹니다 · 종료된 경기는 골 기록도 펼쳐집니다</span>
         </div>
         <MonthList
           matches={monthMatches}

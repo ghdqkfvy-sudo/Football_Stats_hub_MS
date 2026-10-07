@@ -171,6 +171,7 @@ function FutureCard({
       id={p.id}
       name={p.name}
       posLabel={POS[feed?.pos && feed.clubId !== '0' ? feed.pos : p.pos ?? 'M']}
+      pos={feed?.pos && feed.clubId !== '0' ? feed.pos : p.pos ?? 'M'}
       photo={feed?.photo}
       photoKind={feed?.photoKind}
       fallbackLabel={p.name.slice(0, 1)}

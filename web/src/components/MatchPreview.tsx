@@ -53,8 +53,10 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
   const rec = recordOf(meetings);
 
   return (
-    /* 맞대결 기록이 없으면 오른쪽 268px 칸이 빈 상자로 남는다 — 한 칸으로 접는다 */
-    <div className="mprev" data-h2h={meetings.length > 0}>
+    /* 맞대결이 없어도 칸은 남긴다 — 접어 버리면 국가대표 탭만 클럽 탭과 모양이
+       달라지고(한 상대를 십수 년에 한 번 만나 거의 늘 비었다), "기록이 없다" 는
+       것 자체가 정보다. */
+    <div className="mprev" data-h2h>
       {/* 위 카드와 같은 순서 — 홈 / 원정 */}
       <div className="mprev__forms">
         <FormColumn
@@ -70,6 +72,18 @@ export function MatchPreview({ match, focusTeamId, lastFive, h2h, h2hScope }: Pr
           mine={match.away.id === focusTeamId}
         />
       </div>
+
+      {meetings.length === 0 && (
+        <div className="mprev__h2h" data-empty>
+          <div className="mprev__h2hh">
+            <span className="eyebrow">상대전적</span>
+            <span className="mprev__note num">{h2hScope === 'all' ? '역대' : '최근 세 시즌'} 0경기</span>
+          </div>
+          <p className="mprev__none">
+            ESPN 기록에 두 팀의 맞대결이 없습니다.
+          </p>
+        </div>
+      )}
 
       {meetings.length > 0 && (
         <div className="mprev__h2h">

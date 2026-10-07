@@ -27,3 +27,11 @@ export function useMedia(query: string): boolean {
 }
 
 export const useIsMobile = () => useMedia(MOBILE_QUERY);
+
+/**
+ * 진짜 마우스가 있는 기기인지. 터치 기기는 탭 한 번에 mouseenter·focus·click 을
+ * 한꺼번에 흉내 내서, 호버 핸들러와 클릭 핸들러가 같은 상태를 서로 뒤집는다.
+ * 터치에서는 호버 핸들러를 달지 않고 탭(click)만 쓴다.
+ */
+export const HAS_HOVER =
+  typeof window !== 'undefined' && !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LEAGUE_ORDER, PINNED } from '../config/koreans';
-import type { KoreanPlayer } from '../types/feedTypes';
+import type { KoreanGame, KoreanPlayer } from '../types/feedTypes';
 import { loadKoreans, type Source } from '../lib/api';
 import { visibleComps } from '../lib/comps';
 import { usePalette } from '../lib/palette';
-import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
+import { StatCard, type CompLine, type NationalLine, type RecentLine } from '../components/StatCard';
+import crestKor from '../assets/crest-kor.png';
 import { Swap } from '../components/Swap';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -16,6 +17,32 @@ const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' }
  * (규칙과 근거는 lib/comps.ts)
  */
 const shownStats = (p: KoreanPlayer) => visibleComps(p.stats, p.league);
+
+const toRecent = (gm: KoreanGame): RecentLine => ({
+  competition: gm.competition,
+  result: gm.result,
+  opponent: gm.opponent,
+  opponentId: gm.opponentId,
+  score: gm.score,
+  started: gm.started,
+  minutes: gm.minutes,
+  subIn: gm.subIn,
+  goals: gm.goals,
+  assists: gm.assists,
+  yellow: gm.yellow,
+});
+
+/** A매치 줄 — 예전 피드(national 없음)면 줄을 그리지 않는다 */
+const nationalOf = (p: KoreanPlayer): NationalLine | undefined =>
+  p.national && {
+    year: p.national.year,
+    apps: p.national.apps,
+    starts: p.national.starts,
+    goals: p.national.goals,
+    assists: p.national.assists,
+    crest: crestKor,
+    recent: p.national.recent.map(toRecent),
+  };
 
 const sum = (rows: { goals: number; assists: number; apps: number }[], k: 'goals' | 'assists' | 'apps') =>
   rows.reduce((a, r) => a + r[k], 0);
@@ -169,6 +196,9 @@ export function KoreansTab() {
               id={p.id}
               name={p.nameKo}
               posLabel={POS_LABEL[p.pos]}
+              pos={p.pos}
+              tint="league"
+              national={nationalOf(p)}
               photo={p.photo}
               photoKind={p.photoKind}
               fallbackLabel={p.nameKo.slice(0, 1)}
@@ -187,19 +217,7 @@ export function KoreansTab() {
                 goals: s.goals,
                 assists: s.assists,
               }))}
-              recent={p.recent.map((gm): RecentLine => ({
-                competition: gm.competition,
-                result: gm.result,
-                opponent: gm.opponent,
-                opponentId: gm.opponentId,
-                score: gm.score,
-                started: gm.started,
-                minutes: gm.minutes,
-                subIn: gm.subIn,
-                goals: gm.goals,
-                assists: gm.assists,
-                yellow: gm.yellow,
-              }))}
+              recent={p.recent.map(toRecent)}
               emptyNote="이번 시즌 리그 출전 기록이 아직 없습니다."
               recentNote="경기별 기록은 소속 클럽의 경기 라인업에서 가져옵니다. 다음 갱신 회차에 채워집니다."
               open={openId === p.id}

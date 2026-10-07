@@ -36,6 +36,7 @@ import {
   rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
+import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
 const rankOfBest = (b) => rankOf(b?.kind);
@@ -1495,6 +1496,60 @@ async function koreanPlayer(id, nameKo, carriedPhoto, fallbackLeague = '') {
 }
 
 /**
+ * 대표팀 A매치 경기별 출전 기록 (코리안리거 카드의 A매치 줄·호버).
+ *
+ * 경기 목록은 fast 잡이 이미 만든 schedule-korea.json 을 읽는다 — 같은 일정을
+ * 또 받을 이유가 없다. 끝난 경기의 라인업은 바뀌지 않으므로 지난 회차
+ * koreans.json 의 nationalGames 를 이어받고, 새로 끝난 경기만 summary 를 받는다.
+ */
+const NATIONAL_SOURCE = 'summary-lineup-v1';
+async function nationalGames() {
+  const team = TEAMS.find((t) => t.national);
+  if (!team) return [];
+  let sched;
+  try { sched = JSON.parse(await readFile(join(OUT, `schedule-${team.slug}.json`), 'utf8')); } catch { return []; }
+  const meta = scheduleMeta(sched, team.id);
+
+  const prev = new Map();
+  try {
+    const old = JSON.parse(await readFile(join(OUT, 'koreans.json'), 'utf8'));
+    if (old?.nationalSource === NATIONAL_SOURCE) {
+      for (const g of old?.nationalGames ?? []) prev.set(String(g.eventId), g);
+    }
+  } catch { /* 첫 실행 */ }
+
+  const done = (sched?.events ?? [])
+    .filter((e) => e?.competitions?.[0]?.status?.type?.completed === true)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  let fetched = 0;
+  const games = await pool(done, 4, async (ev) => {
+    const id = String(ev.id);
+    const hit = prev.get(id);
+    if (hit) return hit;
+    const lg = ev?.league?.slug ?? ev?.season?.slug ?? team.league;
+    const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${id}`);
+    if (!sum?.rosters) return null;
+    const lineup = nationalLineup(sum, team.id);
+    /* 라인업이 아직 안 올라온 경기는 저장하지 않는다 — 다음 회차에 다시 받는다 */
+    if (!Object.keys(lineup).length) return null;
+    fetched++;
+    const m = meta.get(id) ?? {};
+    return {
+      eventId: id,
+      date: String(ev.date ?? m.date ?? ''),
+      competition: String(lg),
+      opponent: m.opponent ?? '',
+      opponentId: m.opponentId ?? '0',
+      score: m.score ?? '',
+      result: m.result ?? 'D',
+      lineup,
+    };
+  });
+  if (fetched) console.log(`    A매치 라인업 신규 ${fetched}경기`);
+  return games.filter(Boolean);
+}
+
+/**
  * FIFA 남자 랭킹 — 위키백과 Module:SportsRankings/data/FIFA_World_Rankings.
  * 줄마다 `{ "Korea Republic", 32, -7, 1558.72 }` (이름, 순위, 변동, 점수) 형식이다.
  * 이름은 FIFA 표기(Korea Republic · IR Iran · USA …)라 앱 쪽에서 ESPN 표기와
@@ -1911,8 +1966,15 @@ async function main() {
     const got = await pool(KOREANS, 4, ([id, nameKo]) =>
       koreanPlayer(id, nameKo, carried.get(String(id))));
     const players = got.filter(Boolean);
+    const games = await nationalGames();
+    const year = new Date().getUTCFullYear();
+    if (games.length) for (const p of players) p.national = nationalFor(games, p.id, year);
     if (players.length) {
-      await save('koreans.json', { players, season: SEASON, fetchedAt: new Date().toISOString() });
+      await save('koreans.json', {
+        players, season: SEASON,
+        nationalSource: NATIONAL_SOURCE, nationalGames: games,
+        fetchedAt: new Date().toISOString(),
+      });
       console.log(`    코리안리거 ${players.length}명`);
     } else if (await fileExists('koreans.json')) {
       note('코리안리거', '0명 — 기존 파일 유지');

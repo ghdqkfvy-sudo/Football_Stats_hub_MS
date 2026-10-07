@@ -1,6 +1,7 @@
 import { lineKind, lineLabels, LINE_COLOR, type PlayerSeason, type Slot } from '../lib/squad';
 import { Headshot } from './Headshot';
 import { PitchMarkings } from './PitchMarkings';
+import { HAS_HOVER } from '../lib/useMedia';
 
 interface Props {
   slots: Slot[];
@@ -110,10 +111,17 @@ function PlayerChip({
       data-active={active}
       data-selected={selected}
       style={{ ['--pc' as string]: color }}
-      onMouseEnter={() => onHover(p.id)}
-      onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover(p.id)}
-      onBlur={() => onHover(null)}
+      /* ⚠️ 터치에서는 호버를 달지 않는다. 탭 한 번에 가짜 mouseenter(호버=이 선수)와
+         click(고정 토글)이 같이 와서, 이미 고정된 선수를 다시 누르면 고정만 풀리고
+         activeId 는 그대로라 카드가 다시 안 떴다. 터치는 탭 = 고정 토글 하나뿐이다. */
+      {...(HAS_HOVER
+        ? {
+          onMouseEnter: () => onHover(p.id),
+          onMouseLeave: () => onHover(null),
+          onFocus: () => onHover(p.id),
+          onBlur: () => onHover(null),
+        }
+        : {})}
       // 클릭하면 선택이 고정된다 — 오른쪽 선수 목록도 그 선수로 따라간다
       onClick={() => onSelect?.(selected ? null : p.id)}
       onKeyDown={(e) => {

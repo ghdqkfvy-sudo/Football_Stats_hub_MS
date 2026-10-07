@@ -31,9 +31,11 @@ interface Props {
   players: PlayerSeason[];
   activeId: string | null;
   onHover: (id: string | null) => void;
+  /** 카드의 ✕ — 포메이션에서 고정한 선택까지 푼다 */
+  onClose?: () => void;
 }
 
-export function PlayerTable({ players, activeId, onHover }: Props) {
+export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
   const [filter, setFilter] = useState('ALL');
 
   /* 정렬을 걸지 않았을 때의 기본 순서는 "베스트 11 먼저, 그다음 기여도 순"
@@ -99,6 +101,10 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
     setCard(null);
     onHover(null);
   };
+  const dismissCard = () => {
+    closeCard();
+    onClose?.();
+  };
 
   /*
    * 포메이션에서 선수를 고르면(또는 그 위에 마우스를 올리면) 목록도 같이
@@ -113,13 +119,24 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
     const p = rows.find((x) => x.id === activeId);
     const el = rowRefs.current.get(activeId);
     if (!p || !el) return;
-    el.scrollIntoView({ block: 'nearest' });
+    /* 목록 **안에서만** 그 줄이 보이게 스크롤한다. scrollIntoView 는 페이지까지
+       끌어내려서, 폰에서 포메이션 칩을 누르면 화면이 목록으로 훅 내려갔다
+       (카드는 화면 아래 고정이라 페이지를 움직일 이유가 없다). */
+    const list = listRef.current;
+    if (list) {
+      const top = el.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+      if (top < list.scrollTop) list.scrollTop = top;
+      else if (top + el.offsetHeight > list.scrollTop + list.clientHeight) {
+        list.scrollTop = top + el.offsetHeight - list.clientHeight;
+      }
+    }
     // 스크롤이 끝난 뒤의 좌표로 카드를 놓는다
     const id = requestAnimationFrame(() => placeCard(p, el));
     return () => cancelAnimationFrame(id);
   }, [activeId, rows]);
 
   return (
+    <>
     <div className="pt" ref={wrapRef}>
       <div className="pt__bar">
         <div className="pt__filters">
@@ -187,9 +204,16 @@ export function PlayerTable({ players, activeId, onHover }: Props) {
         {rows.length === 0 && <p className="nogoal" style={{ padding: 16 }}>해당 포지션 기록이 없습니다.</p>}
         </Swap>
       </div>
-
-      {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={closeCard} />}
     </div>
+
+    {/*
+      * ⚠️ 카드는 .pt **바깥**에 그린다. .pt 에는 backdrop-filter 가 있어서, 안에 두면
+      * position:fixed 의 기준이 화면이 아니라 .pt 상자가 된다. 폰에서는 카드가
+      * "화면 아래" 가 아니라 "선수 목록 아래" 에 붙어 화면 밖(아래)에 떠 있었다 —
+      * 포메이션 칩을 눌러도 카드가 안 보이던 원인. 목록을 끝까지 내려야만 보였다.
+      */}
+    {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={dismissCard} />}
+    </>
   );
 }
 

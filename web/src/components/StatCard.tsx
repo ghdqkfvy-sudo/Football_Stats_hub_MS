@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { CREST } from '../config/targets';
 import { tintOf } from '../config/crestTint';
 import { usePalette } from '../lib/palette';
@@ -70,11 +70,42 @@ export function LeagueMark({ src, color }: { src?: string; color: string }) {
   );
 }
 
+/** A매치 합계 한 줄 — 클럽 합계와 섞지 않고 따로 그린다 */
+export interface NationalLine {
+  /** 합계를 센 해 (2026 A매치) */
+  year: number;
+  apps: number;
+  starts: number;
+  goals: number;
+  assists: number;
+  /** 대표팀 엠블럼 */
+  crest?: string;
+  recent: RecentLine[];
+}
+
+/** 밝은 대회 색(리그1 노랑 등) 위에서는 글자를 어둡게 */
+function inkOn(hex: string) {
+  const m = hex.replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return '#fff';
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.62 ? '#0A0D16' : '#fff';
+}
+
 interface Props {
   id: string;
   name: string;
   /** GK / DF / MF / FW */
   posLabel?: string;
+  /** G / D / M / F — 포지션 배지 색 (선수 스탯 표·피치와 같은 체계) */
+  pos?: string;
+  /**
+   * 카드 색의 기준. 'club' 은 소속 클럽 색, 'league' 는 소속 리그 색.
+   * 코리안리거는 한 팀이 아니라 여러 리그에 흩어져 있어서, 리그 색이어야
+   * 위의 리그 필터 칩·대회 줄과 같은 색으로 묶여 읽힌다.
+   */
+  tint?: 'club' | 'league';
+  /** A매치 기록 — 있으면 카드에 A매치 줄이 생기고 호버가 클럽/국가대표 두 칸이 된다 */
+  national?: NationalLine;
   photo?: string;
   photoKind?: AthleteInfo['photoKind'];
   /** 이미지가 없을 때 원 안에 넣을 글자 */
@@ -101,9 +132,12 @@ export function StatCard({
   id, name, posLabel, photo, photoKind, fallbackLabel,
   clubId, club, age, league, leagueName, leagueLogo,
   comps, recent, tag, emptyNote, recentNote, open, onHover,
+  pos, tint = 'club', national,
 }: Props) {
   const palette = usePalette();
-  const [bg, fg] = tintOf(clubId ?? '0');
+  const [clubBg, clubFg] = tintOf(clubId ?? '0');
+  const leagueBg = league ? palette.color(league) : clubBg;
+  const [bg, fg] = tint === 'league' ? [leagueBg, inkOn(leagueBg)] : [clubBg, clubFg];
 
   const sum = (k: 'goals' | 'assists') => comps.reduce((a, r) => a + r[k], 0);
   const g = sum('goals');
@@ -147,7 +181,7 @@ export function StatCard({
         <div className="krc__id">
           <b>
             {name}
-            {posLabel && <em>{posLabel}</em>}
+            {posLabel && <em data-pos={pos}>{posLabel}</em>}
           </b>
           {club && (
             <span className="krc__club">
@@ -227,19 +261,56 @@ export function StatCard({
         </>
       )}
 
-      <RecentPanel name={name} recent={recent} note={recentNote} open={open} />
+      {national && (
+        /* A매치는 클럽 합계와 **다른 줄**이다 — 섞어 더하면 "공격 포인트" 가 무엇의
+           합인지 흐려진다. 대표팀 색 띠와 엠블럼으로 클럽 기록과 갈라 놓는다. */
+        <div className="krc__nat" title={`${national.year}년 A매치 · 선발 ${national.starts}`}>
+          {national.crest
+            ? <img className="krc__natc" src={national.crest} alt="" width={16} height={16} />
+            : <i className="krc__natc" />}
+          <span className="krc__natl">
+            A매치 <em className="num">{national.year}</em>
+          </span>
+          <span className="krc__nata num">
+            {national.apps}경기 <em>(선발 {national.starts})</em>
+          </span>
+          <span className="krcc__ga num">
+            <b data-k="g" data-on={national.goals > 0}><i>G</i>{national.goals}</b>
+            <b data-k="a" data-on={national.assists > 0}><i>A</i>{national.assists}</b>
+          </span>
+        </div>
+      )}
+
+      {national ? (
+        <div className="krr krr--split" role="tooltip" data-open={open}>
+          <RecentPanel name={name} title="클럽" recent={recent} note={recentNote} open={open} bare />
+          <RecentPanel
+            name={name}
+            title="국가대표"
+            recent={national.recent}
+            note="최근 대표팀 경기 출전 기록이 없습니다."
+            open={open}
+            bare
+          />
+        </div>
+      ) : (
+        <RecentPanel name={name} recent={recent} note={recentNote} open={open} />
+      )}
     </article>
   );
 }
 
-/** 호버 — 최근 경기 기록 */
+/** 호버 — 최근 경기 기록. bare 면 바깥 패널 없이 한 칸만 그린다(클럽/국가대표 나란히) */
 function RecentPanel({
-  name, recent, note, open,
+  name, title, recent, note, open, bare = false,
 }: {
   name: string;
+  /** 칸 제목 — "클럽" / "국가대표" */
+  title?: string;
   recent: RecentLine[];
   note?: string;
   open: boolean;
+  bare?: boolean;
 }) {
   const palette = usePalette();
 
@@ -250,11 +321,32 @@ function RecentPanel({
   /* 넓은 화면에서는 카드 위에 떠오르는 호버 패널이고, 좁은 화면에서는
      카드 아래에 그대로 붙는다(모바일에는 호버가 없어 안 보였다).
      둘 다 CSS 가 정한다 — 항상 그려 두고 data-open 만 넘긴다. */
+  /* 넓은 화면의 떠오르는 패널이 화면 밖으로 나가지 않게 — 두 칸짜리는 카드보다
+     넓어서, 맨 왼쪽·오른쪽 열 카드에서는 가운데 정렬만으로는 잘린다. */
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = bare ? ref.current?.parentElement : ref.current;
+    if (!el || !open) return;
+    el.style.removeProperty('--krr-shift');
+    if (getComputedStyle(el).position !== 'absolute') return;
+    const r = el.getBoundingClientRect();
+    const pad = 12;
+    const shift = r.left < pad ? pad - r.left
+      : r.right > window.innerWidth - pad ? window.innerWidth - pad - r.right : 0;
+    if (shift) el.style.setProperty('--krr-shift', `${Math.round(shift)}px`);
+  }, [open, bare]);
+
   return (
-    <div className="krr" role="tooltip" data-open={open}>
+    <div
+      ref={ref}
+      className={bare ? 'krr__col' : 'krr'}
+      {...(bare ? {} : { role: 'tooltip', 'data-open': open })}
+    >
       <div className="krr__h">
-        <span className="eyebrow">최근 {rows.length || ''}경기 기록</span>
-        <b>{name}</b>
+        <span className="eyebrow">
+          {title ? `${title} · ` : ''}최근 {rows.length || ''}경기 기록
+        </span>
+        {!bare && <b>{name}</b>}
       </div>
 
       {rows.length === 0 ? (

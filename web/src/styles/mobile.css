@@ -453,6 +453,11 @@
     transition: transform .18s;
   }
   .krr[data-open='true'] .krr__h::after { transform: rotate(180deg); }
+  /* 클럽/국가대표 두 칸짜리 — 접혀 있을 때도 두 칸 제목은 남기고 내용만 숨긴다 */
+  .krr--split:not([data-open='true']) > .krr__col { display: block; }
+  .krr--split:not([data-open='true']) .krr__col > :not(.krr__h) { display: none; }
+  .krr--split:not([data-open='true']) .krr__col + .krr__col { padding-top: 8px; }
+  .krr--split .krr__col + .krr__col .krr__h::after { content: none; }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

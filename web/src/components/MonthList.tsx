@@ -104,8 +104,8 @@ export function MonthList({
             <button
               className="ml__row"
               aria-expanded={done ? isOpen : undefined}
+              /* 미래 경기도 누를 수 있다 — 위의 히어로·캘린더가 그 경기로 맞춰진다 */
               onClick={() => onToggle(m)}
-              style={!done ? { cursor: 'default' } : undefined}
             >
               <span className="ml__date">
                 <b className="num">{p.date}</b>
