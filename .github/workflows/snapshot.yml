@@ -104,4 +104,18 @@ jobs:
           # GITHUB_TOKEN으로 한 push는 다른 on:push 워크플로우(Pages 배포)를
           # 자동으로 트리거하지 않는다(무한루프 방지를 위한 GitHub의 기본 동작).
           # 그래서 여기서 명시적으로 deploy-pages.yml 을 한 번 더 돌려준다.
+          #
+          # ⚠️ 그 전에 멈춘 배포를 치운다. deploy 잡이 GitHub 쪽에서 러너·환경 배정을
+          # 못 받고 queued/waiting 으로 몇 시간씩 서 있는 일이 있다(2026-10-05 16시간,
+          # 10-06 7시간). 그 run 이 pages 동시성 슬롯을 쥐고 있으면 뒤에 오는 배포가
+          # 대기 자리 하나를 두고 서로 밀어내며 전부 취소되고, 사이트가 그 자리에 멈춘다.
+          # 정상 배포는 1~2분이라 30분 넘게 안 끝난 run 은 매달린 것으로 보고 끊는다.
+          cutoff=$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+          for st in queued waiting in_progress; do
+            gh run list --workflow deploy-pages.yml --status "$st" --limit 20               --json databaseId,createdAt --jq ".[] | select(.createdAt < \"$cutoff\") | .databaseId" |
+            while read -r id; do
+              echo "::warning::30분 넘게 멈춘 배포 run $id ($st) — 취소한다"
+              gh run cancel "$id" || true
+            done
+          done
           gh workflow run deploy-pages.yml --ref main
