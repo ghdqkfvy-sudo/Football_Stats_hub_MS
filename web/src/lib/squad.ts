@@ -729,7 +729,8 @@ export function lineLabels(kind: LineKind, n: number): string[] {
     },
     MID: {
       1: ['CM'],
-      2: ['LM', 'RM'],
+      /* 두 명 줄은 2선(AM) 아래의 더블 볼란치다 — 4-2-3-1 의 4·8 번 자리(README) */
+      2: ['LDM', 'RDM'],
       3: ['LM', 'CM', 'RM'],
       4: ['LM', 'LCM', 'RCM', 'RM'],
       5: ['LM', 'LCM', 'CM', 'RCM', 'RM'],

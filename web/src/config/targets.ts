@@ -436,6 +436,7 @@ const COMPS: CompetitionMeta[] = [
   { key: 'jpn.1',            name: 'J1 League',         short: 'J1',  color: '#E8546B' },
   { key: 'usa.1',            name: 'MLS',               short: 'MLS', color: '#3FD7C0' },
   { key: 'eng.2',            name: 'Championship',      short: 'CHA', color: '#C084FC' },
+  { key: 'eng.trophy',       name: 'EFL Trophy',        short: 'EFL', color: '#C9A86A' },
   { key: 'eng.3',            name: 'League One',        short: 'L1E', color: '#9CA8BC' },
   { key: 'esp.2',            name: 'LaLiga 2',          short: 'LL2', color: '#F58E86' },
   { key: 'ger.2',            name: '2. Bundesliga',     short: 'BL2', color: '#F09090' },

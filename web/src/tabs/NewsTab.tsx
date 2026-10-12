@@ -172,18 +172,30 @@ export function NewsTab({ target }: { target: Target }) {
 function Card({ a, now, lead = false }: { a: Article; now: number; lead?: boolean }) {
   const [imgOk, setImgOk] = useState(true);
   const desc = plainDesc(a);
+  /* 사진이 없는 기사(한국어 구글 뉴스는 전부 그렇다)는 빈 16:9 상자를 그리지 않고
+     글만 있는 카드로 — 목록의 절반이 빈 상자로 채워져 화면이 비어 보였다.
+     영상은 ▶ 자리가 "영상" 이라는 정보라 상자를 남긴다. */
+  const media = a.type === 'Media';
+  const showPh = media || (!!a.image && imgOk);
   return (
-    <a className="ncard" data-lead={lead} href={a.href} target="_blank" rel="noreferrer noopener">
-      <div className="ncard__ph">
-        {a.image && imgOk ? (
-          <img src={a.image} alt="" loading="lazy" onError={() => setImgOk(false)} />
-        ) : (
-          <span className="ncard__noimg" aria-hidden="true">
-            {a.type === 'Media' ? '▶' : '“”'}
-          </span>
-        )}
-        {a.type === 'Media' && <span className="ncard__play" aria-hidden="true">▶</span>}
-      </div>
+    <a
+      className="ncard"
+      data-lead={lead}
+      data-noimg={!showPh || undefined}
+      href={a.href}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      {showPh && (
+        <div className="ncard__ph">
+          {a.image && imgOk ? (
+            <img src={a.image} alt="" loading="lazy" onError={() => setImgOk(false)} />
+          ) : (
+            <span className="ncard__noimg" aria-hidden="true">▶</span>
+          )}
+          {media && <span className="ncard__play" aria-hidden="true">▶</span>}
+        </div>
+      )}
 
       <div className="ncard__body">
         <div className="ncard__meta">

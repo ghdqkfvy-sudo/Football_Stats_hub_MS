@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { Headshot } from './Headshot';
@@ -86,6 +86,36 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
     return () => ro.disconnect();
   }, [rows.length]);
 
+  /*
+   * 목록 아래에 가려진 선수 수. 목록은 고정 높이라 마지막 행이 반쯤 잘린 것
+   * 말고는 "아래에 더 있다" 는 신호가 없었다 — 아래 끝을 흐리고 남은 수를 적는다.
+   * 행의 절반 이상이 목록 아래로 나가 있으면 "가려진" 것으로 센다.
+   */
+  const [below, setBelow] = useState(0);
+  const syncBelow = useCallback(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const bottom = list.getBoundingClientRect().bottom;
+    let n = 0;
+    for (const el of rowRefs.current.values()) {
+      const r = el.getBoundingClientRect();
+      if (r.top + r.height / 2 > bottom) n++;
+    }
+    setBelow(n);
+  }, []);
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    syncBelow();
+    const ro = new ResizeObserver(syncBelow);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rows, syncBelow]);
+  const scrollMore = () => {
+    const list = listRef.current;
+    if (list) list.scrollBy({ top: list.clientHeight * 0.8, behavior: 'smooth' });
+  };
+
   /** 카드를 그 줄 옆에 놓는다 (호버 상태는 건드리지 않는다) */
   const placeCard = (p: PlayerSeason, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
@@ -165,7 +195,7 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
         <span className="num">카드</span>
       </div>
 
-      <div className="pt__list" ref={listRef}>
+      <div className="pt__list" ref={listRef} onScroll={syncBelow} data-more={below > 0 || undefined}>
         {/* 포지션 필터를 바꾸면 목록이 한 번 페이드로 바뀐다 (정렬만 바꿀 때는 그대로) */}
         <Swap k={filter}>
         {rows.map((p) => (
@@ -204,6 +234,11 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
         {rows.length === 0 && <p className="nogoal" style={{ padding: 16 }}>해당 포지션 기록이 없습니다.</p>}
         </Swap>
       </div>
+      {below > 0 && (
+        <button className="pt__more" onClick={scrollMore} aria-label={`아래로 ${below}명 더 보기`}>
+          <span className="num">{below}</span>명 더 <i aria-hidden="true">↓</i>
+        </button>
+      )}
     </div>
 
     {/*

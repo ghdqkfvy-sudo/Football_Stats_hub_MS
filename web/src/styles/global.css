@@ -184,6 +184,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .pill:hover { color: var(--text-hi); border-color: var(--line-2); }
 .pill img { width: 18px; height: 18px; object-fit: contain; }
+/* 엠블럼을 못 받았을 때의 약어 배지(components/Crest ChipCrest) — 자리마다 img 와 같은 크기 */
+.chipcrest {
+  display: grid; place-items: center; flex: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  font-family: var(--font-body); font-size: 6.5px; font-weight: 800; letter-spacing: -.02em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
 .pill[aria-pressed='true'] {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
@@ -1335,17 +1342,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
  *   (근본 해결은 이 소스를 안 쓰는 것이다 — 스냅샷이 회차를 거듭하며
  *    컷아웃으로 올려 준다. scripts/lib/photos.mjs 참고)
  */
-/* 시즌은 이제 고르는 값이 아니라 적는 값이다 (App.tsx 주석 참고) */
-.season--static {
-  padding: 5px 11px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--text-mid);
-  font-family: var(--font-display);
-  letter-spacing: .02em;
-  white-space: nowrap;
-}
-
 .hs img[data-kind='cutout'] { object-position: 50% 4%; }
 .hs img[data-kind='wiki'],
 .hs img[data-kind='thumb'] { object-position: 50% 18%; }
@@ -1509,6 +1505,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* overflow 를 막지 않는다 — 호버 카드가 패널 밖으로 나가야 한다 */
 .pt {
+  position: relative;
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--panel); backdrop-filter: var(--panel-blur);
   display: flex; flex-direction: column; min-height: 0;
@@ -1566,6 +1563,23 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    두께는 브라우저마다 다르니 PlayerTable 이 실제로 재서 --pt-gutter 로 넣어
    주고, 머리글이 그만큼 오른쪽을 비운다. */
 .pt__head { padding-right: calc(14px + var(--pt-gutter, 0px)); }
+/* 아래에 가려진 선수가 있으면 끝을 흐리고 남은 수를 띄운다(PlayerTable below) */
+.pt__list[data-more] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+          mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+}
+.pt__more {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: rgba(6,16,38,.82);
+  backdrop-filter: blur(6px);
+  font-size: 11.5px; font-weight: 600; color: var(--text-mid);
+  transition: color .15s, border-color .15s;
+}
+.pt__more:hover { color: var(--text-hi); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.pt__more .num { color: var(--accent); }
+.pt__more i { font-style: normal; font-size: 10px; }
 .pt__list::-webkit-scrollbar { width: 8px; }
 .pt__list::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
 .pt__row {
@@ -2086,6 +2100,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 .ncard__body { padding: 13px 15px 15px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+/* 사진 없는 기사 — 글만. 위쪽 팀 컬러 선이 사진 자리를 대신해 카드 머리를 잡는다 */
+.ncard[data-noimg] { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+.ncard[data-noimg] .ncard__body { padding-top: 15px; }
+.ncard[data-noimg] .ncard__d { -webkit-line-clamp: 4; line-clamp: 4; }
+.ncard[data-lead='true'][data-noimg] .ncard__body { padding: 20px 22px; }
 .ncard__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ncard__kind {
   font-size: 10px; font-weight: 700; letter-spacing: .04em;

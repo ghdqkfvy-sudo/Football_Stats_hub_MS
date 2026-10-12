@@ -9,6 +9,8 @@
  * 헤더가 보이는 동안에는 위로 숨어 있고(inert — 눌리지도 초점을 받지도 않는다),
  * 넓은 화면에서는 아예 그리지 않는다(App 이 useIsMobile 로 고른다).
  */
+import { ChipCrest } from './Crest';
+
 const JUMPS: [string, string][] = [
   ['sum-next', '다음 경기'],
   ['sum-week', '주간'],
@@ -21,12 +23,14 @@ interface Props {
   summary: boolean;
   crest: string;
   darkCrest: boolean;
+  teamId: string;
+  abbr: string;
   name: string;
   tabs: { id: string; label: string; short?: string }[];
   tab: string;
   onTab: (id: string) => void;
   /** 데스크톱 막대의 팀 전환 엠블럼 줄 (폰에서는 CSS 가 숨긴다) */
-  teams?: { id: string; name: string; crest: string; darkCrest?: boolean }[];
+  teams?: { id: string; name: string; crest: string; darkCrest?: boolean; teamId: string; abbr: string }[];
   activeTeamId?: string | null;
   onTeam?: (id: string) => void;
   onSummary?: () => void;
@@ -35,14 +39,14 @@ interface Props {
 const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
 export function MiniBar({
-  show, summary, crest, darkCrest, name, tabs, tab, onTab, teams, activeTeamId, onTeam, onSummary,
+  show, summary, crest, darkCrest, teamId, abbr, name, tabs, tab, onTab, teams, activeTeamId, onTeam, onSummary,
 }: Props) {
   return (
     <div className="mbar" data-show={show || undefined} inert={!show}>
       <button className="mbar__id" onClick={toTop} aria-label={`${name} · 맨 위로`}>
         {summary
           ? <span className="mbar__star">★</span>
-          : <img src={crest} alt="" className={darkCrest ? 'crest' : undefined} />}
+          : <ChipCrest src={crest} teamId={teamId} abbr={abbr} dark={darkCrest} />}
       </button>
       {/* 넓은 화면에서만 — 지금 어느 팀 화면인지 */}
       <b className="mbar__name">{name}</b>
@@ -112,7 +116,7 @@ export function MiniBar({
               title={t.name}
               onClick={() => onTeam?.(t.id)}
             >
-              <img src={t.crest} alt="" className={t.darkCrest ? 'crest' : undefined} />
+              <ChipCrest src={t.crest} teamId={t.teamId} abbr={t.abbr} dark={t.darkCrest} />
             </button>
           ))}
         </div>
