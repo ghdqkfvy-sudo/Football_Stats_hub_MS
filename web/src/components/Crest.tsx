@@ -74,3 +74,35 @@ export function Crest({ team, size = 24, className = '', glow }: {
     />
   );
 }
+
+/**
+ * 팀 스위처 알약·미니 막대의 작은 엠블럼.
+ * 폰 스위처는 글자 없이 엠블럼만 보여 주므로, 이미지가 깨지면 일곱 칸이
+ * 전부 같은 깨진 아이콘이 되어 팀을 고를 수 없었다 — 실패하면 팀 약어 배지로.
+ * 크기는 놓이는 자리의 CSS 가 정한다(.pill img / .mbar__team img 와 같은 값).
+ */
+export function ChipCrest({ src, teamId, abbr, dark }: {
+  src: string;
+  teamId: string;
+  abbr: string;
+  dark?: boolean;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!src || failedSrc === src) {
+    const [bg, fg] = tintOf(teamId);
+    return (
+      <span className="chipcrest" style={{ background: bg, color: fg }} aria-hidden="true">
+        {abbr}
+      </span>
+    );
+  }
+  return (
+    <img
+      key={src}
+      src={src}
+      alt=""
+      className={dark ? 'crest' : undefined}
+      onError={() => setFailedSrc(src)}
+    />
+  );
+}

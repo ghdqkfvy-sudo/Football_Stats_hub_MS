@@ -17,7 +17,7 @@ import { NewsTab } from './tabs/NewsTab';
 import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
-import { Crest, CrestGlowScope } from './components/Crest';
+import { ChipCrest, Crest, CrestGlowScope } from './components/Crest';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SummaryTab } from './tabs/SummaryTab';
 import { dirOf, type SwapDir } from './components/Swap';
@@ -374,7 +374,7 @@ export default function App() {
                     onClick={() => openTeam(t.id)}
                     aria-label={t.name}
                   >
-                    <img src={t.crest} alt="" className={t.darkCrest ? 'crest' : undefined} />
+                    <ChipCrest src={t.crest} teamId={t.espnTeamId} abbr={t.abbr} dark={t.darkCrest} />
                     <span className="pill__name">{t.name}</span>
                   </button>
                 ))}
@@ -391,7 +391,7 @@ export default function App() {
                   >
                     {/* 국기 이모지(🇰🇷)는 윈도우에서 'KR' 두 글자로 떨어진다 —
                         태극 문양 이미지를 직접 넣어 어디서나 같게 보이게 한다. */}
-                    <img src={t.crest} alt="" />
+                    <ChipCrest src={t.crest} teamId={t.espnTeamId} abbr={t.abbr} />
                     <span className="pill__name">{t.name}</span>
                   </button>
                 ))}
@@ -416,10 +416,6 @@ export default function App() {
               {source !== 'live' && fetchedAt && (
                 <em className="srcbadge__at num">{ago(fetchedAt)}</em>
               )}
-            </span>
-
-            <span className="season season--static num" title="표시 중인 시즌">
-              {season}
             </span>
           </div>
 
@@ -462,11 +458,13 @@ export default function App() {
         summary={summary}
         crest={target.crest}
         darkCrest={!!target.darkCrest}
+        teamId={target.espnTeamId}
+        abbr={target.abbr}
         name={summary ? 'Summary' : target.name}
         tabs={tabs}
         tab={tab}
         onTab={(id) => goTab(id as TabId)}
-        teams={mobile ? undefined : TARGETS.map((t) => ({ id: t.id, name: t.name, crest: t.crest, darkCrest: t.darkCrest }))}
+        teams={mobile ? undefined : TARGETS.map((t) => ({ id: t.id, name: t.name, crest: t.crest, darkCrest: t.darkCrest, teamId: t.espnTeamId, abbr: t.abbr }))}
         activeTeamId={summary ? null : targetId}
         onTeam={(id) => openTeam(id as TargetId)}
         onSummary={openSummary}

@@ -42,6 +42,7 @@
   }
   .mbar__id:hover, .mbar__top:hover { color: var(--text-hi); border-color: var(--line-2); }
   .mbar__id img { width: 22px; height: 22px; object-fit: contain; }
+  .mbar__id .chipcrest, .mbar__team .chipcrest { width: 22px; height: 22px; font-size: 7.5px; }
   .mbar__star { font-size: 16px; color: var(--accent); }
   .mbar__top { font-size: 16px; font-weight: 700; }
 
@@ -93,7 +94,7 @@
   .mbar__name { display: none; }
   .mbar__b { padding: 0 9px; font-size: 13px; }
   .mbar__team { width: 30px; height: 30px; }
-  .mbar__team img { width: 19px; height: 19px; }
+  .mbar__team img, .mbar__team .chipcrest { width: 19px; height: 19px; }
 }
 @media (min-width: 641px) and (prefers-reduced-motion: reduce) {
   .mbar { transition: none; }
