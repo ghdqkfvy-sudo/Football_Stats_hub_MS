@@ -212,6 +212,7 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
             tabIndex={0}
             onFocus={(e) => openCard(p, e.currentTarget)}
             onBlur={closeCard}
+            onKeyDown={(e) => { if (e.key === 'Escape') closeCard(); }}
           >
             <span className="pt__who">
               <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={30} />

@@ -4,6 +4,7 @@ import { dayKey, kstTime, monthGrid, todayKey } from '../lib/kst';
 import { usePalette } from '../lib/palette';
 import { MatchPopCard } from './MatchPop';
 import { Swap, type SwapDir } from './Swap';
+import { Crest } from './Crest';
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -169,6 +170,8 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   onSelectDay(cell.key);
+                } else if (e.key === 'Escape') {
+                  setHoverDay(null);
                 }
               }}
             >
@@ -179,6 +182,16 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                 const label = done
                   ? `${m.home.abbr} ${m.homeScore}-${m.awayScore} ${m.away.abbr}`
                   : `${m.home.abbr} vs ${m.away.abbr} ${m.timeTBD ? '시각 미정' : `${kstTime(m.kickoffUtc)} KST`}`;
+                /* 넓은 화면에서는 막대가 칩이 되어 상대 엠블럼과 스코어(우리 팀 기준)
+                   또는 킥오프 시각을 직접 보여 준다 — 칸이 큰데 색 막대 하나뿐이라
+                   한 달 결과를 보려면 칸마다 마우스를 올려야 했다. 폰은 CSS 가 숨긴다. */
+                const away = m.away.id === focusTeamId;
+                const opp = away ? m.home : m.away;
+                const ours = away ? m.awayScore : m.homeScore;
+                const theirs = away ? m.homeScore : m.awayScore;
+                const res = !done || ours == null || theirs == null
+                  ? undefined
+                  : ours > theirs ? 'W' : ours < theirs ? 'L' : 'D';
                 return (
                   <div key={m.id} className="barwrap">
                     <button
@@ -194,7 +207,16 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                         onSelectDay(cell.key);
                         onPick(m);
                       }}
-                    />
+                    >
+                      <span className="bar__info" data-r={res} aria-hidden="true">
+                        {away && <i className="bar__at">@</i>}
+                        <Crest team={opp} size={14} glow={false} />
+                        <span className="bar__opp">{opp.abbr}</span>
+                        <b className="num">
+                          {done ? `${ours ?? '-'}-${theirs ?? '-'}` : m.timeTBD ? '미정' : kstTime(m.kickoffUtc)}
+                        </b>
+                      </span>
+                    </button>
                   </div>
                 );
               })}

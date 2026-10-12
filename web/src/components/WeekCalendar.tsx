@@ -75,6 +75,20 @@ export function WeekCalendar({
   const keys = weekKeys(startKey);
   const today = todayKey();
   const [pop, setPop] = useState<Pop | null>(null);
+  /** 경기 칸 위(자리가 없으면 아래)에 미리보기를 띄운다 — 마우스 호버·키보드 초점 공통 */
+  const showPop = (el: HTMLElement, m: Match, t: Target) => {
+    const r = el.getBoundingClientRect();
+    /* 위쪽에 자리가 없으면 아래로 뒤집는다 */
+    const above = r.top > 260;
+    setPop({
+      m, teamId: t.espnTeamId,
+      x: r.left + r.width / 2,
+      y: above ? r.top : r.bottom,
+      above,
+      accent: summaryColor(t),
+      opp: SUMMARY_OPP,
+    });
+  };
 
   /* 주를 넘기면 그 방향에서 미끄러져 들어온다 (다음 주 → 오른쪽에서) */
   const lastKey = useRef(startKey);
@@ -150,18 +164,12 @@ export function WeekCalendar({
                       onClick={() => onPick(k)}
                       onMouseEnter={(e) => {
                         if (!HAS_HOVER) return;
-                        const r = e.currentTarget.getBoundingClientRect();
-                        /* 위쪽에 자리가 없으면 아래로 뒤집는다 */
-                        const above = r.top > 260;
-                        setPop({
-                          m, teamId: t.espnTeamId,
-                          x: r.left + r.width / 2,
-                          y: above ? r.top : r.bottom,
-                          above,
-                          accent: summaryColor(t),
-                          opp: SUMMARY_OPP,
-                        });
+                        showPop(e.currentTarget, m, t);
                       }}
+                      /* 키보드로 칸을 옮겨 다녀도 같은 미리보기가 뜬다 — 마우스 전용이었다 */
+                      onFocus={(e) => showPop(e.currentTarget, m, t)}
+                      onBlur={() => setPop(null)}
+                      onKeyDown={(e) => { if (e.key === 'Escape') setPop(null); }}
                       onMouseLeave={() => setPop(null)}
                       title={`${t.name} vs ${opp.name}`}
                     >

@@ -421,13 +421,33 @@ export default function App() {
 
           {/* 요약 화면에는 팀별 탭이 없다 — 한 화면에 다 들어 있다 */}
           {!summary && (
-            <nav className="tabs" role="tablist" ref={tabsRef} data-ink={ink ? true : undefined}>
+            <nav
+              className="tabs"
+              role="tablist"
+              ref={tabsRef}
+              data-ink={ink ? true : undefined}
+              /* 탭 목록 표준 키보드 — ←/→ 로 옆 탭, Home/End 로 처음·끝.
+                 Tab 키는 고른 탭 하나에만 멈추고(나머지 tabIndex -1) 본문으로 넘어간다. */
+              onKeyDown={(e) => {
+                const i = tabs.findIndex((t) => t.id === tab);
+                const to = e.key === 'ArrowRight' ? (i + 1) % tabs.length
+                  : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+                    : e.key === 'Home' ? 0
+                      : e.key === 'End' ? tabs.length - 1 : -1;
+                if (to < 0) return;
+                e.preventDefault();
+                goTab(tabs[to].id);
+                requestAnimationFrame(() =>
+                  tabsRef.current?.querySelectorAll<HTMLElement>('.tab')[to]?.focus());
+              }}
+            >
               {tabs.map((t) => (
                 <button
                   key={t.id}
                   className="tab"
                   role="tab"
                   aria-selected={t.id === tab}
+                  tabIndex={t.id === tab ? 0 : -1}
                   onClick={() => goTab(t.id)}
                 >
                   {t.short ? (

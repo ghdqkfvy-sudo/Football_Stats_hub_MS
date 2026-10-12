@@ -47,6 +47,33 @@ const nationalOf = (p: KoreanPlayer): NationalLine | undefined =>
 const sum = (rows: { goals: number; assists: number; apps: number }[], k: 'goals' | 'assists' | 'apps') =>
   rows.reduce((a, r) => a + r[k], 0);
 
+type SortKey = 'default' | 'points' | 'apps' | 'form';
+const SORTS: [SortKey, string][] = [
+  ['default', '기본'],
+  ['points', '공격P'],
+  ['apps', '출전'],
+  ['form', '최근 폼'],
+];
+
+const pointsOf = (p: KoreanPlayer) => {
+  const s = shownStats(p);
+  return sum(s, 'goals') + sum(s, 'assists');
+};
+const appsOf = (p: KoreanPlayer) => sum(shownStats(p), 'apps');
+const startsOf = (p: KoreanPlayer) => shownStats(p).reduce((a, r) => a + r.starts, 0);
+/** 최근 경기(최신순 3경기)의 골+도움 */
+const formOf = (p: KoreanPlayer) => p.recent.reduce((a, g) => a + g.goals + g.assists, 0);
+/** 클럽도 대표팀도 이번 시즌 한 경기도 안 뛴 선수 — 큰 카드 대신 칩으로 접는다 */
+const isIdle = (p: KoreanPlayer) => appsOf(p) === 0 && !(p.national && p.national.apps > 0);
+
+/** 직전 경기(recent[0], 최신순)에서 골·도움을 올렸으면 "직전 경기 1골 1도움" */
+function lastMatchTag(p: KoreanPlayer): string | null {
+  const g = p.recent[0];
+  if (!g || g.goals + g.assists === 0) return null;
+  return ['직전 경기', g.goals > 0 && `${g.goals}골`, g.assists > 0 && `${g.assists}도움`]
+    .filter(Boolean).join(' ');
+}
+
 export function KoreansTab() {
   const palette = usePalette();
   /* 명단과 정렬 규칙만 코드에 있고, 기록은 전부 네트워크에서 온다 */
@@ -83,6 +110,7 @@ export function KoreansTab() {
   }, [all]);
 
   const [league, setLeague] = useState('ALL');
+  const [sortKey, setSortKey] = useState<SortKey>('default');
   const [openId, setOpenId] = useState<string | null>(null);
 
   /**
@@ -95,7 +123,13 @@ export function KoreansTab() {
       const i = PINNED.indexOf(p.id);
       return i === -1 ? Infinity : i;
     };
-    return [...rows].sort((a, b) => {
+    /* 정렬 단추 — 기본 정렬은 동점일 때의 순서로 그대로 쓴다 */
+    const by: Record<Exclude<SortKey, 'default'>, (p: KoreanPlayer) => number[]> = {
+      points: (p) => [pointsOf(p), appsOf(p)],
+      apps: (p) => [appsOf(p), startsOf(p)],
+      form: (p) => [formOf(p), pointsOf(p)],
+    };
+    const base = [...rows].sort((a, b) => {
       const pa = pinIndex(a);
       const pb = pinIndex(b);
       if (pa !== pb) return pa - pb;
@@ -108,7 +142,15 @@ export function KoreansTab() {
       if (pts !== 0) return pts;
       return sum(sb, 'apps') - sum(sa, 'apps');
     });
-  }, [league, all]);
+    if (sortKey === 'default') return base;
+    const key = by[sortKey];
+    return base
+      .map((p, i) => ({ p, i, k: key(p) }))
+      .sort((a, b) => (b.k[0] - a.k[0]) || (b.k[1] - a.k[1]) || (a.i - b.i))
+      .map((x) => x.p);
+  }, [league, all, sortKey]);
+  const active = useMemo(() => list.filter((p) => !isIdle(p)), [list]);
+  const idle = useMemo(() => list.filter(isIdle), [list]);
 
   const totals = useMemo(() => {
     let goals = 0;
@@ -154,7 +196,7 @@ export function KoreansTab() {
         <div className="sec__head">
           <h2 className="sec__title">코리안리거</h2>
           <span className="sec__note">
-            해외 리그 소속 {all.length}명 · 리그와 유럽대항전 기록
+            해외 리그 소속 {all.length}명 · 리그와 유럽대항전 기록 · 게이지는 선발 비율
             {takenAt && ` · ${new Date(takenAt).toLocaleString('ko-KR', {
               month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
             })} 기준`}
@@ -176,6 +218,7 @@ export function KoreansTab() {
           ))}
         </div>
 
+        <div className="kr__bar">
         <nav className="kr__filters" aria-label="리그 필터">
           <button aria-pressed={league === 'ALL'} onClick={() => setLeague('ALL')}>
             전체
@@ -187,10 +230,19 @@ export function KoreansTab() {
             </button>
           ))}
         </nav>
+        <div className="kr__sort" role="group" aria-label="정렬">
+          <span>정렬</span>
+          {SORTS.map(([k, label]) => (
+            <button key={k} aria-pressed={sortKey === k} onClick={() => setSortKey(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        </div>
 
-        <Swap k={league}>
+        <Swap k={`${league}-${sortKey}`}>
         <div className="kr__grid">
-          {list.map((p) => (
+          {active.map((p) => (
             <StatCard
               key={p.id}
               id={p.id}
@@ -198,6 +250,8 @@ export function KoreansTab() {
               posLabel={POS_LABEL[p.pos]}
               pos={p.pos}
               tint="league"
+              compLabel={false}
+              tag={lastMatchTag(p) && <span className="kr__hot">{lastMatchTag(p)}</span>}
               national={nationalOf(p)}
               photo={p.photo}
               photoKind={p.photoKind}
@@ -225,6 +279,22 @@ export function KoreansTab() {
             />
           ))}
         </div>
+        {idle.length > 0 && (
+          <div className="kr__idle">
+            <h3>이번 시즌 출전 기록 없음 · {idle.length}명</h3>
+            <ul>
+              {idle.map((p) => (
+                <li key={p.id}>
+                  <b>{p.nameKo}</b>
+                  <span>
+                    {[p.club, p.league && (palette.name(p.league) === p.league ? p.leagueName : palette.name(p.league))]
+                      .filter(Boolean).join(' · ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         </Swap>
       </section>
     </div>
