@@ -197,15 +197,17 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
       <div className="tbl__head" role="row">
         <span className="tbl__rank">#</span>
         <span className="tbl__team">TEAM</span>
-        <span className="num">P</span>
-        <span className="num">W</span>
-        <span className="num">D</span>
-        <span className="num">L</span>
-        <span className="num tbl__g">GF</span>
-        <span className="num tbl__g">GA</span>
-        <span className="num tbl__gd">GD</span>
-        <span className="num tbl__pts">PTS</span>
-        <span className="tbl__form">FORM</span>
+        {/* 머리글 약어는 마우스를 올리면 풀이가 뜨고(title), 표 아래 범례에도 적는다 —
+            터치 기기에는 호버가 없다 */}
+        <span className="num" title="경기 수">P</span>
+        <span className="num" title="승">W</span>
+        <span className="num" title="무">D</span>
+        <span className="num" title="패">L</span>
+        <span className="num tbl__g" title="득점">GF</span>
+        <span className="num tbl__g" title="실점">GA</span>
+        <span className="num tbl__gd" title="득실차">GD</span>
+        <span className="num tbl__pts" title="승점">PTS</span>
+        <span className="tbl__form" title="최근 5경기 — 오른쪽이 가장 최근">FORM</span>
       </div>
 
       {items.map((it) => {
@@ -291,6 +293,15 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
           {full ? '요약해서 보기' : `전체 순위 보기 (${table.rows.length}팀)`}
         </button>
       )}
+
+      <p className="tbl__key">
+        <span><b>P</b> 경기</span>
+        <span><b>W·D·L</b> 승·무·패</span>
+        <span><b>GF·GA</b> 득점·실점</span>
+        <span><b>GD</b> 득실차</span>
+        <span><b>PTS</b> 승점</span>
+        <span><b>FORM</b> 최근 5경기 · 오른쪽이 최근 →</span>
+      </p>
     </div>
   );
 }

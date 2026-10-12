@@ -56,7 +56,7 @@ export function FutureTab({ target }: { target: Target }) {
         <div className="sec__head">
           <h2 className="sec__title">Future Resources</h2>
           <span className="sec__note">
-            조항 종류만 표기 · 소속팀과 기록은 ESPN 에서
+            조항 종류만 표기 · 소속팀과 기록은 ESPN 에서 · 게이지는 선발 비율
           </span>
         </div>
 
@@ -184,6 +184,7 @@ function FutureCard({
       comps={comps}
       recent={recent}
       tag={CLAUSE_LABEL[p.kind]}
+      compLabel={false}
       emptyNote={
         feed === undefined
           ? '기록을 불러오는 중입니다.'

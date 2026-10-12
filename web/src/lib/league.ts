@@ -64,7 +64,10 @@ function blank(team: TeamRef): Acc {
 }
 
 function applyMatches(acc: Map<string, Acc>, matches: Match[], seedOnly: boolean) {
-  for (const m of matches) {
+  /* 폼(form)은 순서가 의미다 — 오른쪽이 최근이라고 범례에 적으므로
+     들어온 순서가 아니라 킥오프 순으로 쌓는다(formMap 과 같은 규칙) */
+  const sorted = [...matches].sort((a, b) => a.kickoffUtc.localeCompare(b.kickoffUtc));
+  for (const m of sorted) {
     if (m.status !== 'finished' || m.homeScore === undefined || m.awayScore === undefined) continue;
     // 시드에 없는 팀은 넣지 않는다(다른 대회 경기가 섞이는 것을 막는다)
     if (seedOnly && (!acc.has(m.home.id) || !acc.has(m.away.id))) continue;

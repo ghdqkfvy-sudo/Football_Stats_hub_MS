@@ -124,6 +124,11 @@ interface Props {
   emptyNote?: string;
   /** 최근 경기가 없을 때의 문구 */
   recentNote?: string;
+  /**
+   * 카드마다 "대회별 출전 · 게이지는 선발 비율" 머리를 달지.
+   * 카드를 여러 장 늘어놓는 화면은 섹션 머리에 한 번만 적고 끈다(false).
+   */
+  compLabel?: boolean;
   open: boolean;
   onHover: (v: boolean) => void;
 }
@@ -132,7 +137,7 @@ export function StatCard({
   id, name, posLabel, photo, photoKind, fallbackLabel,
   clubId, club, age, league, leagueName, leagueLogo,
   comps, recent, tag, emptyNote, recentNote, open, onHover,
-  pos, tint = 'club', national,
+  pos, tint = 'club', national, compLabel = true,
 }: Props) {
   const palette = usePalette();
   const [clubBg, clubFg] = tintOf(clubId ?? '0');
@@ -158,6 +163,7 @@ export function StatCard({
           onMouseLeave: () => onHover(false),
           onFocus: () => onHover(true),
           onBlur: () => onHover(false),
+          onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') onHover(false); },
         }
         : {
           onClick: () => onHover(!open),
@@ -240,8 +246,8 @@ export function StatCard({
               예전에는 공격포인트 비중이라, 골·도움이 없는 선수는 전부 0 이고
               하나라도 있으면 꽉 찬 막대가 되어 아무 정보도 주지 않았다.
               "얼마나 주전인가" 가 이 카드에서 훨씬 많이 궁금한 값이다. */}
-          <div className="krc__label">대회별 출전 · 게이지는 선발 비율</div>
-          <div className="krc__comps">
+          {compLabel && <div className="krc__label">대회별 출전 · 게이지는 선발 비율</div>}
+          <div className="krc__comps" data-nolabel={!compLabel || undefined}>
             {comps.map((s) => {
               const share = s.apps > 0 ? Math.round((s.starts / s.apps) * 100) : 0;
               return (
