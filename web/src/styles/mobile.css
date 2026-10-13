@@ -23,7 +23,10 @@
   .hdr__inner { padding-block: 14px 0; }
 
   /* 오른쪽 위 구석은 출처 배지 자리 — 긴 팀 이름이 그 밑으로 들어가지 않게 */
-  .hdr__id { gap: 11px; padding-right: 88px; }
+  /* 오른쪽 위 출처 배지는 팀 이름 줄과만 겹친다 — 여백은 이름 줄에만 준다.
+     블록 전체에 주면 아래 대회 칩 줄까지 211px 로 좁아져 두 줄로 꺾였다. */
+  .hdr__id { gap: 11px; }
+  .hdr__name { padding-right: 84px; }
   .hdr__crest, .hdr__crest--sum { width: 38px; height: 38px; }
   .hdr__crest--sum { border-radius: 11px; font-size: 18px; }
   .hdr__name { font-size: 22px; line-height: 1.15; }
@@ -211,6 +214,12 @@
 @media (max-width: 640px) {
   .tab__full { display: none; }
   .tab__short { display: inline; }
+  /* 공용 짧은 표기 (tokens.css .m-full / .m-short) */
+  .m-full { display: none; }
+  .m-short { display: inline; }
+  /* 순위표 진출권 범례 — 약칭으로 줄인 네 칸이 한 줄에 들어가게 간격을 줄인다 */
+  .tbl__legend { gap: 6px 11px; padding: 10px 12px; }
+  .tbl__lg { gap: 5px; font-size: 11px; }
   .tabs { gap: 0; }
   .tab { flex: 1 1 0; min-width: 0; padding-inline: 4px; text-align: center; font-size: 14px; }
   .tab[aria-selected='true']::after { left: 14%; right: 14%; }

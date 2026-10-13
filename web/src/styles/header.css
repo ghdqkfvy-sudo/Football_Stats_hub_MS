@@ -44,10 +44,12 @@
  * 두 줄로 흩어져도 무엇이 한 덩어리인지 바로 읽힌다.
  */
 @media (max-width: 560px) {
-  .hdr__sub { gap: 5px 6px; }
+  .hdr__sub { gap: 5px 4px; }
   .hdr__sub > span + span::before { content: none; }
+  /* 앱 이름은 폰에서 뺀다 — 대회 칩과 시즌만 남겨 한 줄로 */
+  .hdr__sub > .hdr__brand { display: none; }
   .hdr__sub > span:not(:first-child) {
-    padding: 2px 7px; border-radius: 999px;
+    padding: 2px 6px; border-radius: 999px; font-size: 11px;
     border: 1px solid var(--line-2); background: rgba(255, 255, 255, .05);
   }
   .hdr__sub > span:nth-child(2) {

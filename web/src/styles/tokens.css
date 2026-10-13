@@ -85,3 +85,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-transform: uppercase; color: var(--text-lo);
 }
 .shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: 20px; }
+
+/* 폰 전용 짧은 표기 — <span class="m-full">긴 이름</span><span class="m-short">약어</span>.
+   넓은 화면은 긴 이름, 폰(≤640px, mobile.css)은 약어. 대회 이름처럼 폰에서 두 줄로
+   꺾이던 라벨에 쓴다. */
+.m-short { display: none; }
+.nowrap { white-space: nowrap; }

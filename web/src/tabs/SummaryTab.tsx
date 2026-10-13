@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SUMMARY_OPP, TARGETS, comp, getTarget, summaryColor, type Target, type TargetId } from '../config/targets';
+import { SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -224,8 +224,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
   }, []);
 
   /* ── 팀 비교 ─────────────────────────────────────────
-     리그 순위(그 팀 리그 표) + 모든 대회 합산 전적. 리그가 달라 승점을 그대로
-     견줄 수 없어 경기당 승점으로 줄을 세운다(lib/compare). */
+     리그 순위·승점·전적(그 팀 리그 표) + 챔스 단계·전적 + 최근 5경기(모든 대회).
+     리그가 달라 승점을 그대로 견줄 수 없어 줄은 경기당 승점으로 세운다(lib/compare). */
   const compare = useMemo(() => TARGETS.filter((t) => t.kind === 'club').map((t) => {
     const row = t.league ? tables[t.league]?.table?.rows.find((r) => r.team.id === t.espnTeamId) : undefined;
     /* 유럽대항전 — 챔스 → 유로파 → 컨퍼런스 중 이 팀이 뛰는 첫 대회 */
@@ -235,8 +235,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     return {
       t,
       row,
+      /* 줄 세우기에만 쓴다 — 리그가 달라 승점을 그대로 견줄 수 없다(칸으로는 보이지 않는다) */
       ppg: row ? pointsPerGame(row.points, row.played) : null,
+      /* 최근 5경기 폼(모든 대회) */
       season: seasonRecord(mine, t.espnTeamId),
+      /* 유럽대항전 전적 — 그 대회 경기만 */
+      euroRec: euro ? seasonRecord(mine.filter((m) => m.competition === euro), t.espnTeamId) : null,
       euro,
       stage: euro
         ? euroStage(mine.filter((m) => m.competition === euro), t.espnTeamId, cupRounds[t.id]?.[euro] ?? [], euroRank)
@@ -362,20 +366,20 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
       <section id="sum-compare">
         <div className="sec__head">
           <h2 className="sec__title">팀 비교</h2>
-          <span className="sec__note">경기당 승점 순 · 챔스는 리그 페이즈 순위 또는 몇 강 · 시즌 전적은 모든 대회(친선 제외)</span>
+          <span className="sec__note">리그 경기당 승점 순 · 챔스는 리그 페이즈 순위 또는 몇 강 · 최근 5경기는 모든 대회</span>
         </div>
         <div className="cmp" role="table" aria-label="우리 클럽 비교">
           <div className="cmp__head" role="row">
             <span role="columnheader">팀</span>
             <span role="columnheader" title="소속 리그 순위">리그</span>
-            <span role="columnheader" className="num" title="리그 승점 / 경기 수">승점</span>
-            <span role="columnheader" className="num" title="리그 경기당 승점">경기당</span>
+            <span role="columnheader" className="num" title="리그 승점">승점</span>
+            <span role="columnheader" className="num" title="리그 승·무·패">리그 전적</span>
             <span role="columnheader" title="리그 페이즈면 순위, 토너먼트면 몇 강인지">챔스</span>
-            <span role="columnheader" className="num" title="모든 대회 승·무·패">시즌 전적</span>
-            <span role="columnheader" className="num" title="모든 대회 득점·실점">득·실</span>
+            <span role="columnheader" className="num" title="챔스 승·무·패">챔스 전적</span>
+            <span role="columnheader" className="num" title="리그 득점·실점">득·실</span>
             <span role="columnheader" title="모든 대회 최근 5경기 — 오른쪽이 최근">최근 5경기</span>
           </div>
-          {compare.map(({ t, row, ppg, season, euro, stage }) => (
+          {compare.map(({ t, row, season, euroRec, euro, stage }) => (
             <button
               key={t.id}
               className="cmp__row"
@@ -391,8 +395,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
                 {t.league && <CompCrest k={t.league} size={14} />}
                 {row ? <b className="num">{row.rank}위</b> : <i>–</i>}
               </span>
-              <span className="num" role="cell">{row ? <>{row.points}<i>/{row.played}</i></> : '–'}</span>
-              <span className="num cmp__ppg" role="cell">{ppg?.toFixed(2) ?? '–'}</span>
+              <span className="num cmp__pts" role="cell">{row ? row.points : '–'}</span>
+              <span className="num" role="cell">{row ? `${row.win}-${row.draw}-${row.loss}` : '–'}</span>
               <span className="cmp__euro" role="cell" data-status={stage?.kind === 'ko' ? stage.status : stage ? 'league' : undefined}>
                 {euro && stage ? (
                   <>
@@ -402,8 +406,10 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
                   </>
                 ) : <i>–</i>}
               </span>
-              <span className="num" role="cell">{season.win}-{season.draw}-{season.loss}</span>
-              <span className="num" role="cell">{season.gf}:{season.ga}</span>
+              <span className="num" role="cell">
+                {euroRec && euroRec.played > 0 ? `${euroRec.win}-${euroRec.draw}-${euroRec.loss}` : '–'}
+              </span>
+              <span className="num" role="cell">{row ? `${row.gf}/${row.ga}` : '–'}</span>
               <span className="cmp__form" role="cell">
                 {season.form.map((f, i) => <i key={i} className="fchip" data-r={f}>{f}</i>)}
               </span>
@@ -433,7 +439,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               onClick={() => pickComp(c)}
             >
               <CompCrest k={c} size={17} />
-              {comp(c).name}
+              <span className="m-full">{comp(c).name}</span>
+              <span className="m-short">{mobileName(c)}</span>
             </button>
           ))}
         </nav>

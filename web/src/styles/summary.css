@@ -590,7 +590,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
 }
 .cmp__head, .cmp__row {
   display: grid; align-items: center; gap: 8px; padding: 0 14px;
-  grid-template-columns: minmax(130px, 1.4fr) 76px 64px 60px 150px 82px 60px minmax(120px, 1fr);
+  grid-template-columns: minmax(130px, 1.3fr) 76px 52px 76px 150px 76px 60px minmax(120px, 1fr);
 }
 .cmp__head {
   padding-block: 9px; border-bottom: 1px solid var(--line);
@@ -610,7 +610,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
 .cmp__lg { display: inline-flex; align-items: center; gap: 6px; }
 .cmp__lg b { color: var(--text-hi); }
 .cmp__row .num i { font-style: normal; color: var(--text-lo); font-size: 11px; }
-.cmp__ppg { font-weight: 800; color: var(--text-hi); }
+.cmp__pts { font-weight: 800; color: var(--text-hi); }
 .cmp__form { display: flex; gap: 3px; }
 /* 챔스 칸 — 리그 페이즈 순위 / 몇 강. 끝난 라운드는 진출(초록)·탈락(흐림)·우승(금) */
 .cmp__euro { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
@@ -620,7 +620,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
 .cmp__euro[data-status='out'] b { color: var(--text-lo); font-weight: 600; }
 .cmp__euro[data-status='won'] b { color: #F5C542; }
 @media (max-width: 760px) {
-  /* 폰 — 팀 · 리그 · 챔스 · 최근 5경기. 팀 이름이 잘리지 않게 승점·경기당·시즌 전적·득실은
+  /* 폰 — 팀 · 리그 · 챔스 · 최근 5경기. 팀 이름이 잘리지 않게 승점·리그 전적·챔스 전적·득실은
      숨긴다 (줄은 그대로 경기당 승점 순이다) */
   /* ⚠️ 마지막 칸을 auto 로 두면 머리줄과 각 줄이 **따로** 폭을 정한다(줄마다 독립된
      그리드다) — 머리는 "최근 5경기" 글자 폭, 줄은 칩 다섯 개 폭이라 칸이 어긋났다.

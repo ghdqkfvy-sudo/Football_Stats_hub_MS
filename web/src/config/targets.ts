@@ -359,12 +359,16 @@ export const DARK_CREST_IDS: ReadonlySet<string> = new Set(
  * 되어 아무 데서나 줄이 꺾인다. 조각을 나눠 두면 줄바꿈이 조각 사이에서만
  * 일어나 읽을 수 있다.
  */
-export function subtitleParts(t: Target): string[] {
-  if (t.subtitle) return t.subtitle.split('·').map((x) => x.trim()).filter(Boolean);
+export function subtitleParts(t: Target): { full: string; short: string }[] {
+  if (t.subtitle) return t.subtitle.split('·').map((x) => x.trim()).filter(Boolean).map((x) => ({ full: x, short: x }));
   const keys = t.competitions;
   const lead = t.league && keys.includes(t.league) ? t.league : keys[0];
   const rest = keys.filter((k) => k !== lead);
-  return [comp(lead).name, ...rest.map((k) => comp(k).short)];
+  /* 리그 이름은 폰에서 약칭(mobileName — Premier League → EPL) */
+  return [
+    { full: comp(lead).name, short: mobileName(lead) },
+    ...rest.map((k) => ({ full: comp(k).short, short: comp(k).short })),
+  ];
 }
 
 export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary);
@@ -457,6 +461,30 @@ export function comp(key: CompetitionKey): CompetitionMeta {
 }
 
 export const ALL_COMPETITIONS = COMPS;
+
+/**
+ * 폰에서 쓰는 대회 이름 — 대회 선택 버튼처럼 칸이 좁은 자리에서 "Premier League" 가
+ * 두 줄로 꺾였다. 사람들이 실제로 부르는 약칭으로 줄인다. 여기 없으면 원래 이름.
+ * (헤더 부제의 약어 CDR · SUP 와 같은 표기)
+ */
+const MOBILE_NAME: Record<string, string> = {
+  'eng.1': 'EPL',
+  'esp.1': 'La Liga',
+  'uefa.champions': 'UCL',
+  'uefa.europa': 'UEL',
+  'uefa.europa.conf': 'UECL',
+  'esp.copa_del_rey': 'CDR',
+  'esp.super_cup': 'SUP',
+  'eng.fa': 'FA Cup',
+  'eng.league_cup': 'EFL Cup',
+  'fifa.world': 'World Cup',
+  'fifa.worldq.afc': 'WCQ',
+  'afc.asian.cup': 'Asian Cup',
+  'fifa.friendly': '친선',
+  'uefa.super_cup': 'USC',
+  'fifa.cwc': 'CWC',
+};
+export const mobileName = (key: CompetitionKey): string => MOBILE_NAME[key] ?? comp(key).name;
 
 /** espnTeamId → 스냅샷 파일 슬러그. 데이터 파일 이름이 타깃 정의에서 나온다. */
 export const SLUG_BY_TEAM_ID: Record<string, string> = Object.fromEntries(
