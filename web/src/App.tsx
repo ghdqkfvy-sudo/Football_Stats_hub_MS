@@ -100,8 +100,21 @@ export default function App() {
   };
 
   /** 팀을 고르면 그 팀 화면으로 넘어간다 */
-  const openTeam = useCallback((id: TargetId) => {
-    if (id === targetId && view === 'team') return;
+  /*
+   * 일정 탭에서 바로 띄울 경기 — Summary 의 매치데이 히어로를 누르면 그 팀 일정 탭으로
+   * 넘어가 **그 경기**가 히어로·캘린더에 선택된 채로 열린다. 일정 탭이 받아 쓰면 지운다.
+   */
+  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
+  const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
+
+  /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
+  const openTeam = useCallback((id: TargetId, focus?: { matchId: string }) => {
+    if (focus) {
+      setFocusMatch({ team: id, id: focus.matchId });
+      setTab('schedule');
+    } else if (id === targetId && view === 'team') {
+      return;
+    }
     setMotion('rise');
     setTargetId(id);
     setView('team');
@@ -559,6 +572,8 @@ export default function App() {
               matches={matches}
               loading={loading}
               onGoalsLoaded={onGoalsLoaded}
+              focusMatchId={focusMatch?.team === target.id ? focusMatch.id : null}
+              onFocused={clearFocusMatch}
             />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}

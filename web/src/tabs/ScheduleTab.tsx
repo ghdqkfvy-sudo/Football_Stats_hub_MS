@@ -18,9 +18,12 @@ interface Props {
   loading: boolean;
   /** 득점 상세를 받아오면 상위 상태를 갱신한다 */
   onGoalsLoaded: (matchId: string, goals: Match['goals']) => void;
+  /** 열자마자 띄울 경기 (Summary 매치데이 히어로에서 넘어올 때) — 쓰고 나면 onFocused */
+  focusMatchId?: string | null;
+  onFocused?: () => void;
 }
 
-export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) {
+export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatchId, onFocused }: Props) {
   const next = useMemo(
     () => matches.find((m) => m.status === 'scheduled' || m.status === 'live'),
     [matches],
@@ -36,13 +39,26 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [pinned, setPinned] = useState(false);
 
+  /* Summary 에서 고른 경기로 — 그 달·그 날을 고르고 고정한다(다음 경기로 되돌아가지 않게).
+     일정이 아직 안 왔으면 올 때까지 기다린다. */
   useEffect(() => {
-    if (pinned || !matches.length) return;
+    if (!focusMatchId) return;
+    const m = matches.find((x) => x.id === focusMatchId);
+    if (!m) return;
+    const [y, mo] = monthKey(m.kickoffUtc).split('-').map(Number);
+    setCursor({ y, m: mo });
+    setSelectedDay(dayKey(m.kickoffUtc));
+    setPinned(true);
+    onFocused?.();
+  }, [focusMatchId, matches, onFocused]);
+
+  useEffect(() => {
+    if (focusMatchId || pinned || !matches.length) return;
     const anchor = next ?? matches[matches.length - 1];
     const [y, m] = monthKey(anchor.kickoffUtc).split('-').map(Number);
     setCursor({ y, m });
     setSelectedDay(dayKey(anchor.kickoffUtc));
-  }, [matches, next, pinned]);
+  }, [matches, next, pinned, focusMatchId]);
 
   /**
    * 히어로에 보여줄 경기 — 캘린더에서 다른 날짜를 고르면 그 날의 경기로 바뀐다.

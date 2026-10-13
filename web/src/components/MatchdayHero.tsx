@@ -61,6 +61,8 @@ interface Props {
   standingOf?: (teamId: string) => TeamStanding | undefined;
   hero?: boolean;
   onSelect?: () => void;
+  /** 누를 수 있는 카드의 설명 (화면 읽기·마우스 툴팁) */
+  label?: string;
 }
 
 function Countdown({ iso }: { iso: string }) {
@@ -119,7 +121,7 @@ function Side({
   );
 }
 
-export function MatchdayCard({ target, match, standingOf, hero = false, onSelect }: Props) {
+export function MatchdayCard({ target, match, standingOf, hero = false, onSelect, label }: Props) {
   const c = comp(match.competition);
   const home = match.home.id === target.espnTeamId;
   const live = match.status === 'live';
@@ -142,7 +144,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
         ['--opp' as string]: SUMMARY_OPP,
       }}
       onClick={onSelect}
-      {...(onSelect ? { type: 'button' as const, 'aria-label': `${target.nameEn} 경기를 크게 보기` } : {})}
+      {...(onSelect ? { type: 'button' as const, 'aria-label': label ?? `${target.nameEn} 경기를 크게 보기`, title: label } : {})}
     >
       <header className="mdh__top">
         <span className="mdh__badge">
