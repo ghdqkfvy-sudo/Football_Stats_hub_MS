@@ -52,6 +52,22 @@ const ZONE_KO: Record<string, string> = {
   'group stage': '조별리그',
 };
 const zoneLabel = (text: string) => ZONE_KO[text.toLowerCase()] ?? text;
+/* 폰 범례용 약칭 — "1–5위 챔피언스리그 진출 · 6위 유로파리그 진출 / 7위 …" 가 두 줄이 됐다.
+   대회는 약어로, "진출" 은 뺀다(색 띠와 순위만으로 진출이다). 없으면 긴 이름 그대로. */
+const ZONE_SHORT: Record<string, string> = {
+  'champions league': 'UCL',
+  'champions league qualifying': 'UCL 예선',
+  'europa league': 'UEL',
+  'europa league qualifying': 'UEL 예선',
+  'conference league': 'UECL',
+  'conference league qualifying': 'UECL 예선',
+  'uefa conference league qualifying': 'UECL 예선',
+  'relegation playoff': '강등 PO',
+  'promotion playoff': '승격 PO',
+  'qualifies for knockout round playoffs': '16강 PO',
+  'qualifies for knockout play-offs': '16강 PO',
+};
+const zoneShort = (text: string) => ZONE_SHORT[text.toLowerCase()] ?? zoneLabel(text);
 
 /*
  * 띠 색만 우리가 정한다.
@@ -188,7 +204,8 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
             <span className="tbl__lg" key={z.text} style={{ ['--zone' as string]: zoneColor(z) }}>
               <i aria-hidden="true" />
               <b className="num">{rankRange(z.ranks)}</b>
-              {zoneLabel(z.text)}
+              <span className="m-full">{zoneLabel(z.text)}</span>
+              <span className="m-short">{zoneShort(z.text)}</span>
             </span>
           ))}
         </div>

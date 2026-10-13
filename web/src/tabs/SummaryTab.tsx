@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SUMMARY_OPP, TARGETS, comp, getTarget, summaryColor, type Target, type TargetId } from '../config/targets';
+import { SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -433,7 +433,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               onClick={() => pickComp(c)}
             >
               <CompCrest k={c} size={17} />
-              {comp(c).name}
+              <span className="m-full">{comp(c).name}</span>
+              <span className="m-short">{mobileName(c)}</span>
             </button>
           ))}
         </nav>

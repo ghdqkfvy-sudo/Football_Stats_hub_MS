@@ -374,9 +374,17 @@ export default function App() {
                   줄이 꺾이게 한다. 한 줄 문자열이면 "Premier Lea / gue" 처럼
                   아무 데서나 끊긴다. 가운뎃점은 CSS 가 그린다. */}
               <div className="hdr__sub">
-                <span>MS STATS HUB</span>
-                {(summary ? ['전체 요약'] : subtitleParts(target)).map((part) => (
-                  <span key={part}>{part}</span>
+                {/* 폰에서는 숨긴다 — 부제가 두 줄로 꺾였다(styles/header.css) */}
+                <span className="hdr__brand">MS STATS HUB</span>
+                {(summary ? [{ full: '전체 요약', short: '전체 요약' }] : subtitleParts(target)).map((part) => (
+                  <span key={part.full}>
+                    {part.short === part.full ? part.full : (
+                      <>
+                        <span className="m-full">{part.full}</span>
+                        <span className="m-short">{part.short}</span>
+                      </>
+                    )}
+                  </span>
                 ))}
                 <span className="num">{season}</span>
               </div>

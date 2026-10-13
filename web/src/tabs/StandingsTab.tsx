@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { markOf, type Target } from '../config/targets';
+import { markOf, mobileName, type Target } from '../config/targets';
 import type { Match, StandingTable } from '../lib/types';
 import { loadLeague, type Source , loadScheduleExtras, type ScheduleExtras } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
@@ -105,7 +105,8 @@ export function StandingsTab({
             onClick={() => pickComp(c)}
           >
             <CompCrest k={c} size={17} />
-            {palette.name(c)}
+            <span className="m-full">{palette.name(c)}</span>
+            <span className="m-short">{mobileName(c)}</span>
           </button>
         ))}
       </nav>
@@ -150,14 +151,22 @@ export function StandingsTab({
             <div className="sec__head">
               <h2 className="sec__title">{table.competitionName} 순위</h2>
               <span className="sec__note">
-                {table.derived
-                  ? `${finished}경기 결과로 산출 · 최대 ${tableRound(table)}R 반영`
-                  : `ESPN 공식 집계 ${tableRound(table)}R 기준 · 최근 경기 반영에 시차가 있습니다`}
-                {' · '}
-                {SRC[data.source]}
-                {data.fetchedAt ? ` ${new Date(data.fetchedAt).toLocaleString('ko-KR', {
-                  month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                })} 기준` : ''}
+                <span className="m-full">
+                  {table.derived
+                    ? `${finished}경기 결과로 산출 · 최대 ${tableRound(table)}R 반영`
+                    : `ESPN 공식 집계 ${tableRound(table)}R 기준 · 최근 경기 반영에 시차가 있습니다`}
+                  {' · '}
+                  {SRC[data.source]}
+                  {data.fetchedAt ? ` ${new Date(data.fetchedAt).toLocaleString('ko-KR', {
+                    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })} 기준` : ''}
+                </span>
+                {/* 폰 — 긴 설명이 두 줄로 꺾이며 날짜가 "10. 13." / "오전 01:20" 로 갈렸다.
+                    핵심(몇 라운드 · 언제 값)만 남기고 날짜는 한 덩어리로 */}
+                <span className="m-short">
+                  {tableRound(table)}R 기준
+                  {data.fetchedAt && <> · <span className="nowrap">{kstStamp(data.fetchedAt)} 갱신</span></>}
+                </span>
               </span>
             </div>
             <StandingsTable
@@ -195,4 +204,12 @@ export function StandingsTab({
       </Swap>
     </div>
   );
+}
+
+/** "10.13 01:20" — KST(UTC+9 고정, 서머타임 없음) */
+function kstStamp(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t + 9 * 3600_000).toISOString();
+  return `${Number(d.slice(5, 7))}.${d.slice(8, 10)} ${d.slice(11, 16)}`;
 }

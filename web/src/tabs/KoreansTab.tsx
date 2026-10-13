@@ -191,9 +191,10 @@ export function KoreansTab() {
           <h2 className="sec__title">코리안리거</h2>
           <span className="sec__note">
             해외 리그 소속 {all.length}명 · 리그와 유럽대항전 기록 · 게이지는 선발 비율
-            {takenAt && ` · ${new Date(takenAt).toLocaleString('ko-KR', {
+            {/* 날짜·시각은 한 덩어리로 — 폰에서 "10. 13." / "오전 01:23" 으로 갈렸다 */}
+            {takenAt && <> · <span className="nowrap">{new Date(takenAt).toLocaleString('ko-KR', {
               month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
-            })} 기준`}
+            })} 기준</span></>}
             {source === 'live' ? ' · 실시간' : source === 'feed' ? ' · 자동 갱신' : ''}
           </span>
         </div>

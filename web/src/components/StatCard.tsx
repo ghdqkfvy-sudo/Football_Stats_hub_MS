@@ -6,6 +6,9 @@ import type { AthleteInfo } from '../types/feedTypes';
 import { Crest } from './Crest';
 import { Headshot } from './Headshot';
 
+/** 대회 줄 이름의 폰 약칭 (리그 · 챔스는 이미 짧다) */
+const KRCC_SHORT: Record<string, string> = { 'uefa.europa': 'UEL', 'uefa.europa.conf': 'UECL' };
+
 /**
  * 진짜 마우스가 있는 기기인지. 터치 기기에서는 "호버"가 없어서 예전에는
  * 탭 = focus 로 펼쳤는데, 다시 탭해도 초점이 그대로라 **접히지 않았다.**
@@ -265,7 +268,11 @@ export function StatCard({
                   style={{ ['--c' as string]: palette.color(s.competition) }}
                 >
                   <LeagueMark src={s.logo} color={palette.color(s.competition)} />
-                  <span className="krcc__n">{s.label}</span>
+                  {/* 폰 — 좁은 칸에서 "유로파" · "컨퍼런스" 가 두 줄로 꺾였다 */}
+                  <span className="krcc__n">
+                    <span className="m-full">{s.label}</span>
+                    <span className="m-short">{KRCC_SHORT[s.competition] ?? s.label}</span>
+                  </span>
                   <span
                     className="krcc__bar"
                     title={s.apps > 0 ? `선발 ${s.starts} / 출전 ${s.apps} (${share}%)` : '출전 기록 없음'}
