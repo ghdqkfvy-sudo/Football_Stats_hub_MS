@@ -6,6 +6,7 @@ import type { KoreanPlayer } from '../types/feedTypes';
 import { visibleComps } from '../lib/comps';
 import { StatCard, type CompLine, type RecentLine } from '../components/StatCard';
 import { Swap } from '../components/Swap';
+import { lastMatchTag } from '../lib/form';
 
 const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -184,6 +185,7 @@ function FutureCard({
       comps={comps}
       recent={recent}
       tag={CLAUSE_LABEL[p.kind]}
+      hot={lastMatchTag(recent)}
       compLabel={false}
       emptyNote={
         feed === undefined

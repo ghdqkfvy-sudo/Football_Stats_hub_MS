@@ -6,6 +6,7 @@ import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { kstShortDate } from '../lib/kst';
 import { Swap } from './Swap';
+import { PlayerDetail } from './PlayerDetail';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 const FILTERS: { id: string; label: string }[] = [
@@ -131,6 +132,14 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
     setCard(null);
     onHover(null);
   };
+  /* 선수 상세(시즌 전 경기) — 행을 누르거나 Enter */
+  const [detail, setDetail] = useState<PlayerSeason | null>(null);
+  const closeDetail = useCallback(() => setDetail(null), []);
+  const openDetail = (p: PlayerSeason) => {
+    setCard(null);
+    setDetail(p);
+  };
+
   const dismissCard = () => {
     closeCard();
     onClose?.();
@@ -212,7 +221,12 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
             tabIndex={0}
             onFocus={(e) => openCard(p, e.currentTarget)}
             onBlur={closeCard}
-            onKeyDown={(e) => { if (e.key === 'Escape') closeCard(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeCard();
+              else if (e.key === 'Enter') openDetail(p);
+            }}
+            onClick={() => openDetail(p)}
+            title="눌러서 시즌 전 경기 기록 보기"
           >
             <span className="pt__who">
               <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={30} />
@@ -249,12 +263,13 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
       * 포메이션 칩을 눌러도 카드가 안 보이던 원인. 목록을 끝까지 내려야만 보였다.
       */}
     {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={dismissCard} />}
+    <PlayerDetail p={detail} onClose={closeDetail} />
     </>
   );
 }
 
 /** 경고·퇴장 — 없으면 줄표 하나로 조용히 둔다 */
-function Cards({ yellow, red, zero = false }: { yellow: number; red: number; zero?: boolean }) {
+export function Cards({ yellow, red, zero = false }: { yellow: number; red: number; zero?: boolean }) {
   if (!yellow && !red && !zero) return <i className="cards__none">–</i>;
   return (
     <span className="cards">

@@ -57,7 +57,7 @@ export function Crest({ team, size = 24, className = '', glow }: {
   }
   /* `crest` 는 문양 윤곽에 아주 얇은 빛을 두른다 — 토트넘 남색 수탉이나
      리버풀 간판처럼 어두운 픽셀이 100% 인 엠블럼이 어두운 배경에 묻히는 것을
-     막는다(global.css 참고). 상대 팀까지 전부 두르면 강조가 사라지므로
+     막는다(styles/background.css 참고). 상대 팀까지 전부 두르면 강조가 사라지므로
      기본은 우리 일곱 팀만이다. */
   const lit = DARK_CREST_IDS.has(team.id) || (glow ?? scope.has(team.id));
   return (

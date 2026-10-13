@@ -1,0 +1,329 @@
+/* ══ 참가 대회 선택 ════════════════════════════════════════ */
+
+/* 대회가 여럿이면 좁은 화면에서 한 줄에 다 안 들어간다 — 클럽 스위처와
+   같은 규칙으로 가로 스크롤 + 오른쪽 흐림으로 "더 있다" 를 알린다. */
+.comps {
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+}
+.comps::-webkit-scrollbar { display: none; }
+.comps > * { flex: 0 0 auto; }
+@media (min-width: 861px) {
+  /* 넓은 화면에서는 어차피 다 들어가므로 흐림을 끈다 */
+  .comps { -webkit-mask-image: none; mask-image: none; }
+}
+.comps__b {
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 9px 15px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--ink-900);
+  font-size: 12.5px; font-weight: 500; color: var(--text-lo);
+  transition: color .16s, border-color .16s, background .16s;
+}
+.comps__b i {
+  width: 8px; height: 8px; border-radius: 2px; background: var(--c);
+  opacity: .55; transition: opacity .16s, box-shadow .16s;
+}
+.comps__b:hover { color: var(--text-mid); border-color: var(--line-2); }
+.comps__b[aria-pressed='true'] {
+  color: var(--text-hi); font-weight: 600;
+  border-color: color-mix(in srgb, var(--c) 50%, transparent);
+  background: color-mix(in srgb, var(--c) 12%, var(--ink-900));
+}
+.comps__b[aria-pressed='true'] i { opacity: 1; box-shadow: 0 0 10px var(--c); }
+
+/* ══ 순위표 ════════════════════════════════════════════════ */
+
+.tbl {
+  border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  background: var(--panel); backdrop-filter: var(--panel-blur);
+}
+
+.tbl__head, .tbl__line {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 30px 30px 30px 30px 34px 34px 44px 48px 96px;
+  align-items: center; gap: 6px;
+}
+.tbl__head {
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+  font-size: 10px; letter-spacing: .1em; color: var(--text-lo); font-weight: 600;
+  background: rgba(0,0,0,.22);
+}
+.tbl__head > .num, .tbl__head > .tbl__form, .tbl__head > .tbl__pts { text-align: center; }
+.tbl__head > .tbl__form { text-align: left; padding-left: 4px; }
+/* 헤더 셀은 전부 같은 작은 라벨 — 본문 셀 스타일을 물려받지 않게 한다 */
+.tbl__head > * {
+  font-family: var(--font-body) !important; font-size: 10px !important;
+  font-weight: 600 !important; color: var(--text-lo) !important; letter-spacing: .1em;
+}
+
+.tbl__row { border-bottom: 1px solid var(--line); }
+.tbl__row:last-child { border-bottom: 0; }
+
+.tbl__line {
+  width: 100%; padding: 9px 16px; text-align: left; position: relative;
+  transition: background .15s;
+}
+.tbl__line:hover { background: rgba(255,255,255,.032); }
+/* 진출권 구분 띠 */
+.tbl__line[data-zone='true']::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--zone);
+}
+.tbl__row[data-focus='true'] .tbl__line {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+/* 우리 팀 행에 팀 컬러 띠를 또 그리면 왼쪽에 색이 두 개 겹쳐
+   "이게 진출권 색인가 팀 색인가" 가 헷갈린다. 왼쪽 띠는 진출권 전용으로
+   비워 두고, 우리 팀은 배경·순위·승점 색으로만 구분한다. */
+.tbl__row[data-open='true'] .tbl__line { background: rgba(255,255,255,.05); }
+
+.tbl__line > .num { text-align: center; font-size: 12.5px; color: var(--text-mid); }
+.tbl__rank { font-size: 12.5px; color: var(--text-lo); text-align: center; }
+.tbl__row[data-focus='true'] .tbl__rank { color: var(--accent); font-weight: 700; }
+
+.tbl__team { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.tbl__team b {
+  font-size: 13px; font-weight: 500; letter-spacing: -.012em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tbl__short { display: none; }
+.tbl__row[data-focus='true'] .tbl__team b { font-weight: 700; }
+
+.tbl__g { color: var(--text-lo) !important; }
+.tbl__gd[data-sign='p'] { color: var(--win) !important; }
+.tbl__gd[data-sign='n'] { color: var(--loss) !important; }
+/* 승점도 다른 숫자와 **같은 글꼴·같은 크기** — 예전에는 디스플레이 글꼴 19px 이라
+   같은 줄의 득실(+8)보다 아래로 처져 보였고 글꼴도 섞여 보였다.
+   강조는 굵기와 흰색으로만 한다. */
+.tbl__pts { font-weight: 700; color: var(--text-hi) !important; }
+.tbl__row[data-focus='true'] .tbl__pts { color: var(--accent) !important; }
+
+.tbl__form { display: flex; gap: 3px; padding-left: 4px; }
+.tbl__head > [title] { cursor: help; }
+/* 약어 범례 — 표 아래 한 줄. 넓은 화면에서도 호버 없이 바로 읽힌다 */
+.tbl__key {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 10px 14px 12px;
+  border-top: 1px solid var(--line); font-size: 10.5px; color: var(--text-lo);
+}
+.tbl__key b { font-weight: 700; color: var(--text-mid); letter-spacing: .04em; margin-right: 3px; }
+.tbl__nof { color: var(--text-lo); font-size: 11px; font-style: normal; }
+
+/*
+ * 숫자 열 정렬 — 두 가지를 **동시에** 맞춘다.
+ *  ① 세로: 일의 자리가 줄마다 같은 자리에 온다 → 오른쪽 정렬.
+ *  ② 가로: 숫자 묶음이 칸 가운데에 오고, 머리글(# P W D L GD PTS)도 칸 가운데.
+ * 그래서 숫자는 "흔한 값의 폭(두 글자 = 2ch)" 상자를 칸 가운데에 두고
+ * 그 안에서 오른쪽 정렬한다: padding-right = (칸 폭 − 상자 폭) / 2.
+ * 퍼센트 여백은 그 그리드 칸 폭 기준이라 화면 폭(데스크톱·900·640)이 바뀌어도
+ * 따로 맞출 필요가 없다. 득실의 "+11" 처럼 세 글자는 왼쪽으로 한 글자 더 나간다
+ * (일의 자리는 그대로 맞는다). line-height 1 로 숫자 상자 높이를 글자 크기에 맞춰
+ * 같은 줄의 숫자들이 같은 높이에 앉게 한다.
+ * (지난 시도: 고정 px 오른쪽 정렬 → 머리글이 숫자보다 넓어 PTS 가 삐뚤어 보였다)
+ */
+.tbl__line > .num, .tbl__line > .tbl__rank {
+  text-align: right; padding-right: calc((100% - 2ch) / 2); line-height: 1;
+}
+/* 머리글은 칸 가운데. 자간(.1em)이 마지막 글자 뒤에도 붙어 왼쪽으로 치우치는 만큼 보정 */
+.tbl__head > .num, .tbl__head > .tbl__rank { text-align: center; padding: 0 0 0 .1em; }
+
+.tbl__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.4,0,.2,1); }
+.tbl__row[data-open='true'] .tbl__panel { grid-template-rows: 1fr; }
+.tbl__panelIn { overflow: hidden; }
+
+.tbl__hint {
+  margin: 9px 2px 0; font-size: 11.5px; color: var(--text-mid);
+  text-shadow: 0 1px 10px rgba(4,12,28,.9);
+}
+
+/* 홈/원정 분리 */
+.split {
+  display: grid; grid-template-columns: 1fr 1px 1fr; gap: 18px;
+  padding: 14px 16px 18px; background: rgba(0,0,0,.2);
+  border-top: 1px solid var(--line);
+}
+.split__div { background: var(--line); }
+.split__col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.split__h {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 10.5px; letter-spacing: .1em; color: var(--text-lo);
+  padding-bottom: 7px; margin-bottom: 4px; border-bottom: 1px solid var(--line);
+}
+.split__h b { font-family: var(--font-body); font-size: 11.5px; letter-spacing: 0; color: var(--text-mid); font-weight: 600; }
+
+.split__row {
+  display: grid; grid-template-columns: 58px 17px minmax(0,1fr) 58px 17px;
+  align-items: center; gap: 8px; padding: 5px 0;
+}
+.split__d { font-size: 11px; color: var(--text-lo); }
+.split__o { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.split__s {
+  font-family: var(--font-display); font-size: 16px; font-weight: 600;
+  text-align: center; color: var(--text-mid);
+}
+.split__s[data-res='W'] { color: var(--win); }
+.split__s[data-res='L'] { color: var(--loss); }
+
+/* ══ 공격 포인트 순위 ══════════════════════════════════════ */
+
+/* ── 공격 포인트 3분할 ────────────────────────────────
+   득점 · 도움 · 공격포인트를 탭 전환 없이 나란히 놓는다.
+   게이지는 팀 컬러 그라데이션이고, 도움만 방향이 반대라
+   막대만 봐도 어떤 표인지 구분된다. */
+
+.lb3 {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* stretch — 세 표가 항상 같은 높이가 된다(내용이 짧은 표는 아래가 빈다) */
+  align-items: stretch;
+}
+
+.lbc {
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: rgba(6,16,38,.26); backdrop-filter: blur(10px);
+  overflow: hidden; min-width: 0;
+}
+.lbc__h {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+}
+.lbc__h h3 {
+  margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--text-hi); text-shadow: 0 1px 10px rgba(4,12,28,.9);
+}
+.lbc__none { margin: 0; padding: 16px 14px; font-size: 11.5px; color: var(--text-lo); }
+.lb3__note { margin: 12px 2px 0; font-size: 11px; color: var(--text-lo); line-height: 1.6; }
+
+/* 더보기 — 세 표를 한꺼번에 8위 → 15위로 펼친다 */
+.lb3__more {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; margin-top: 10px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: rgba(6,16,38,.26); color: var(--text-mid);
+  font-size: 12px; font-weight: 700; letter-spacing: -.01em; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.lb3__more:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, rgba(6,16,38,.26));
+}
+
+
+.lbc__list { list-style: none; margin: 0; padding: 0; }
+.lbc__row {
+  display: grid; grid-template-columns: 22px 18px minmax(0, 1fr) 48px;
+  align-items: center; gap: 8px; padding: 7px 14px;
+  border-bottom: 1px solid rgba(150,180,230,.07);
+}
+.lbc__row:last-child { border-bottom: 0; }
+.lbc__pad { width: 18px; }
+.lbc__rank { font-size: 11.5px; color: var(--text-lo); text-align: center; }
+.lbc__row[data-top='true'] .lbc__rank { color: var(--accent); font-weight: 700; }
+.lbc__name {
+  grid-column: 3; font-size: 12.5px; font-weight: 600; color: var(--text-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 10px rgba(4,12,28,.9);
+}
+
+/* 게이지는 팀 내 기록(variant=bar)에서만 쓴다.
+   대회 순위표는 숫자를 정확히 비교하는 자리라 막대가 시선을 흐린다. */
+.lb3[data-variant='bar'] .lbc__row { gap: 4px 8px; padding: 9px 14px; }
+.lbc__meter {
+  grid-column: 1 / 4; display: block; height: 7px; border-radius: 999px;
+  background: rgba(255,255,255,.07); overflow: hidden; margin-top: -2px;
+}
+.lbc__meter i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--secondary));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent),
+              0 0 22px color-mix(in srgb, var(--accent) 28%, transparent);
+  transition: width .4s cubic-bezier(.22,.7,.3,1);
+}
+/* 도움은 보조 컬러에서 시작해 accent 로 끝난다 */
+.lbc[data-rev='true'] .lbc__meter i {
+  background: linear-gradient(90deg, var(--secondary), var(--accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--secondary) 60%, transparent),
+              0 0 22px color-mix(in srgb, var(--secondary) 28%, transparent);
+}
+
+/* 기록 숫자 — 팀 컬러 */
+.lbc__v {
+  /* 게이지 오른쪽에 붙어 세로 가운데 — 막대와 숫자가 한 덩어리로 읽힌다 */
+  grid-column: 4; grid-row: 1 / 3; align-self: center; text-align: right;
+  font-family: var(--font-display); font-size: 19px; font-weight: 700; line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* 숫자는 세 표 모두 팀 컬러다. 지표 구분은 게이지 방향이 맡는다. */
+.lbc__v em {
+  font-family: var(--font-body); font-style: normal; font-size: 9.5px; font-weight: 700;
+  color: var(--text-lo); margin-left: 2px; text-shadow: none;
+}
+.lbc__row[data-top='true'] .lbc__name { font-weight: 700; }
+
+/* 서브탭은 좁은 화면에서만 — 넓은 화면은 세 표를 나란히 보는 편이 낫다 */
+.lb3__tabs { display: none; }
+
+@media (max-width: 900px) {
+  /*
+   * 세 표를 세로로 쌓으면 여덟 줄짜리 표 세 개가 이어 붙어 스크롤이 길고,
+   * "득점 1위" 를 보려고 두 표를 지나쳐야 한다. 서브탭으로 한 번에 하나만.
+   * 고르는 상태는 리액트가 들고 data-active 로 내려 주지만, **감추는 일은
+   * CSS 가** 한다 — 넓은 화면에서는 이 블록이 통째로 꺼지므로 셋 다 보인다.
+   */
+  .lb3 { grid-template-columns: 1fr; }
+  .lb3[data-active] > .lbc { display: none; }
+  .lb3[data-active='goals'] > .lbc[data-key='goals'],
+  .lb3[data-active='assists'] > .lbc[data-key='assists'],
+  .lb3[data-active='points'] > .lbc[data-key='points'] { display: block; }
+
+  /* 표 안에 이미 제목이 있으므로 탭에는 이름과 인원수만 */
+  .lb3[data-active] > .lbc > .lbc__h { display: none; }
+
+  .lb3__tabs {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+    margin-bottom: 10px;
+  }
+  .lb3__tab {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 8px; border-radius: 11px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(6, 16, 38, .3);
+    color: var(--text-mid); font: inherit; font-size: 12px; font-weight: 700;
+    letter-spacing: -.01em; white-space: nowrap;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .lb3__tab[data-on] {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+}
+
+/* ══ 순위표 반응형 ═════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .tbl__head, .tbl__line {
+    grid-template-columns: 32px minmax(0, 1fr) 28px 28px 28px 28px 42px 44px;
+  }
+  .tbl__g { display: none; }
+  .tbl__form { display: none; }
+  .split { grid-template-columns: 1fr; gap: 16px; }
+  .split__div { display: none; }
+  .lb__row { grid-template-columns: 26px 20px minmax(0, 1fr) 62px 48px; }
+  .lb__meter { display: none; }
+}
+
+@media (max-width: 640px) {
+  .tbl__head, .tbl__line { padding-inline: 11px; gap: 4px; grid-template-columns: 26px minmax(0,1fr) 26px 26px 26px 26px 38px 40px; }
+  /* 좁은 화면에서는 축약 팀명으로 바꿔 잘림을 없앤다 */
+  .tbl__full { display: none; }
+  .tbl__short { display: block; }
+  .tbl__team b { font-size: 12.5px; }
+  /* 순위·기록·승점 모두 같은 크기 */
+  .tbl__line > .num, .tbl__line > .tbl__rank { font-size: 12px; }
+  .split__row { grid-template-columns: 52px 17px minmax(0,1fr) 52px 17px; gap: 6px; }
+  .lb__row { padding-inline: 11px; }
+  .lb__sub { display: none; }
+  .lb__row { grid-template-columns: 24px 20px minmax(0,1fr) 48px; }
+}

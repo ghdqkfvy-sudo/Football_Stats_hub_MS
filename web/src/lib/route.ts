@@ -23,3 +23,22 @@ export function parseRoute(hash: string = typeof location !== 'undefined' ? loca
 export function formatRoute(targetId: string | null, tab: string | null): string {
   return targetId ? `#/${targetId}${tab ? `/${tab}` : ''}` : '#/';
 }
+
+/*
+ * 마지막으로 본 화면 기억 — 주소 없이(홈 화면 아이콘, 즐겨찾기한 첫 주소) 들어오면
+ * 매번 Summary 에서 시작해 내 팀까지 다시 눌러 들어가야 했다.
+ * 링크로 연 주소(#/chelsea/standings)가 있으면 그쪽이 언제나 이긴다.
+ * 저장소는 사생활 모드 등에서 막힐 수 있다 — 실패하면 조용히 기억하지 않는다.
+ */
+const LAST_KEY = 'msh:last-route';
+
+export function rememberRoute(hash: string): void {
+  try { localStorage.setItem(LAST_KEY, hash); } catch { /* 저장 불가 — 기억하지 않는다 */ }
+}
+
+/** 시작 화면의 주소 — 지금 주소가 있으면 그것, 없으면 마지막으로 본 화면 */
+export function startHash(): string {
+  if (typeof location === 'undefined') return '';
+  if (location.hash && location.hash !== '#') return location.hash;
+  try { return localStorage.getItem(LAST_KEY) ?? ''; } catch { return ''; }
+}

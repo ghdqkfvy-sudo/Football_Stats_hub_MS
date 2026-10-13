@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Target } from '../config/targets';
 import { loadNews, type Source } from '../lib/api';
 import type { Article } from '../types/feedTypes';
 import { kstShortDate, kstTime } from '../lib/kst';
 import { useIsMobile } from '../lib/useMedia';
 import { Swap } from '../components/Swap';
+import { groupStories, type Story } from '../lib/newsGroup';
 
 const KIND: Record<string, string> = {
   HeadlineNews: '뉴스',
@@ -48,9 +49,14 @@ function plainDesc(a: Article): string {
 
 type Filter = 'ALL' | 'ko' | 'espn' | 'Media';
 
-/* 폰에서 처음 보여 줄 기사 수(대표 기사 포함). 한 팀 피드가 40건이라
-   전부 그리면 화면 18장 길이가 된다. 넓은 화면은 지금처럼 전부 그린다. */
+/* 처음 보여 줄 기사 수(대표 기사 포함). 한 팀 피드가 40건이라 전부 그리면
+   폰에서 화면 18장 길이가 된다. 폰은 "더보기" 단추로, 넓은 화면은 목록 끝에
+   닿으면 저절로 다음 묶음을 그린다. */
 const MOBILE_PAGE = 12;
+const DESKTOP_PAGE = 17;   // 대표 1 + 4열 × 4줄
+
+/** 매체 이름 — ESPN 기사는 매체가 하나라 ESPN 으로 묶는다 */
+const pubOf = (a: Article) => (a.source === 'ko' ? (a.publisher || '한국어') : 'ESPN');
 
 export function NewsTab({ target }: { target: Target }) {
   const [rows, setRows] = useState<Article[] | null>(null);
@@ -60,12 +66,16 @@ export function NewsTab({ target }: { target: Target }) {
      매번 다른 값을 내므로(순수하지 않다), 목록을 받은 그 순간으로 고정한다. */
   const [now, setNow] = useState(() => Date.now());
   const mobile = useIsMobile();
+  const page = mobile ? MOBILE_PAGE : DESKTOP_PAGE;
   const [shown, setShown] = useState(MOBILE_PAGE);
+  /* 매체 필터 ('' = 전체) */
+  const [pub, setPub] = useState('');
 
   useEffect(() => {
     let alive = true;
     setRows(null);
     setShown(MOBILE_PAGE);
+    setPub('');
     const league = target.league ?? target.competitions[0];
     loadNews(league, target.espnTeamId, target.newsQuery).then((r) => {
       if (!alive) return;
@@ -80,10 +90,34 @@ export function NewsTab({ target }: { target: Target }) {
 
   const list = useMemo(() => {
     if (!rows) return [];
-    if (filter === 'ALL') return rows;
-    if (filter === 'Media') return rows.filter((x) => x.type === 'Media');
-    return rows.filter((x) => x.source === filter);
-  }, [rows, filter]);
+    const byKind = filter === 'ALL' ? rows
+      : filter === 'Media' ? rows.filter((x) => x.type === 'Media')
+        : rows.filter((x) => x.source === filter);
+    return pub ? byKind.filter((x) => pubOf(x) === pub) : byKind;
+  }, [rows, filter, pub]);
+  /* 같은 소식은 한 카드로 — 나머지 매체는 카드 아래 "같은 소식 N건" 에 */
+  const stories = useMemo(() => groupStories(list), [list]);
+
+  /* 매체 목록 — 기사 많은 순. 한 곳뿐이면 고를 게 없으니 그리지 않는다 */
+  const pubs = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const a of rows ?? []) n.set(pubOf(a), (n.get(pubOf(a)) ?? 0) + 1);
+    return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko'));
+  }, [rows]);
+
+  /* 넓은 화면 — 목록 끝(보초)이 화면에 들어오면 다음 묶음 */
+  const sentinel = useRef<HTMLDivElement>(null);
+  const more = stories.length > shown;
+  useEffect(() => {
+    if (mobile || !more) return;
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setShown((n) => n + DESKTOP_PAGE);
+    }, { rootMargin: '400px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mobile, more]);
 
   const hasKo = !!rows?.some((x) => x.source === 'ko');
 
@@ -96,9 +130,9 @@ export function NewsTab({ target }: { target: Target }) {
     );
   }
 
-  const [lead, ...rest] = list;
-  /* 폰에서는 앞의 몇 건만 — 나머지는 "더보기" 로 */
-  const restShown = mobile ? rest.slice(0, Math.max(0, shown - 1)) : rest;
+  const [lead, ...rest] = stories;
+  /* 앞의 몇 건만 — 폰은 "더보기", 넓은 화면은 끝에 닿으면 저절로 */
+  const restShown = rest.slice(0, Math.max(0, Math.max(shown, page) - 1));
   const hidden = rest.length - restShown.length;
 
   return (
@@ -133,7 +167,22 @@ export function NewsTab({ target }: { target: Target }) {
               {label}
             </button>
           ))}
-          <span className="nf__count num">{list.length}건</span>
+          {pubs.length > 1 && (
+            <select
+              className="nf__pub"
+              aria-label="매체"
+              value={pub}
+              onChange={(e) => { setPub(e.target.value); setShown(MOBILE_PAGE); }}
+            >
+              <option value="">모든 매체</option>
+              {pubs.map(([name, n]) => (
+                <option key={name} value={name}>{name} ({n})</option>
+              ))}
+            </select>
+          )}
+          <span className="nf__count num">
+            {list.length}건{stories.length < list.length && ` · ${stories.length}개 소식`}
+          </span>
         </nav>
 
         {!list.length && (
@@ -147,24 +196,55 @@ export function NewsTab({ target }: { target: Target }) {
         )}
 
         {/* 필터를 바꾸면 목록이 한 번 페이드로 바뀐다 ("더보기" 로 늘어날 때는 그대로) */}
-        <Swap k={filter}>
-        {lead && <Card a={lead} now={now} lead />}
+        <Swap k={`${filter}-${pub}`}>
+        {lead && <StoryCard s={lead} now={now} lead />}
 
         {rest.length > 0 && (
           <div className="ngrid">
             {restShown.map((x) => (
-              <Card key={x.id} a={x} now={now} />
+              <StoryCard key={x.lead.id} s={x} now={now} />
             ))}
           </div>
         )}
         </Swap>
 
-        {hidden > 0 && (
+        {hidden > 0 && (mobile ? (
           <button className="nmore" onClick={() => setShown((n) => n + MOBILE_PAGE)}>
             기사 더보기 <span className="num">({hidden}건 남음)</span>
           </button>
-        )}
+        ) : (
+          <div ref={sentinel} className="nmore nmore--auto" aria-hidden="true">
+            기사 불러오는 중… <span className="num">({hidden}건 남음)</span>
+          </div>
+        ))}
       </section>
+    </div>
+  );
+}
+
+/**
+ * 한 소식 = 대표 기사 카드 + (있으면) 같은 소식을 다룬 다른 매체 목록.
+ * 카드는 통째로 링크(<a>)라 그 안에 다른 링크를 넣을 수 없다 — 목록은 카드 아래에 둔다.
+ */
+function StoryCard({ s, now, lead = false }: { s: Story; now: number; lead?: boolean }) {
+  if (!s.related.length) return <Card a={s.lead} now={now} lead={lead} />;
+  return (
+    <div className="nstory" data-lead={lead}>
+      <Card a={s.lead} now={now} lead={lead} />
+      <details className="nrel">
+        <summary>같은 소식 <span className="num">{s.related.length}</span>건 더</summary>
+        <ul>
+          {s.related.map((r) => (
+            <li key={r.id}>
+              <a href={r.href} target="_blank" rel="noreferrer noopener">
+                <b>{pubOf(r)}</b>
+                <span>{r.headline}</span>
+                <em className="num">{ago(r.published, now)}</em>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

@@ -1,0 +1,58 @@
+/* ══ 컵 여정 ════════════════════════════════════════════
+   순위표가 없는 대회는 표 대신 라운드 사슬로 그린다. */
+
+.cup {
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--panel); backdrop-filter: var(--panel-blur); padding: 14px 16px 16px;
+}
+.cup__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cup__note { font-size: 10.5px; color: var(--text-lo); }
+.cup__path { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.cup__r {
+  position: relative; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 12px 10px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.02);
+}
+/* 라운드 사이를 잇는 세로 선 — 사슬처럼 이어져 보이게 */
+.cup__r + .cup__r::before {
+  content: ''; position: absolute; left: 24px; top: -7px; height: 7px; width: 2px;
+  background: var(--line-2);
+}
+.cup__r[data-on='false'] { opacity: .55; border-style: dashed; }
+.cup__r[data-blocked='true'] { opacity: .35; }
+.cup__r[data-res='W'] { border-color: color-mix(in srgb, var(--win) 45%, transparent); }
+.cup__r[data-res='L'] { border-color: color-mix(in srgb, var(--loss) 45%, transparent); }
+.cup__r[data-res='D'] { border-color: color-mix(in srgb, var(--draw) 45%, transparent); }
+.cup__rl {
+  min-width: 86px; font-size: 11.5px; font-weight: 700; color: var(--text-hi);
+  letter-spacing: -.01em;
+}
+.cup__tie { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.cup__tie b { color: var(--text-hi); font-weight: 600; }
+.cup__tie em { font-style: normal; font-size: 10.5px; color: var(--text-lo); }
+.cup__sc { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-hi); }
+.cup__tbd { font-size: 11.5px; color: var(--text-lo); }
+
+/* 퓨처 리소스 — 조항 종류별 영역 */
+.fgroup { margin-top: 18px; }
+.fgroup:first-of-type { margin-top: 4px; }
+.fgroup__h {
+  display: grid; grid-template-columns: 4px auto auto 1fr;
+  align-items: center; gap: 0 9px;
+  padding: 0 0 9px; margin-bottom: 11px; border-bottom: 1px solid var(--line);
+}
+.fgroup__h i {
+  grid-row: 1 / 3; width: 4px; align-self: stretch; min-height: 26px;
+  border-radius: 2px; background: var(--c);
+}
+.fgroup__h h3 {
+  margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--c);
+}
+.fgroup__h > span {
+  font-size: 11px; color: var(--text-lo);
+  border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px;
+}
+.fgroup__h p {
+  grid-column: 2 / -1; margin: 2px 0 0; font-size: 11.5px; color: var(--text-lo);
+}

@@ -120,6 +120,8 @@ interface Props {
   recent: RecentLine[];
   /** 오른쪽 위 배지 (Future 의 조항 종류 같은 것) */
   tag?: ReactNode;
+  /** 지금 폼 — "직전 경기 1골" (lib/form.ts). 이름 아래 초록 배지 */
+  hot?: string | null;
   /** 대회 기록이 하나도 없을 때의 문구 */
   emptyNote?: string;
   /** 최근 경기가 없을 때의 문구 */
@@ -137,7 +139,7 @@ export function StatCard({
   id, name, posLabel, photo, photoKind, fallbackLabel,
   clubId, club, age, league, leagueName, leagueLogo,
   comps, recent, tag, emptyNote, recentNote, open, onHover,
-  pos, tint = 'club', national, compLabel = true,
+  pos, tint = 'club', national, compLabel = true, hot,
 }: Props) {
   const palette = usePalette();
   const [clubBg, clubFg] = tintOf(clubId ?? '0');
@@ -213,6 +215,7 @@ export function StatCard({
               {leagueText}
             </span>
           )}
+          {hot && <span className="krc__hot">{hot}</span>}
         </div>
         {tag && <span className="krc__tag">{tag}</span>}
       </div>
