@@ -306,8 +306,8 @@
   .tbl__head, .tbl__line {
     grid-template-columns: 32px minmax(0, 1fr) 28px 28px 28px 28px 42px 44px;
   }
-  .tbl__g { display: none; }
-  .tbl__form { display: none; }
+  .tbl__g, .tbl__key-g { display: none; }
+  .tbl__form, .tbl__key-form { display: none; }
   .split { grid-template-columns: 1fr; gap: 16px; }
   .split__div { display: none; }
   .lb__row { grid-template-columns: 26px 20px minmax(0, 1fr) 62px 48px; }
