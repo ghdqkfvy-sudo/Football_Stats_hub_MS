@@ -100,26 +100,6 @@ export default function App() {
   };
 
   /** 팀을 고르면 그 팀 화면으로 넘어간다 */
-  /*
-   * 일정 탭에서 바로 띄울 경기 — Summary 의 매치데이 히어로를 누르면 그 팀 일정 탭으로
-   * 넘어가 **그 경기**가 히어로·캘린더에 선택된 채로 열린다. 일정 탭이 받아 쓰면 지운다.
-   */
-  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
-  const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
-
-  /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
-  const openTeam = useCallback((id: TargetId, focus?: { matchId: string }) => {
-    if (focus) {
-      setFocusMatch({ team: id, id: focus.matchId });
-      setTab('schedule');
-    } else if (id === targetId && view === 'team') {
-      return;
-    }
-    setMotion('rise');
-    setTargetId(id);
-    setView('team');
-    toTop();
-  }, [targetId, view]);
   const openSummary = useCallback(() => {
     if (view === 'summary') return;
     setMotion('rise');
@@ -146,6 +126,27 @@ export default function App() {
      이펙트 대신 계산으로. 클럽으로 돌아오면 고른 탭이 그대로 살아 있다. */
   const [tabPick, setTab] = useState<TabId>(() => (START.tab as TabId | null) ?? tabs[0].id);
   const tab = tabs.some((t) => t.id === tabPick) ? tabPick : tabs[0].id;
+
+  /*
+   * 일정 탭에서 바로 띄울 경기 — Summary 의 매치데이 히어로를 누르면 그 팀 일정 탭으로
+   * 넘어가 **그 경기**가 히어로·캘린더에 선택된 채로 열린다. 일정 탭이 받아 쓰면 지운다.
+   */
+  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
+  const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
+
+  /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
+  const openTeam = useCallback((id: TargetId, focus?: { matchId: string }) => {
+    if (focus) {
+      setFocusMatch({ team: id, id: focus.matchId });
+      setTab('schedule');
+    } else if (id === targetId && view === 'team') {
+      return;
+    }
+    setMotion('rise');
+    setTargetId(id);
+    setView('team');
+    toTop();
+  }, [targetId, view]);
   const goTab = useCallback((id: TabId) => {
     if (id === tab) return;
     setMotion(dirOf(tabs.findIndex((t) => t.id === tab), tabs.findIndex((t) => t.id === id)));
