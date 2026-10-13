@@ -118,17 +118,29 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
   };
 
   /** 카드를 그 줄 옆에 놓는다 (호버 상태는 건드리지 않는다) */
+  /*
+   * 카드 자리.
+   *  · 목록의 줄에서 연 카드 → 목록 **왼쪽**(그 줄 옆). 보고 있는 줄을 가리지 않는다.
+   *  · 포메이션에서 연 카드 → 목록 **위, 오른쪽 끝에 붙여**. 왼쪽에 두면 카드가
+   *    포메이션을 덮어서, 방금 누른 선수와 주변 자리가 가려졌다.
+   * ⚠️ 경기장과 목록이 나란한 넓은 화면에서만 갈라 쓴다 — 좁은 화면은 CSS 가 카드를
+   *    따로 놓는다(styles/players.css · mobile.css).
+   */
+  const fromRow = useRef<string | null>(null);
   const placeCard = (p: PlayerSeason, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     const lr = listRef.current?.getBoundingClientRect();
-    setCard({ p, top: r.top + r.height / 2, left: (lr?.left ?? r.left) - 12 });
+    const overList = fromRow.current !== p.id && !!lr && lr.left > window.innerWidth * 0.3;
+    setCard({ p, top: r.top + r.height / 2, left: overList ? lr!.right - 12 : (lr?.left ?? r.left) - 12 });
   };
 
   const openCard = (p: PlayerSeason, el: HTMLElement) => {
+    fromRow.current = p.id;
     placeCard(p, el);
     onHover(p.id);
   };
   const closeCard = () => {
+    fromRow.current = null;
     setCard(null);
     onHover(null);
   };
@@ -157,6 +169,7 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
     }
     const p = rows.find((x) => x.id === activeId);
     const el = rowRefs.current.get(activeId);
+    if (fromRow.current !== activeId) fromRow.current = null;   // 포메이션에서 고른 선수
     if (!p || !el) return;
     /* 목록 **안에서만** 그 줄이 보이게 스크롤한다. scrollIntoView 는 페이지까지
        끌어내려서, 폰에서 포메이션 칩을 누르면 화면이 목록으로 훅 내려갔다

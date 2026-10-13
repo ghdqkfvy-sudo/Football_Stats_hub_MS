@@ -229,4 +229,75 @@ describe('teamCohesion', () => {
     expect(teamCohesion([], 6)).toBe(0);
     expect(teamCohesion(slots, 0)).toBe(0);
   });
+
+});
+
+describe('bestEleven — 좌우 짝 자리는 한 묶음', () => {
+  /* 첼시 3-4-2-1 (2026-10) 을 줄인 모양 */
+  const shape3421 = [
+    { abbr: 'G', n: 1 },
+    { abbr: 'CD-L', n: 1 }, { abbr: 'CD', n: 1 }, { abbr: 'CD-R', n: 1 },
+    { abbr: 'LM', n: 1 }, { abbr: 'CM-L', n: 1 }, { abbr: 'CM-R', n: 1 }, { abbr: 'RM', n: 1 },
+    { abbr: 'CF-L', n: 1 }, { abbr: 'CF-R', n: 1 },
+    { abbr: 'F', n: 1 },
+  ];
+  const pl = (id: string, posPlaces: Record<string, number>, apps = 5, score = 1) => ({
+    id, name: id, jersey: 1, pos: 'M' as const,
+    apps, starts: 5, minutes: apps * 80, goals: 0, assists: 0, points: 0,
+    yellow: 0, red: 0, slots: {}, modalSlot: 0, posPlaces, posAny: posPlaces,
+    modalPos: Object.keys(posPlaces)[0], byComp: [], recent: [], realMinutes: true, score,
+  });
+  const filler = shape3421
+    .filter((s) => !s.abbr.startsWith('CM'))
+    .map((s) => pl(`fill-${s.abbr}`, { [s.abbr]: 6 }));
+  const cm = (slots: ReturnType<typeof bestEleven>['slots']) =>
+    slots.filter((s) => s.label.startsWith('CM')).map((s) => `${s.label}:${s.player?.id}`);
+
+  it('중앙 미드필더는 왼쪽·오른쪽을 한 묶음으로 센다', () => {
+    /* ⚠️ 예전에는 CM-R 만 2경기 선 선수(헨더슨)가, 중원 4경기(CM-L 2 + CM-R 2)인
+       선수(제임스)를 이겼다 — 자리를 약어 하나하나로 따로 셌기 때문이다. */
+    const players = [
+      ...filler,
+      pl('lavia', { 'CM-L': 2, 'CM-R': 1 }),
+      pl('james', { 'CM-L': 2, 'CM-R': 2 }),
+      pl('henderson', { 'CM-R': 2 }, 2, 999),
+    ];
+    const { slots } = bestEleven(players, '3-4-2-1', shape3421);
+    expect(cm(slots).sort()).toEqual(['CM-L:lavia', 'CM-R:james'].sort());
+  });
+
+  it('묶음 안에서는 더 많이 선 쪽에 앉힌다', () => {
+    const players = [...filler, pl('a', { 'CM-R': 4 }), pl('b', { 'CM-L': 3 })];
+    expect(cm(bestEleven(players, '3-4-2-1', shape3421).slots)).toEqual(['CM-L:b', 'CM-R:a']);
+  });
+
+  it('동점은 종합 점수가 아니라 총 출전 수로 가린다', () => {
+    const players = [
+      ...filler.filter((p) => p.id !== 'fill-LM'),
+      ...['CM-L', 'CM-R'].map((a) => pl(`cm-${a}`, { [a]: 6 })),
+      pl('many-apps', { LM: 3 }, 8, 1),
+      pl('high-score', { LM: 3 }, 6, 999),
+    ];
+    const lm = bestEleven(players, '3-4-2-1', shape3421).slots.find((s) => s.label === 'LM');
+    expect(lm?.player?.id).toBe('many-apps');
+  });
+
+  it('4-2-3-1 의 두 명 중원 줄(ESPN 은 LM·RM 으로 준다)도 한 묶음이다', () => {
+    const shape = [
+      { abbr: 'G', n: 1 },
+      { abbr: 'LB', n: 1 }, { abbr: 'CD-L', n: 1 }, { abbr: 'CD-R', n: 1 }, { abbr: 'RB', n: 1 },
+      { abbr: 'LM', n: 1 }, { abbr: 'RM', n: 1 },
+      { abbr: 'AM-L', n: 1 }, { abbr: 'AM', n: 1 }, { abbr: 'AM-R', n: 1 },
+      { abbr: 'F', n: 1 },
+    ];
+    const players = [
+      ...shape.filter((s) => s.abbr !== 'LM' && s.abbr !== 'RM').map((s) => pl(`f-${s.abbr}`, { [s.abbr]: 9 })),
+      pl('valverde', { RM: 9 }),
+      pl('tchou', { LM: 2, RM: 3 }),   // 중원 5경기 — 한쪽만 보면 2·3
+      pl('lm-only', { LM: 4 }),
+    ];
+    const pivot = bestEleven(players, '4-2-3-1', shape).slots
+      .filter((s) => s.label === 'LM' || s.label === 'RM').map((s) => s.player?.id).sort();
+    expect(pivot).toEqual(['tchou', 'valverde']);
+  });
 });
