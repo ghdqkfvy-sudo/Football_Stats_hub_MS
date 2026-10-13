@@ -68,6 +68,23 @@ body {
 }
 
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/*
+ * 폰에서 누를 때 생기던 파란 음영 두 가지를 끈다.
+ *  1) 탭 하이라이트 — 브라우저가 누른 요소 전체에 칠하는 기본 파란/회색 음영
+ *     (카드가 통째로 "선택된 그림" 처럼 보였다). 눌린 느낌은 각 요소의 :hover·:active 가 준다.
+ *  2) 글자 선택 — 빠르게 두 번 누르거나 길게 누르면 카드 글자가 파랗게 선택됐다.
+ *     누르는 요소에서만 선택을 막는다(본문·뉴스 설명 같은 글은 그대로 선택된다).
+ * touch-action: manipulation — 두 번 탭 확대를 끄고, 그 대기 시간도 없앤다.
+ */
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button, [role='button'], [role='tab'], [role='row'], summary,
+.day, .bar, .pt__row, .chipbox, .krc, .wcal__m, .mdh__card, .ml__row, .cmp__row, .pill, .tab {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;   /* 길게 눌러도 "복사·공유" 메뉴가 뜨지 않게 (링크는 제외) */
+}
+/* 엠블럼·사진을 끌면 반투명 그림이 따라오며 파랗게 잡혔다 */
+img { -webkit-user-drag: none; user-select: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 /* 자체 outline: none 을 건 요소들 — 키보드 초점이 보이지 않던 곳(마우스 클릭엔 안 뜬다) */
 .chipbox:focus-visible .chipbox__ring { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 50%; }
