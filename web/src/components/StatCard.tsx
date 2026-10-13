@@ -120,7 +120,7 @@ interface Props {
   recent: RecentLine[];
   /** 오른쪽 위 배지 (Future 의 조항 종류 같은 것) */
   tag?: ReactNode;
-  /** 지금 폼 — "직전 경기 1골" (lib/form.ts). 이름 아래 초록 배지 */
+  /** 지금 폼 — "직전 경기 1골" (lib/form.ts). 소속팀·나이 줄 옆 초록 배지 */
   hot?: string | null;
   /** 대회 기록이 하나도 없을 때의 문구 */
   emptyNote?: string;
@@ -203,8 +203,12 @@ export function StatCard({
                 }}
                 size={15}
               />
-              {club}
-              {age ? ` · ${age}세` : ''}
+              {/* 이름이 길면 이 칸만 말줄임 — 옆의 폼 배지는 잘리지 않는다 */}
+              <span className="krc__cn">
+                {club}
+                {age ? ` · ${age}세` : ''}
+              </span>
+              {hot && <span className="krc__hot">{hot}</span>}
             </span>
           )}
           {leagueText && (
@@ -215,7 +219,8 @@ export function StatCard({
               {leagueText}
             </span>
           )}
-          {hot && <span className="krc__hot">{hot}</span>}
+          {/* 소속팀을 모르는 선수는 팀 줄이 없으니 여기에 */}
+          {hot && !club && <span className="krc__hot">{hot}</span>}
         </div>
         {tag && <span className="krc__tag">{tag}</span>}
       </div>

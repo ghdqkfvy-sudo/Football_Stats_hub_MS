@@ -44,9 +44,9 @@
 
 .kr__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
 
-/* 직전 경기에서 골·도움을 올린 선수 — 이름 아래 초록 배지 (StatCard hot) */
+/* 직전 경기에서 골·도움을 올린 선수 — 소속팀·나이 줄 옆 초록 배지 (StatCard hot) */
 .krc__hot {
-  display: inline-block; margin: 6px 0 0 6px; padding: 2px 8px; border-radius: 999px;
+  display: inline-block; flex: none; padding: 1px 7px; border-radius: 999px;
   font-size: 10px; font-weight: 700; color: #4ADE80;
   border: 1px solid rgba(74,222,128,.45); background: rgba(74,222,128,.12);
 }
@@ -103,6 +103,7 @@
   font-size: 11.5px; color: var(--text-mid);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.krc__cn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .krc__lg {
   display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: .03em;
   padding: 2px 8px; border-radius: 999px; color: var(--text-mid); border: 1px solid var(--line-2);
