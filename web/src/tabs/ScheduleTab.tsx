@@ -250,6 +250,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
         <div className="sec__head">
           <h2 className="sec__title">경기 캘린더</h2>
           <span className="sec__note">모든 날짜·시각은 한국시간(KST) 기준입니다</span>
+          <IcsLinks slug={target.id} name={target.name} />
         </div>
         {cursor && (
           <Calendar
@@ -308,5 +309,26 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded }: Props) 
         onClose={() => setSheet(null)}
       />
     </div>
+  );
+}
+
+/**
+ * 폰·PC 캘린더로 일정 내보내기. 파일은 배포 빌드가 만든다(scripts/build-ics.mjs).
+ * 구독(webcal://)은 캘린더 앱이 몇 시간마다 다시 받아 바뀐 일정을 따라가고,
+ * 다운로드는 지금 시점의 일정을 한 번 넣는다.
+ */
+function IcsLinks({ slug, name }: { slug: string; name: string }) {
+  const path = `${import.meta.env.BASE_URL}cal/${slug}.ics`;
+  const abs = typeof location === 'undefined' ? path : new URL(path, location.href).href;
+  const webcal = abs.replace(/^https?:/, 'webcal:');
+  return (
+    <span className="icsbar">
+      <a href={webcal} title={`${name} 일정을 캘린더 앱에서 구독 — 바뀐 일정이 자동으로 반영됩니다`}>
+        캘린더 구독
+      </a>
+      <a href={path} download={`${slug}.ics`} title={`${name} 일정 파일(.ics) 받기`}>
+        .ics
+      </a>
+    </span>
   );
 }

@@ -1,0 +1,537 @@
+/* ══ 선수 스탯 ═════════════════════════════════════════════ */
+
+/* 헤드샷 — 이미지가 막히면 등번호 배지로 대체된다 */
+.hs {
+  position: relative; display: inline-grid; place-items: center; flex: none;
+  border-radius: 50%; overflow: hidden;
+  background: linear-gradient(160deg, var(--ink-800), var(--ink-850));
+  border: 1.5px solid var(--line-2);
+}
+.hs img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+/*
+ * 사진 출처에 따라 잘라 보여 줄 위치가 다르다.
+ *
+ * · TheSportsDB 컷아웃(cutout)은 배경을 딴 상반신이라 정수리가 맨 위에 있다 →
+ *   위를 살짝 띄워야 머리가 잘리지 않는다.
+ * · 위키백과 대표 이미지(wiki)는 **헤드샷이 아니라 경기 사진**이다. 맨 위
+ *   (top = 0%)는 하늘·관중석이라 얼굴이 아예 안 걸린다. 얼굴은 대개 위쪽
+ *   1/5 지점에 있어서 그쪽을 보여 준다.
+ *   (근본 해결은 이 소스를 안 쓰는 것이다 — 스냅샷이 회차를 거듭하며
+ *    컷아웃으로 올려 준다. scripts/lib/photos.mjs 참고)
+ */
+.hs img[data-kind='cutout'] { object-position: 50% 4%; }
+.hs img[data-kind='wiki'],
+.hs img[data-kind='thumb'] { object-position: 50% 18%; }
+.hs__n {
+  position: absolute; right: -1px; bottom: -1px;
+  min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700; font-style: normal;
+  background: var(--accent); color: var(--on-accent); border: 1.5px solid var(--ink-900);
+}
+.hs--fallback {
+  font-family: var(--font-display); font-weight: 700; color: var(--text-mid);
+}
+
+/* 왼쪽 경기장과 오른쪽 선수 리스트의 세로 길이를 맞춘다.
+   리스트는 베스트 11(골키퍼까지)이 보이고 그 아래부터 스크롤된다. */
+.squad {
+  display: grid; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  gap: 16px; align-items: stretch;
+  /* 높이를 하나로 못 박아 둔다 — 경기장과 리스트가 같은 길이가 되고,
+     리스트는 베스트 11(골키퍼까지) 다음부터 스크롤된다. */
+  height: 700px;
+}
+.squad > * { min-height: 0; }
+
+/* ── 축구장 ─────────────────────────────────────────
+   레퍼런스: 밝은 잔디 + 결무늬, 선수는 포지션 색 링을 두른 원,
+   원 위에 자리 이름(LB·CAM·ST), 아래에 이름과 기록 칩. */
+
+.pitch {
+  border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  background: var(--panel); backdrop-filter: var(--panel-blur);
+  padding: 13px 13px 14px;
+  display: flex; flex-direction: column;
+}
+.pitch__head { display: flex; align-items: center; gap: 10px; }
+.pitch__t { font-size: 14px; font-weight: 700; color: var(--accent); }
+.pitch__t b { font-weight: 800; }
+.pitch__f {
+  font-family: var(--font-body); font-size: 12px; font-weight: 800; color: var(--accent);
+  letter-spacing: .02em; padding: 3px 9px; border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.pitch__note { margin-left: auto; font-size: 11.5px; color: var(--text-mid); }
+
+/* 팀 화학력 게이지 */
+.pitch__chem { display: flex; align-items: center; gap: 10px; margin: 9px 2px 11px; }
+.pitch__chem > span { font-size: 11px; color: var(--text-mid); white-space: nowrap; }
+.pitch__chem { cursor: help; }
+.pitch__info {
+  display: inline-grid; place-items: center; width: 13px; height: 13px; margin-left: 2px;
+  border-radius: 50%; border: 1px solid var(--line-2); vertical-align: 1px;
+  font: italic 700 8.5px/1 Georgia, serif; color: var(--text-lo);
+}
+.pitch__chem:hover .pitch__info, .pitch__chem:focus-visible .pitch__info { color: var(--accent); border-color: var(--accent); }
+.pitch__chem i {
+  flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,.10); overflow: hidden;
+}
+.pitch__chem u {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #2ED573);
+}
+.pitch__chem b { font-family: var(--font-body); font-size: 14px; font-weight: 800; color: var(--accent); }
+
+.pitch__field {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  gap: 8px; padding: 20px 10px 24px; min-height: 0; flex: 1;
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid rgba(160,255,190,.45);
+  box-shadow: 0 0 28px rgba(46,213,115,.16), inset 0 0 40px rgba(0,0,0,.18);
+}
+.pitch__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* 한 줄의 칩은 폭을 똑같이 나눠 갖는다.
+   ⚠️ 예전에는 space-evenly + min-width 였다. 그런데 칩 폭이 **그 선수의
+   기록 문구 길이**로 정해져서(출전·선발·골·도움), 기록이 많은 선수가 있는
+   줄은 총 폭이 늘어나 잔디(.pitch__field, overflow:hidden) 밖으로 삐져나갔다
+   — 맨유·토트넘처럼 공격포인트가 고루 퍼진 팀에서 왼쪽 칩이 잘려 보였다.
+   이제 칩이 줄 안에서 균등하게 줄어들고, 기록 문구는 칩 안에서 줄바꿈된다. */
+.pitch__row {
+  position: relative; z-index: 1; display: flex;
+  justify-content: center; gap: 4px; padding-inline: 4px;
+}
+.pitch__row > * { flex: 1 1 0; min-width: 0; max-width: 108px; }
+.pitch__warn { margin-top: 9px; font-size: 10.5px; color: var(--text-lo); text-align: center; }
+
+.chipbox {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 0; cursor: default; outline: none;
+}
+.chipbox__tag {
+  font-size: 8.5px; font-weight: 800; letter-spacing: .04em; line-height: 1;
+  padding: 2.5px 5px; border-radius: 4px; color: #06210F;
+  background: var(--pc); box-shadow: 0 1px 5px rgba(0,0,0,.4);
+}
+.chipbox__ring {
+  position: relative; display: grid; place-items: center;
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 2px solid var(--pc);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 55%, transparent), 0 3px 10px rgba(0,0,0,.45);
+  transition: transform .16s, box-shadow .16s;
+}
+.chipbox__hs { border-color: transparent; }
+.chipbox__hs.hs--fallback { background: rgba(6,24,14,.72); color: #EAF7EE; }
+.chipbox__no {
+  position: absolute; right: -3px; bottom: -2px;
+  min-width: 17px; height: 17px; padding: 0 3px; border-radius: 999px;
+  display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 800; color: #06210F; background: var(--pc);
+  box-shadow: 0 1px 5px rgba(0,0,0,.5);
+}
+.chipbox__name {
+  font-size: 11.5px; font-weight: 700; color: #F4F9FF; letter-spacing: -.01em;
+  text-shadow: 0 1px 6px rgba(0,0,0,.95); max-width: 100%; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 기록 알약은 **절대 줄바꿈하지 않는다** — 줄이 갈리면 칩 높이가 제각각이 되어
+   줄 전체가 어긋나 보인다. 그래서 담는 항목도 최소로 줄였다. */
+.chipbox__stat {
+  max-width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  flex-wrap: nowrap; white-space: nowrap;
+  font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,.82);
+  padding: 2px 7px; border-radius: 10px; background: rgba(4,20,12,.55);
+  overflow: hidden;
+}
+.chipbox__stat em { font-style: normal; font-weight: 800; }
+.chipbox__stat em.p { font-weight: 600; color: rgba(255,255,255,.72); }
+.chipbox__stat em.g { color: #FFD75E; }
+.chipbox__stat em.a { color: #7FE3FF; }
+.chipbox {
+  cursor: pointer; position: relative; border-radius: 12px; padding: 4px 2px 2px;
+  transition: transform .14s, background .14s, box-shadow .14s;
+}
+.chipbox__ring { transition: transform .14s, box-shadow .14s; }
+
+/*
+ * 하이라이트는 **두 방향 모두**에서 켜진다.
+ *  · 포메이션 칩에 마우스를 올리면 → 이 칩 + 오른쪽 목록의 같은 줄
+ *  · 목록 줄에 마우스를 올리면     → 그 줄 + 포메이션의 같은 칩
+ * 둘 다 activeId 하나로 묶여 있어서(PlayersTab), 여기서는 그 상태를
+ * 눈에 보이게 만드는 일만 한다. 칩만 살짝 띄우면 잔디 위에서 잘 안 보여
+ * 칩 바탕까지 팀 색으로 깔아 준다.
+ */
+.chipbox:hover,
+.chipbox[data-active='true'] { transform: translateY(-3px); }
+.chipbox[data-active='true'] {
+  background: color-mix(in srgb, var(--pc) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 45%, transparent);
+}
+.chipbox[data-active='true'] .chipbox__ring {
+  transform: scale(1.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 55%, transparent),
+              0 0 26px color-mix(in srgb, var(--pc) 90%, transparent);
+}
+.chipbox[data-active='true'] .chipbox__name { color: var(--pc); }
+.chipbox[data-active='true'] .chipbox__tag {
+  background: var(--pc); color: #06101f; border-color: transparent;
+}
+/* 클릭으로 고정 선택한 선수 — 마우스를 치워도 남는다 */
+.chipbox[data-selected='true'] .chipbox__ring {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px var(--pc),
+              0 0 26px color-mix(in srgb, var(--pc) 85%, transparent);
+}
+.chipbox[data-selected='true'] .chipbox__name { color: var(--pc); font-weight: 800; }
+
+/* ── 선수 목록 ────────────────────────────────────── */
+
+/* overflow 를 막지 않는다 — 호버 카드가 패널 밖으로 나가야 한다 */
+.pt {
+  position: relative;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--panel); backdrop-filter: var(--panel-blur);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.pt__bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.pt__filters { display: inline-flex; gap: 3px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.pt__filters button {
+  padding: 5px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--text-lo);
+  transition: background .15s, color .15s;
+}
+.pt__filters button:hover { color: var(--text-mid); }
+.pt__filters button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
+.pt__count { font-size: 11px; color: var(--text-lo); }
+
+.pt__head, .pt__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px 46px 72px 30px 30px 34px 52px;
+  align-items: center; gap: 6px; padding: 0 14px;
+}
+.pt__head > span:nth-child(5) { text-align: center; }
+.pt__head {
+  padding-block: 9px; border-bottom: 1px solid var(--line);
+  font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--text-lo);
+}
+.pt__head > .num, .pt__row > .num { text-align: center; }
+
+/* 정렬 머리글 — 누를 수 있다는 걸 알 수 있을 정도로만 */
+.pt__sort {
+  position: relative;
+  font: inherit; color: inherit; letter-spacing: inherit; text-align: center;
+  cursor: pointer; border-radius: 4px; padding: 2px 0;
+  transition: color .14s, background .14s;
+}
+.pt__sort:hover { color: var(--text-mid); background: rgba(255,255,255,.05); }
+.pt__sort[data-on='true'] { color: var(--accent); }
+/* 화살표는 글자 옆에 **띄워서** 붙인다 — 글자 흐름에 넣으면 정렬을 켤 때마다
+   라벨이 좌우로 밀려 본문 열과 어긋난다. */
+.pt__sort i {
+  position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+  font-style: normal; font-size: 7px; line-height: 1; margin-left: 1px;
+}
+
+/* 베스트 11(11명)까지는 그대로 보이고 나머지는 스크롤로 내려 본다.
+   호버 카드는 fixed 로 그려서 이 스크롤에 잘리지 않는다. */
+/* 스크롤바가 생기면 본문만 왼쪽으로 밀려 머리글과 어긋난다.
+   자리를 항상 비워 두면 스크롤 여부와 무관하게 열이 맞는다. */
+.pt__list {
+  flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin;
+}
+/* 스크롤바가 본문 폭만 줄여서 숫자 열이 전부 왼쪽으로 밀려 있었다(실측 10px).
+   두께는 브라우저마다 다르니 PlayerTable 이 실제로 재서 --pt-gutter 로 넣어
+   주고, 머리글이 그만큼 오른쪽을 비운다. */
+.pt__head { padding-right: calc(14px + var(--pt-gutter, 0px)); }
+/* 아래에 가려진 선수가 있으면 끝을 흐리고 남은 수를 띄운다(PlayerTable below) */
+.pt__list[data-more] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+          mask-image: linear-gradient(#000 calc(100% - 56px), transparent);
+}
+.pt__more {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: rgba(6,16,38,.82);
+  backdrop-filter: blur(6px);
+  font-size: 11.5px; font-weight: 600; color: var(--text-mid);
+  transition: color .15s, border-color .15s;
+}
+.pt__more:hover { color: var(--text-hi); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.pt__more .num { color: var(--accent); }
+.pt__more i { font-style: normal; font-size: 10px; }
+.pt__list::-webkit-scrollbar { width: 8px; }
+.pt__list::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
+.pt__row {
+  position: relative; padding-block: 7px; border-bottom: 1px solid var(--line);
+  font-size: 12.5px; color: var(--text-mid); outline: none;
+}
+.pt__row:last-child { border-bottom: 0; }
+.pt__row:hover, .pt__row[data-active='true'] { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+/* 포메이션에서 고른 선수가 목록의 어느 줄인지 — 왼쪽 띠로 바로 짚어 준다 */
+.pt__row[data-active='true'] { box-shadow: inset 3px 0 0 var(--accent); }
+
+.pt__who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.pt__who b {
+  font-size: 13px; font-weight: 500; color: var(--text-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pt__who em {
+  font-style: normal; font-size: 9.5px; letter-spacing: .08em; color: var(--text-lo);
+  border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 4px; flex: none;
+}
+
+/* 포지션 배지 색 — 피치의 자리 색(LINE_COLOR)과 같은 체계로 맞춘다
+   FW 빨강 · MF 청록 · DF 파랑 · GK 금색 */
+.pt__who em[data-pos='F'], .pcard__pos[data-pos='F'], .krc__id em[data-pos='F'] { --pos: #FF4D5E; }
+.pt__who em[data-pos='M'], .pcard__pos[data-pos='M'], .krc__id em[data-pos='M'] { --pos: #3FD7C0; }
+.pt__who em[data-pos='D'], .pcard__pos[data-pos='D'], .krc__id em[data-pos='D'] { --pos: #4C8DFF; }
+.pt__who em[data-pos='G'], .pcard__pos[data-pos='G'], .krc__id em[data-pos='G'] { --pos: #F5A524; }
+.pt__who em[data-pos] {
+  color: var(--pos);
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+  background: color-mix(in srgb, var(--pos) 12%, transparent);
+  font-weight: 700;
+}
+.pcard__pos {
+  font-style: normal; font-weight: 700; color: var(--pos);
+}
+.pt__min { color: var(--text-lo); }
+
+/* 골 / 도움 게이지 — 스쿼드 최고 기록 대비 비중 */
+.pt__gauge { display: flex; flex-direction: column; gap: 3px; }
+.pt__gauge i { display: block; height: 5px; border-radius: 999px; background: rgba(255,255,255,.10); }
+.pt__gauge u { display: block; height: 100%; border-radius: 999px; }
+.pt__gauge i.g u {
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #FFF));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.pt__gauge i.a u {
+  background: linear-gradient(90deg, #4FC3F7, #7FE3FF);
+  box-shadow: 0 0 8px rgba(79,195,247,.45);
+}
+.pt__g[data-on='true'], .pt__a[data-on='true'] { color: var(--text-hi); font-weight: 600; }
+.pt__p { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text-lo); }
+.pt__p[data-on='true'] { color: var(--accent); text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 85%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 45%, transparent); }
+.pt__g[data-on='true'] { color: var(--accent); text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent); }
+.pt__a[data-on='true'] { color: #7FE3FF; text-shadow: 0 0 12px rgba(127,227,255,.55); }
+
+/* 경고·퇴장 배지 */
+.cards { display: inline-flex; align-items: center; gap: 5px; }
+.cards b { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--text-mid); }
+.cards b i { width: 7px; height: 10px; border-radius: 1.5px; display: block; }
+.cards b[data-c='y'] i { background: #F5C842; }
+.cards b[data-c='r'] i { background: #FF4D5E; }
+.cards__none { font-style: normal; color: var(--text-lo); }
+.pt__cards { display: flex; justify-content: center; font-size: 11px; }
+.pcard__cards {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--text-lo);
+}
+
+/* ── 호버 카드 ────────────────────────────────────── */
+
+.pcard {
+  /* 기본 스탯(왼쪽) + 최근 경기(오른쪽). 세로로 쌓으면 카드가 화면 높이를
+     넘겨 최근 경기가 잘렸다. */
+  position: fixed; z-index: 90;
+  display: grid; grid-template-columns: 308px 252px; gap: 10px; align-items: start;
+  pointer-events: none; text-align: left;
+}
+.pcard__main, .pcard__side {
+  border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 14px;
+  background: color-mix(in srgb, var(--ink-950) 97%, transparent);
+  backdrop-filter: blur(20px); box-shadow: 0 22px 54px rgba(3,10,25,.8);
+}
+.pcard__side { align-self: start; padding: 12px; }
+.pcard__sideh {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.pcard__sideh b { font-size: 11.5px; color: var(--text-hi); }
+.pcard__sideh span { font-size: 10.5px; color: var(--text-lo); }
+.pcard__top { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.pcard__hs.hs--fallback { background: var(--accent); color: var(--on-accent); }
+.pcard__top b { display: block; font-size: 14px; color: var(--text-hi); }
+.pcard__top span { display: block; font-size: 10.5px; color: var(--text-lo); margin-top: 2px; }
+
+.pcard__stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pcard__stats > div {
+  text-align: center; padding: 9px 2px; border-radius: 9px;
+  background: rgba(255,255,255,.05); border: 1px solid transparent;
+}
+.pcard__stats b { display: block; font-family: var(--font-display); font-size: 21px; font-weight: 700; }
+.pcard__stats span { display: block; font-size: 9.5px; color: var(--text-lo); margin-top: 1px; }
+/* 강조 **상자**는 공격 포인트 하나만 쓴다 — 네 칸이 다 빛나면 어디를 봐야
+   할지 알 수 없어진다(득점·도움도 아래 공격 포인트에 합산돼 있다).
+   다만 골·도움은 숫자만 팀 컬러로 칠해 출전·선발과 구분한다. */
+.pcard__stats > div[data-tint] b {
+  color: var(--accent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.pcard__hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+.pcard__hero > div {
+  text-align: center; padding: 10px 4px; border-radius: 10px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+}
+.pcard__hero b { display: block; font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1; }
+.pcard__hero b i { font-style: normal; font-size: 13px; font-weight: 600; margin-left: 2px; color: var(--text-lo); }
+.pcard__hero span { display: block; font-size: 9.5px; color: var(--text-lo); margin-top: 4px; }
+.pcard__ap[data-on='true'] {
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+              rgba(255,255,255,.04);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.pcard__ap[data-on='true'] b {
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 85%, transparent),
+               0 0 42px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.pcard__comps { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+.pcard__comp {
+  /* "6경기" 와 "선발 5" 가 한 줄에 다 들어가야 한다 — 46px 로는 좁아서
+     "6경기 선 / 발 5" 로 잘렸다. */
+  display: grid; grid-template-columns: 16px minmax(0,1fr) 78px 58px;
+  align-items: center; gap: 8px; min-height: var(--mp-row); font-size: 11.5px; color: var(--text-mid);
+}
+.pcard__comp .cdot { width: 8px; height: 8px; border-radius: 2px; margin: 0 auto; }
+.pcard__cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard__ca { text-align: right; color: var(--text-lo); font-size: 11px; white-space: nowrap; }
+.pcard__cg { text-align: right; font-size: 11px; color: var(--text-lo); }
+.pcard__cg b { font-family: var(--font-display); font-size: 14px; color: var(--text-hi); font-weight: 700; }
+
+/* 최근 경기 한 건 — 세 줄로 읽힌다.
+   1) 결과 · 대회 · 날짜   2) 상대(엠블럼+풀네임) · 스코어   3) 출전 · 기록 */
+.pcard__g {
+  display: grid;
+  grid-template-columns: 17px minmax(0,1fr) auto;
+  align-items: center; gap: 4px 7px;
+  padding: 7px 0; font-size: 11.5px; color: var(--text-mid);
+}
+.pcard__g + .pcard__g { border-top: 1px solid var(--line); }
+.pcard__gc {
+  display: flex; align-items: center; gap: 5px; min-width: 0;
+  font-size: 10.5px; color: var(--text-lo);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pcard__opp {
+  grid-column: 2; display: flex; align-items: center; gap: 6px; min-width: 0;
+  color: var(--text-hi); white-space: nowrap;
+}
+.pcard__opp b {
+  font-weight: 500; min-width: 0; margin-left: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pcard__opp img, .pcard__opp .mono { flex: none; }
+.pcard__gb { grid-column: 3; display: flex; align-items: center; gap: 4px; justify-self: end; }
+.pcard__sc { grid-column: 3; text-align: right; font-family: var(--font-display); font-size: 14px; font-weight: 600; }
+.pcard__when { grid-column: 3; justify-self: end; font-size: 10px; color: var(--text-lo); }
+.pcard__ga { grid-column: 2; font-size: 10.5px; color: var(--text-lo); }
+.pcard__gg, .pcard__aa {
+  font-style: normal; margin-left: 5px; padding: 0 4px; border-radius: 3px; font-size: 9.5px; font-weight: 700;
+}
+.pcard__gg { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+.pcard__aa { background: rgba(255,255,255,.08); color: var(--text-mid); }
+
+@media (max-width: 1080px) {
+  .squad { grid-template-columns: 1fr; }
+  .pcard { right: auto; left: 50%; transform: translateX(-50%); top: calc(100% + 6px); width: min(320px, 92vw); }
+}
+@media (max-width: 640px) {
+  .pitch__field { min-height: 400px; padding: 16px 6px; }
+  .squad { height: auto; }
+  .pt__list { max-height: 560px; }
+  .pitch__row > * { max-width: 88px; }
+  .chipbox__hs { width: 38px !important; height: 38px !important; }
+  .chipbox__name { font-size: 10px; max-width: 100%; }
+  /* ⚠️ 열 수와 보이는 칸 수가 맞아야 한다.
+     예전에는 7열을 선언하고 3번째 칸만 숨겨 8칸이 남아, 마지막 "카드" 칸이
+     다음 줄로 밀리면서 표 전체가 어긋나 보였다.
+     좁은 화면에서는 선발·분·게이지를 접고 6칸만 남긴다. */
+  .pt__head, .pt__row {
+    grid-template-columns: minmax(0,1fr) 34px 28px 28px 32px 44px;
+    padding-inline: 11px;
+  }
+  .pt__head > :nth-child(3), .pt__row > :nth-child(3),
+  .pt__head > :nth-child(4), .pt__row > :nth-child(4),
+  .pt__head > :nth-child(5), .pt__row > :nth-child(5) { display: none; }
+
+  /* 호버 카드는 넓은 화면 기준(본체 308 + 최근 경기 252)이라 좁은 화면에선
+     오른쪽이 화면 밖으로 나갔다. 아래에 고정 카드로 세로로 쌓는다. */
+  .pcard {
+    grid-template-columns: 1fr;
+    left: 12px !important; right: 12px; top: auto !important; bottom: 12px;
+    transform: none !important;
+    /* 최근 3경기가 다 들어가야 한다 — 74vh 로는 3번째 경기가 잘렸다 */
+    max-height: 86vh; overflow-y: auto; gap: 8px;
+  }
+  .pcard__main, .pcard__side { padding: 11px 12px; }
+  /* 좁은 화면에서는 숫자 상자를 조금 눌러 세 경기가 들어갈 자리를 만든다 */
+  .pcard__stats > div { padding: 7px 2px; }
+  .pcard__stats b { font-size: 18px; }
+  .pcard__hero > div { padding: 8px 4px; }
+  .pcard__hero b { font-size: 20px; }
+  .pcard__comps { margin-top: 9px; padding-top: 8px; }
+  .pcard__cards { margin-top: 8px; padding-top: 8px; }
+}
+
+/* 선수 상세 (PlayerDetail) — 폰은 바텀시트(.sheet), 넓은 화면은 가운데 창 */
+.pt__row { cursor: pointer; }
+@media (min-width: 641px) {
+  .sheet--modal .sheet__panel {
+    left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
+    width: min(720px, 92vw); max-height: 86vh; border-radius: 18px; border: 1px solid var(--line-2);
+    padding: 20px 22px 18px; animation: none;
+  }
+  .sheet--modal .sheet__grab { display: none; }
+}
+.pdet { outline: none; }
+.pdet__x {
+  position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+  color: var(--text-lo); font-size: 13px;
+}
+.pdet__x:hover { color: var(--text-hi); background: rgba(255,255,255,.06); }
+.pdet__top { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+.pdet__name { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.015em; }
+.pdet__meta { display: block; margin-top: 4px; font-size: 12px; color: var(--text-mid); }
+.pdet__sum { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 16px 0 14px; }
+.pdet__sum div {
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center;
+  background: rgba(255,255,255,.02);
+}
+.pdet__sum b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-hi); }
+.pdet__sum span { display: block; margin-top: 2px; font-size: 10px; color: var(--text-lo); }
+.pdet__h { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-lo); letter-spacing: .04em; margin-bottom: 6px; }
+.pdet__list { list-style: none; margin: 0; padding: 0; }
+.pdet__g {
+  display: grid; align-items: center; gap: 8px;
+  grid-template-columns: 66px 16px minmax(0, 1fr) 70px 110px 74px;
+  padding: 7px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-mid);
+}
+.pdet__when { color: var(--text-lo); font-size: 11px; white-space: nowrap; }
+.pdet__comp { display: grid; place-items: center; }
+.pdet__opp { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pdet__opp b { font-weight: 600; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdet__sc { display: inline-flex; align-items: center; gap: 6px; }
+.pdet__min { display: flex; align-items: center; gap: 6px; }
+.pdet__min i { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
+.pdet__min u { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.pdet__min i[data-start] u { background: var(--accent); }
+.pdet__min em { font-style: normal; font-size: 11px; width: 34px; text-align: right; }
+.pdet__ga { display: inline-flex; justify-content: flex-end; align-items: center; gap: 4px; }
+.pdet__none, .pdet__key { font-size: 11px; color: var(--text-lo); margin: 10px 0 0; }
+@media (max-width: 640px) {
+  .pdet__sum { grid-template-columns: repeat(3, 1fr); }
+  .pdet__g { grid-template-columns: 58px 14px minmax(0, 1fr) 64px; row-gap: 4px; }
+  .pdet__min { grid-column: 3 / 4; }
+  .pdet__ga { grid-column: 4 / 5; }
+}

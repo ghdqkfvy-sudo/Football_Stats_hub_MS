@@ -1,0 +1,55 @@
+/* ══ 반응형 ════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .hero { padding: 15px 14px 18px; border-radius: 20px; gap: 13px; }
+  .hero__fx { gap: 8px; }
+  .fxt { width: auto; flex: 1 1 0; min-width: 0; gap: 7px; }
+  .fxt__tile { width: 62px; height: 62px; border-radius: 15px; }
+  .fxt__tile img, .fxt__tile .mono { width: 46px !important; height: 46px !important; }
+  .fxt__name { font-size: 13px; }
+  .fxt__rec { font-size: 10px; padding: 2px 8px; }
+  .fxvs { font-size: 22px; margin-top: 18px; }
+  .when__time b { font-size: 36px; }
+  .hero__cd { padding: 11px 4px 9px; }
+  .cdu { min-width: 0; flex: 1 1 0; }
+  .cdu b { font-size: 26px; }
+  .cdu__sep { font-size: 20px; left: -2px; }
+}
+
+@media (max-width: 640px) {
+  .shell { padding-inline: 14px; }
+  .hdr__name { font-size: 24px; }
+  .hdr__crest { width: 42px; height: 42px; }
+  .day { min-height: 62px; padding: 5px 3px 6px; gap: 3px; }
+  .cal__pulse { top: 5px; right: 5px; width: 6px; height: 6px; }
+  .bar { height: 5px; border-width: 1.25px; }
+  .cal__legend { padding: 10px 12px; gap: 6px 12px; }
+  .cal__lgnote { margin-left: 0; }
+  .cal__title { font-size: 19px; }
+  .ml__row { grid-template-columns: 38px 3px minmax(0,1fr); gap: 11px; padding: 11px 12px; }
+  .ml__meta {
+    grid-column: 3 / -1; flex-direction: row; align-items: center;
+    justify-content: space-between; gap: 10px; margin-top: -2px;
+  }
+  .ml__date b { font-size: 22px; }
+  .ml__match { grid-template-columns: 1fr 46px 1fr; }
+  .ml__side { min-width: 0; }
+  .ml__side b { font-size: 13px; }
+  .ml__score { font-size: 14px; }
+  .ml__vs { font-size: 11px; }
+  .ml__goals { margin-inline: 12px; padding: 10px 11px; }
+  .gl__row { grid-template-columns: 34px 36px auto; row-gap: 2px; }
+  .gl__a { grid-column: 2 / -1; }
+  /* 모바일에는 호버가 없다. 예전에는 미리보기를 아예 숨겨 놓아서
+     날짜 칸을 눌러도 아무 일이 없었다(막대를 눌러 바텀시트를 여는 것밖에
+     방법이 없었다). 이제는 화면 아래에 고정 카드로 띄운다 — 칸이 작아
+     그 위에 붙이면 잘리기 때문이다. */
+  .day[data-hover='true'] .pop {
+    display: block;
+    position: fixed; left: 12px; right: 12px; bottom: 14px; top: auto;
+    width: auto; transform: none !important; z-index: 80;
+  }
+  /* 손가락에는 "마우스를 치우는" 동작이 없다 — 닫기 단추를 띄운다 */
+  .pop__x, .pcard__x { display: grid; }
+  .page { padding-block: 20px 40px; gap: 24px; }
+}

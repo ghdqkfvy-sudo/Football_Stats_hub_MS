@@ -187,6 +187,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
         <span className="hero__tag" data-live={live}>
           {BOLT}
           {tagText}
+          {/* 진행 중이면 경기 시계(ESPN displayClock — "67'", "HT") 를 붙인다 */}
+          {live && match.statusDetail && <em className="hero__clock num">{match.statusDetail}</em>}
         </span>
         <span className="hero__comp">
           <CompCrest k={match.competition} size={17} />

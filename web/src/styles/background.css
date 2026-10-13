@@ -1,0 +1,98 @@
+/* ══ 팀 배경 아트워크 ══════════════════════════════════════
+   구성비: 배경 이미지 25% + 팀 그라데이션 75%.
+   고정 레이어라 스크롤과 무관하게 페이지 전체에 같은 밀도로 깔린다.
+   (예전에는 아래로 갈수록 검정으로 수렴시켜 상단에만 보였다) */
+
+.bgart { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.bgart__img {
+  position: absolute; inset: 0;
+  background-repeat: no-repeat; background-size: cover; background-position: 50% 22%;
+  /* 25% 로 남는 부분이 흰 유니폼·색종이라 그대로 두면 글자를 삼킨다.
+     구성비는 유지하고 밝기만 눌러 하이라이트를 재운다. */
+  /* 예전에는 brightness(.42) 로 사진을 죽여 놓고 그 위에 82% 베일을 덮어
+     결과적으로 사진이 거의 안 보였다. 밝기는 살리고, 비율(25/75)은
+     베일 알파로만 만든다. */
+  filter: saturate(.52) contrast(1.0) brightness(.62) hue-rotate(-4deg);
+}
+/* 대한민국: 태극기 아트워크.
+   예전 파일은 국기를 확대해 잘라 낸 그림이라 태극 문양 자체가 이미지의
+   오른쪽 위에 박혀 있었다 — background-position 으로 가운데에 놓이는 건
+   '이미지'지 '문양'이 아니어서, CSS 로는 아무리 해도 안 옮겨졌다.
+   지금은 문양이 정확히 한가운데인 그림(3:2 국기 규격)을 쓴다. */
+.bgart[data-kind='flag'] .bgart__img {
+  background-size: min(1500px, 120%) auto;
+  background-position: 50% 50%;
+  filter: saturate(1) brightness(1);
+}
+/* 팀 그라데이션이 75% 를 덮어 사진은 25% 만 남는다 */
+/* 팀 그라데이션이 75% 를 덮고 사진이 25% 남는다 */
+.bgart__veil {
+  position: absolute; inset: 0; opacity: .78;
+  background:
+    linear-gradient(152deg,
+      color-mix(in srgb, var(--brand) 14%, #0A2352) 0%,
+      #0A2050 34%,
+      #08183C 66%,
+      color-mix(in srgb, var(--brand) 8%, #071433) 100%);
+}
+/* 사진 위 글자가 뜨도록 아주 옅은 위·아래 감쇠만 한 겹 더 */
+.bgart__veil::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(4,10,26,.55), rgba(4,10,26,.18) 24%, rgba(4,10,26,.40));
+}
+
+/*
+ * 엠블럼 윤곽.
+ *
+ * ⚠️ 토트넘(남색 수탉)·뉴캐슬(흑백)처럼 어두운 엠블럼은 어두운 배경 위에서
+ * 형체가 사라진다. 네모 테두리를 두르면 로고가 아니라 상자가 보이므로,
+ * 알파 채널을 따라가는 drop-shadow 로 **문양 자체의 윤곽**에 빛을 준다.
+ * 밝은 엠블럼(레알·리버풀)에서는 거의 보이지 않아 한 규칙으로 충분하다.
+ */
+.crest {
+  /* 토트넘/리버풀처럼 100% 어두운 엠블럼도 어두운 배경에서 읽히도록
+     알파 채널을 따라 흰 실루엣 테두리를 4겹으로 그린 뒤 부드러운 후광을 더한다.
+     밝은 엠블럼(레알/뉴캐슬)에는 거의 영향이 없다. */
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+/* 이미 자체 그림자를 가진 자리는 겹치지 않게 그쪽 규칙을 따른다 */
+.fxt__tile .crest {
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* 콘텐츠를 배경 위로 */
+.hdr, main { position: relative; z-index: 1; }
+
+/* 헤더는 사진이 비치도록 반투명으로 */
+.hdr {
+  background: linear-gradient(180deg, rgba(5,12,30,.34), rgba(5,12,30,.52));
+  backdrop-filter: blur(3px);
+}
+.hdr::before { opacity: .5; }
+
+/* 패널: 살짝 비치는 유리 */
+.tbl, .lb { background: color-mix(in srgb, var(--ink-950) 46%, transparent); backdrop-filter: blur(14px) saturate(1.08); }
+/* 히어로는 칠하지 않는다 — 레퍼런스처럼 테두리만 남는다 */
+.comps__b { background: color-mix(in srgb, var(--ink-950) 52%, transparent); backdrop-filter: blur(10px); }
+.empty { background: color-mix(in srgb, var(--ink-950) 55%, transparent); backdrop-filter: blur(10px); }
+
+/* 배경 위에서 팝오버·바텀시트는 불투명해야 읽힌다 */
+.pop { background: color-mix(in srgb, var(--ink-950) 96%, transparent); backdrop-filter: blur(20px); border-color: var(--line-2); }
+.sheet__panel { background: color-mix(in srgb, var(--ink-850) 97%, transparent); backdrop-filter: blur(18px); }
+
+@media (max-width: 640px) {
+  .bgart__img { background-position: 50% 16%; }
+  .bgart[data-kind='flag'] .bgart__img { background-size: 190% auto; background-position: 50% 50%; }
+  /* 좁은 화면은 글자 가독성을 위해 그라데이션을 조금 더 얹는다 */
+  .bgart__veil { opacity: .80; }
+  .day__bars { gap: 3px; }
+}

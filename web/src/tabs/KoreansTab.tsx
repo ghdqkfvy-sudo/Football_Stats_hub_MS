@@ -7,6 +7,7 @@ import { usePalette } from '../lib/palette';
 import { StatCard, type CompLine, type NationalLine, type RecentLine } from '../components/StatCard';
 import crestKor from '../assets/crest-kor.png';
 import { Swap } from '../components/Swap';
+import { lastMatchTag } from '../lib/form';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -66,13 +67,6 @@ const formOf = (p: KoreanPlayer) => p.recent.reduce((a, g) => a + g.goals + g.as
 /** 클럽도 대표팀도 이번 시즌 한 경기도 안 뛴 선수 — 큰 카드 대신 칩으로 접는다 */
 const isIdle = (p: KoreanPlayer) => appsOf(p) === 0 && !(p.national && p.national.apps > 0);
 
-/** 직전 경기(recent[0], 최신순)에서 골·도움을 올렸으면 "직전 경기 1골 1도움" */
-function lastMatchTag(p: KoreanPlayer): string | null {
-  const g = p.recent[0];
-  if (!g || g.goals + g.assists === 0) return null;
-  return ['직전 경기', g.goals > 0 && `${g.goals}골`, g.assists > 0 && `${g.assists}도움`]
-    .filter(Boolean).join(' ');
-}
 
 export function KoreansTab() {
   const palette = usePalette();
@@ -251,7 +245,7 @@ export function KoreansTab() {
               pos={p.pos}
               tint="league"
               compLabel={false}
-              tag={lastMatchTag(p) && <span className="kr__hot">{lastMatchTag(p)}</span>}
+              hot={lastMatchTag(p.recent)}
               national={nationalOf(p)}
               photo={p.photo}
               photoKind={p.photoKind}

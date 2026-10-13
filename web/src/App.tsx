@@ -8,7 +8,9 @@ import './styles/motion.css';
 import './styles/topbar.css';
 import { OUR_TEAM_IDS, TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
-import { loadSchedule, type Source } from './lib/api';
+import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
+import { invalidateFeeds } from './lib/feed';
+import { mergeMatches, pollDelay } from './lib/refresh';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { StandingsTab } from './tabs/StandingsTab';
 import { PlayersTab } from './tabs/PlayersTab';
@@ -22,7 +24,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SummaryTab } from './tabs/SummaryTab';
 import { dirOf, type SwapDir } from './components/Swap';
 import { futureFor } from './data/future';
-import { formatRoute, parseRoute } from './lib/route';
+import { formatRoute, parseRoute, rememberRoute, startHash } from './lib/route';
 import { MiniBar } from './components/MiniBar';
 import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
@@ -47,6 +49,10 @@ const NATIONAL_TABS: { id: TabId; label: string; short?: string }[] = [
 
 /* 시즌은 오늘 날짜(KST)에서 계산한다 — 박아 두면 해가 바뀌는 순간 과거를 가리킨다 */
 const SEASONS = seasonOptions();
+const NO_MATCHES: Match[] = [];
+
+/* 첫 화면 — 주소가 있으면 그 화면, 없으면 마지막으로 본 화면(lib/route.ts) */
+const START = parseRoute(startHash());
 
 /**
  * 데이터가 언제 것인지 배지에 그대로 적는다.
@@ -72,9 +78,9 @@ export default function App() {
    */
   /* 첫 화면은 주소(#/chelsea/standings)가 말해 준다 — lib/route.ts */
   const [view, setView] = useState<'summary' | 'team'>(() =>
-    (TARGETS.some((t) => t.id === parseRoute().targetId) ? 'team' : 'summary'));
+    (TARGETS.some((t) => t.id === START.targetId) ? 'team' : 'summary'));
   const [targetId, setTargetId] = useState<TargetId>(() => {
-    const id = parseRoute().targetId;
+    const id = START.targetId;
     return (TARGETS.some((t) => t.id === id) ? id : 'real-madrid') as TargetId;
   });
   const target = getTarget(targetId);
@@ -123,7 +129,10 @@ export default function App() {
       : NATIONAL_TABS),
     [target.kind, target.espnTeamId],
   );
-  const [tab, setTab] = useState<TabId>(() => (parseRoute().tab as TabId | null) ?? tabs[0].id);
+  /* 고른 탭이 이 팀에 없으면(클럽 → 대한민국) 첫 탭을 보여 준다 — 상태를 고치는
+     이펙트 대신 계산으로. 클럽으로 돌아오면 고른 탭이 그대로 살아 있다. */
+  const [tabPick, setTab] = useState<TabId>(() => (START.tab as TabId | null) ?? tabs[0].id);
+  const tab = tabs.some((t) => t.id === tabPick) ? tabPick : tabs[0].id;
   const goTab = useCallback((id: TabId) => {
     if (id === tab) return;
     setMotion(dirOf(tabs.findIndex((t) => t.id === tab), tabs.findIndex((t) => t.id === id)));
@@ -149,26 +158,22 @@ export default function App() {
     nav.addEventListener('scroll', place, { passive: true });
     return () => { ro.disconnect(); nav.removeEventListener('scroll', place); };
   }, [tab, tabs, summary]);
-  useEffect(() => {
-    if (!tabs.some((t) => t.id === tab)) setTab(tabs[0].id);
-  }, [tabs, tab]);
 
   /*
    * 화면 상태 → 주소. 사용자가 옮겨 다닐 때마다 기록을 하나씩 쌓아
    * 폰의 뒤로 가기가 직전 화면으로 돌아가게 한다(첫 진입은 바꿔치기만).
    * 뒤로/앞으로 가기로 온 변화는 이미 주소가 맞으므로 다시 쌓지 않는다.
    */
-  const tabOk = tabs.some((t) => t.id === tab);
   useEffect(() => {
-    if (!tabOk) return;                      // 잘못된 탭 → 위 이펙트가 고친 뒤에 적는다
     const want = formatRoute(summary ? null : targetId, summary ? null : tab);
+    rememberRoute(want);
     if (location.hash !== want) {
       if (!location.hash || location.hash === '#') history.replaceState(null, '', want);
       else history.pushState(null, '', want);
     }
     const label = tabs.find((t) => t.id === tab)?.label;
     document.title = summary ? 'MS Stats Hub' : `${target.name} · ${label} — MS Stats Hub`;
-  }, [summary, targetId, tab, tabOk, tabs, target.name]);
+  }, [summary, targetId, tab, tabs, target.name]);
 
   /* 주소 → 화면 상태 (뒤로/앞으로 가기, 링크로 연 해시가 바뀔 때) */
   useEffect(() => {
@@ -187,30 +192,71 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const [matches, setMatches] = useState<Match[]>([]);
+  /* 마지막으로 일정을 받은 시각 (아래 자동 갱신) */
+  const lastLoad = useRef(0);
+  /*
+   * 일정은 **어느 팀 것인지** 와 함께 들고 있는다. 화면에 쓰는 matches·loading 은
+   * 거기서 계산한다 — 팀을 바꾸는 순간 이전 팀 일정은 저절로 안 보이고(다음 경기가
+   * 잘못 잡히지 않는다), 이펙트 안에서 상태를 비우고 켜는 단계가 필요 없다.
+   */
+  const [sched, setSched] = useState<{ team: string; matches: Match[] }>({ team: '', matches: [] });
   const [source, setSource] = useState<Source>('none');
   const [fetchedAt, setFetchedAt] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const loading = sched.team !== target.espnTeamId;
+  const matches = loading ? NO_MATCHES : sched.matches;
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    // 팀을 바꾸면 이전 팀 일정이 잠깐 남아 "다음 경기"가 잘못 잡히는 것을 막는다
-    setMatches([]);
-    loadSchedule(target.espnTeamId).then((r) => {
+    const team = target.espnTeamId;
+    lastLoad.current = Date.now();
+    loadSchedule(team).then((r) => {
       if (!alive) return;
-      setMatches(r.data);
+      setSched({ team, matches: r.data });
       setSource(r.source);
       setFetchedAt(r.fetchedAt);
-      setLoading(false);
     });
     return () => {
       alive = false;
     };
   }, [target.espnTeamId]);
 
+  /*
+   * 켜 둔 채로 시간이 지나도 화면이 맞게 — 다시 받는 두 경우.
+   *  1) 경기 시간대(진행 중, 킥오프 ±)에는 주기적으로 (lib/refresh.ts)
+   *  2) 다른 앱에 갔다가 돌아왔을 때 (1분 넘게 지났으면)
+   * 득점 기록은 이어 붙여 깜빡이지 않게 한다(mergeMatches).
+   * 받아 둔 피드도 잊어서, 다음에 여는 탭(순위·선수)이 새 값을 받는다.
+   */
+  const refresh = useCallback(() => {
+    lastLoad.current = Date.now();
+    invalidateFeeds();
+    const team = target.espnTeamId;
+    loadSchedule(team).then((r) => {
+      if (r.source === 'none') return;   // 실패 — 그대로 둔다
+      /* 그새 팀이 바뀌었으면 버린다 */
+      setSched((s) => (s.team === team ? { team, matches: mergeMatches(s.matches, r.data) } : s));
+      setSource(r.source);
+      setFetchedAt(r.fetchedAt);
+    });
+  }, [target.espnTeamId]);
+
+  const delay = pollDelay(matches, HAS_PROXY);
+  useEffect(() => {
+    if (delay === null) return;
+    const id = setInterval(() => { if (!document.hidden) refresh(); }, delay);
+    return () => clearInterval(id);
+  }, [delay, refresh]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (!document.hidden && Date.now() - lastLoad.current > 60_000) refresh();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [refresh]);
+
   const onGoalsLoaded = useCallback((id: string, goals: Match['goals']) => {
-    setMatches((prev) => prev.map((m) => (m.id === id ? { ...m, goals, goalsLoaded: true } : m)));
+    setSched((s) => ({ ...s, matches: s.matches.map((m) => (m.id === id ? { ...m, goals, goalsLoaded: true } : m)) }));
   }, []);
 
   /* 클럽 스위처가 오른쪽 끝까지 스크롤됐는지 — 흐림(마스크)을 끄는 기준 */

@@ -1,0 +1,87 @@
+/* ══════════════════════════════════════════════════════════════
+   MS STATS HUB — 디자인 토큰
+   다크 단일 테마로 확정(사용자 요구). 팀 컬러는 --accent 계열만
+   교체되며 나머지 뉴트럴은 고정이다. 뉴트럴은 순수 회색이 아니라
+   파랑 쪽으로 살짝 기운 값을 쓴다(경기장 야간 조명의 색온도).
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: dark;
+
+  /* 레퍼런스처럼 검정이 아니라 짙은 네이비를 바닥으로 쓴다 */
+  --ink-1000: #061127;
+  --ink-950:  #08172F;
+  --ink-900:  #0C1E3B;
+  --ink-850:  #102748;
+  --ink-800:  #163055;
+  --line:     rgba(150, 180, 230, 0.13);
+  --line-2:   rgba(150, 180, 230, 0.24);
+
+  --text-hi:  #EAF1FD;
+  --text-mid: #9DB0CE;
+  --text-lo:  #6B82A6;
+
+  --win:  #2ED573;
+  /* 무승부는 회색이 아니라 주황 — 승/패 사이의 결과라는 게 한눈에 보인다 */
+  --draw: #F2A23C;
+  /* 패널 배경 — 캘린더(.cal)와 같은 값. 팀 배경 아트워크가 비쳐 보이는
+     정도를 탭마다 다르게 두면 화면이 조각조각 갈라 보인다. */
+  --panel: rgba(6,16,38,.16);
+  --panel-blur: blur(2px);
+  --loss: #FF4D5E;
+
+  /* 팀 스위칭으로 교체되는 값 */
+  --brand:  #FEBE10;
+  --accent: #FFCF3D;
+  --on-accent: #1A1300;
+  --glow: radial-gradient(90rem 40rem at 50% -18rem, rgba(254,190,16,.20), transparent 60%);
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  /* 라틴은 Archivo, 한글은 Noto Sans KR 로 자동 폴백된다.
+     스코어·카운트다운·날짜 같은 수치는 Barlow Condensed 로 폭을 줄여
+     숫자가 커져도 줄이 무너지지 않게 한다. */
+  --font-body: 'Archivo', 'Noto Sans KR', system-ui, -apple-system, 'Malgun Gothic', sans-serif;
+  --font-display: 'Barlow Condensed', 'Archivo', 'Noto Sans KR', 'Arial Narrow', sans-serif;
+  --font-mono: 'Barlow Condensed', ui-monospace, monospace;
+
+  --shell: 1280px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink-1000);
+  color: var(--text-hi);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.5;
+  letter-spacing: -.005em;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* 자체 outline: none 을 건 요소들 — 키보드 초점이 보이지 않던 곳(마우스 클릭엔 안 뜬다) */
+.chipbox:focus-visible .chipbox__ring { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 50%; }
+.pt__row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.krc:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* 공용 유틸 */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+.eyebrow {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--text-lo);
+}
+.shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: 20px; }

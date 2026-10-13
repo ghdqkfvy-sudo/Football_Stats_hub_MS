@@ -81,6 +81,17 @@ export function feed(name: string): Promise<any> {
 
 let metaAt: Promise<string> | null = null;
 
+/**
+ * 받아 둔 피드를 잊는다 — 다음 요청은 서버에서 새로 받는다.
+ * 앱을 켜 둔 채로 시간이 지나면(탭 복귀, 경기 시간대 자동 갱신) 부른다.
+ * 피드는 봇이 10분·1시간마다 다시 뜨므로, 한 번 받은 값을 영원히 쓰면
+ * 킥오프가 지나도 스코어가 그대로였다.
+ */
+export function invalidateFeeds(): void {
+  feedCache.clear();
+  metaAt = null;
+}
+
 /** 정적 피드가 언제 떠진 것인지 */
 export function feedTime(): Promise<string> {
   if (!metaAt) {

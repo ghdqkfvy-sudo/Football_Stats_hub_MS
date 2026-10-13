@@ -86,7 +86,7 @@
   .mbar__teams + .mbar__top { margin-left: 6px; }
 
   /* Summary 구역 바로가기로 뛰었을 때 제목이 막대 밑에 깔리지 않게 */
-  #sum-next, #sum-week, #sum-table, #sum-results { scroll-margin-top: 66px; }
+  #sum-next, #sum-week, #sum-compare, #sum-table, #sum-results { scroll-margin-top: 66px; }
 
   /* 막대에 엠블럼 8개 + 탭 5개가 다 못 들어가는 폭(641–900px)에서는 팀 이름을 뺀다 */
 }

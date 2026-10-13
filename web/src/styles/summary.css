@@ -1,0 +1,622 @@
+/* ══════════════════════════════════════════════════════════════
+   SUMMARY 탭
+   일곱 팀이 한 화면에 섞인다. 그래서 여기서는 **대회 색이 아니라
+   팀 색**이 1차 구분이다 — 카드·캘린더 줄·결과 띠가 전부 팀 컬러다.
+   ══════════════════════════════════════════════════════════════ */
+
+/* 요약 화면 배경 — 팀이 없으므로 공용 아트워크를 쓴다.
+   세로 사진이라 위쪽(트로피)이 헤더 뒤에 오게 잡는다. */
+.bgart[data-kind='summary'] .bgart__img {
+  background-size: min(700px, 72%) auto;
+  background-position: 50% -2%;
+  /* 표와 순위 숫자가 위에 얹히는 화면이라 사진을 팀 배경보다 더 눌러 둔다 */
+  filter: saturate(.62) brightness(.40);
+}
+
+.hdr__crest--sum {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 14px; flex: none;
+  font-size: 22px; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.pill--sum { font-weight: 700; letter-spacing: .04em; }
+
+/* ── 매치데이 히어로 ─────────────────────────────────── */
+/* 팀 탭의 .hero 와 같은 디자인 언어를 쓴다 — 둥근 카드, 팀 컬러 글로우,
+   엠블럼 타일, 큰 킥오프 시각, 카운트다운 스트립. */
+.mdh { display: grid; gap: 14px; }
+
+/* 나머지 여섯 팀은 3장씩 두 줄. 한 줄에 여섯 장을 밀어 넣으면
+   엠블럼도 팀명도 읽을 수 없는 크기가 된다. */
+.mdh__rest { display: grid; gap: 11px; grid-template-columns: repeat(3, 1fr); }
+
+.mdh__card {
+  position: relative; isolation: isolate; display: block; width: 100%;
+  text-align: left; color: inherit; font: inherit;
+  border: 1px solid color-mix(in srgb, var(--team) 34%, transparent);
+  border-radius: 20px; padding: 13px 15px 14px;
+}
+.mdh__card::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background:
+    radial-gradient(70% 90% at 50% 112%, color-mix(in srgb, var(--team) 20%, transparent), transparent 74%),
+    linear-gradient(180deg, rgba(5,14,34,.62), rgba(5,14,34,.80));
+}
+button.mdh__card { cursor: pointer; transition: border-color .18s, transform .18s; }
+button.mdh__card:hover, button.mdh__card:focus-visible {
+  border-color: color-mix(in srgb, var(--team) 72%, transparent);
+  transform: translateY(-2px);
+}
+
+.mdh__card[data-hero] {
+  border-radius: 26px; padding: 17px 22px 20px;
+  border-color: color-mix(in srgb, var(--team) 46%, transparent);
+  /* 팀 탭 히어로(.hero)와 같은 글로우를 준다. 배경 사진을 가리지 않으려고
+     한동안 뺐었는데, 빼고 보니 카드가 그냥 어두운 상자였다.
+     해법은 글로우를 없애는 게 아니라 **바깥으로 번지게** 하는 것이다 —
+     안쪽 스크림은 오히려 옅게 깔아 공이 비쳐 보이게 두고, 팀 컬러는
+     카드 테두리 밖으로 퍼뜨린다. */
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.03),
+    0 26px 60px rgba(3,10,25,.45),
+    0 0 72px -14px color-mix(in srgb, var(--team) 62%, transparent);
+}
+.mdh__card[data-hero]::before {
+  background:
+    radial-gradient(60% 70% at 50% 108%, color-mix(in srgb, var(--team) 30%, transparent), transparent 72%),
+    radial-gradient(92% 60% at 50% -12%, color-mix(in srgb, var(--team) 15%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(5,14,34,.34), rgba(5,14,34,.62));
+}
+/* 위쪽 테두리를 한 줄 더 밝혀 카드가 빛을 받는 것처럼 보이게 */
+.mdh__card[data-hero]::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--team) 26%, transparent), transparent 42%);
+  -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  padding: 1px;
+}
+
+.mdh__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.mdh__badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700; color: var(--team);
+  padding: 4px 11px 4px 6px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
+  background: color-mix(in srgb, var(--team) 12%, transparent);
+  white-space: nowrap;
+}
+.mdh__card[data-hero] .mdh__badge { font-size: 14px; padding: 5px 14px 5px 7px; }
+.mdh__comp {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+  font-size: 11px; color: var(--text-mid);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mdh__card[data-hero] .mdh__comp { font-size: 13px; color: var(--text-hi); }
+.mdh__live {
+  font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .06em;
+  color: #fff; background: var(--loss); padding: 2px 7px; border-radius: 4px;
+  animation: pulse 1.7s ease-in-out infinite;
+}
+.mdh__ha {
+  margin-left: auto; font-size: 9px; font-weight: 800; letter-spacing: .07em;
+  padding: 3px 7px; border-radius: 5px; white-space: nowrap;
+  color: var(--text-lo); border: 1px solid var(--line-2);
+}
+.mdh__ha[data-home] {
+  color: var(--team); border-color: color-mix(in srgb, var(--team) 48%, transparent);
+  background: color-mix(in srgb, var(--team) 12%, transparent);
+}
+
+/* 대진 */
+.mdh__fx { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 10px; }
+.mdh__card[data-hero] .mdh__fx { gap: 18px; padding: 4px 0 2px; }
+
+.mdt { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
+.mdt__tile {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px;
+  border: 1px solid var(--line-2);
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(6,16,38,.42));
+}
+.mdt[data-big] .mdt__tile { width: 78px; height: 78px; border-radius: 20px; }
+.mdt[data-focus] .mdt__tile {
+  border-color: color-mix(in srgb, var(--team) 62%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--team) 22%, transparent);
+}
+.mdt__name {
+  font-size: 11.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2;
+  color: var(--text-mid); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mdt[data-big] .mdt__name { font-size: 15px; color: var(--text-hi); }
+.mdt[data-focus] .mdt__name { color: var(--team); }
+/* 순위 · 승무패 — 팀 탭 히어로의 .fxt__rec 와 같은 알약 */
+.mdt__rec {
+  font-size: 9.5px; color: var(--text-mid); white-space: nowrap;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(6,16,38,.5); border: 1px solid var(--line);
+}
+.mdt[data-big] .mdt__rec { font-size: 11px; padding: 3px 10px; }
+.mdt__rec b { color: var(--text-hi); font-weight: 700; }
+
+.mdh__vs {
+  font-family: var(--font-display); font-size: 17px; font-weight: 600;
+  color: var(--team); letter-spacing: .05em; margin-top: 12px; white-space: nowrap;
+}
+.mdh__vs i { font-style: normal; opacity: .55; margin: 0 2px; }
+/* 스코어는 승패색이 아니라 "누구 골인가" 로 — 이달의 결과와 같은 규칙 */
+.mdh__su { color: var(--team); font-weight: 800; }
+.mdh__so { color: var(--opp, #fff); font-weight: 700; opacity: .9; }
+.mdh__card[data-hero] .mdh__vs {
+  font-size: 30px; margin-top: 22px;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--team) 50%, transparent);
+}
+
+/* 히어로 킥오프 */
+.mdh__when { text-align: center; margin-top: 14px; }
+.mdh__date { font-size: 13.5px; font-weight: 700; color: var(--text-hi); }
+.mdh__time { margin-top: 3px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+/* 팀 탭 히어로와 같은 알람 아이콘 — 시각 왼쪽에서 붉게 받쳐 준다 */
+.mdh__ico { color: var(--loss); display: grid; place-items: center; }
+.mdh__time b {
+  font-family: var(--font-display); font-size: 42px; font-weight: 700; line-height: 1;
+  color: var(--team); letter-spacing: 0;
+  /* 팀 탭 .when__time b 와 같은 2단 글로우. 한 겹(28px/48%)만으로는
+     큰 배경 사진 위에서 빛으로 읽히지 않고 그냥 색 글자로 보인다. */
+  text-shadow: 0 0 30px color-mix(in srgb, var(--team) 55%, transparent),
+               0 2px 22px color-mix(in srgb, var(--team) 30%, transparent);
+}
+.mdh__time em {
+  font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+  color: var(--text-mid); align-self: flex-end; padding-bottom: 5px;
+}
+.mdh__venue {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 6px;
+  font-size: 11.5px; color: var(--text-mid); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mdh__venue svg { color: var(--loss); flex: none; }
+/* 히어로 안에서는 경기장이 킥오프 시간과 같은 줄에 붙지 않도록 한 줄을 차지한다 */
+.mdh__when > .mdh__venue { display: flex; justify-content: center; max-width: 100%; }
+
+/* 카운트다운 스트립 */
+.mdh__cd {
+  display: flex; align-items: flex-start; justify-content: center; margin-top: 14px;
+  padding: 12px 10px 10px; border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--team) 18%, var(--line));
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(6,16,38,.34));
+}
+.mdh__cdu { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 68px; }
+.mdh__cdu b {
+  font-family: var(--font-display); font-size: 31px; font-weight: 700; line-height: 1;
+  color: var(--team); text-shadow: 0 0 20px color-mix(in srgb, var(--team) 42%, transparent);
+}
+.mdh__cdu i { font-style: normal; font-size: 9px; color: var(--text-mid); margin-top: 4px; letter-spacing: .08em; }
+.mdh__cdsep {
+  position: absolute; left: -4px; top: 1px;
+  font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text-lo);
+}
+.mdh__soon { font-family: var(--font-display); font-size: 22px; color: var(--team); }
+
+/* 끝난 경기가 히어로에 올라왔을 때 — 카운트다운 자리에 결과 한 줄 */
+.mdh__cd[data-done] { justify-content: center; }
+.mdh__fin {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--text-mid);
+}
+.mdh__fin b {
+  font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1;
+  letter-spacing: 0; color: var(--team);
+  text-shadow: 0 0 24px color-mix(in srgb, var(--team) 45%, transparent);
+}
+.mdh__fin b i { font-style: normal; margin: 0 4px; color: var(--text-lo); font-weight: 500; }
+
+/* 히어로 카드의 펄스닷 — 팀 캘린더에서 선택된 막대가 숨 쉬는 것과 같은 리듬.
+   "지금 크게 보고 있는 경기" 라는 표시다. LIVE 일 때는 LIVE 배지가 이미
+   깜빡이므로 겹치지 않게 내보내지 않는다. */
+.mdh__pulse {
+  position: relative; width: 6px; height: 6px; flex: none; margin-left: 3px;
+  border-radius: 50%; background: var(--team);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--team) 85%, transparent);
+}
+.mdh__pulse::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid var(--team);
+  animation: ping 1.9s cubic-bezier(0,.4,.6,1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mdh__pulse::after { animation: none; opacity: .5; }
+}
+
+/* 작은 카드 바닥 — 킥오프가 먼저 읽혀야 한다.
+   예전에는 경기장과 같은 10.5px 회색 한 줄이라 카드 여섯 장을 훑어도
+   날짜가 눈에 안 들어왔다. 킥오프만 팀 컬러 스트립으로 떼어 낸다. */
+.mdh__foot {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin-top: 11px;
+  padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 10.5px; color: var(--text-lo);
+}
+.mdh__foot .mdh__venue {
+  margin-top: 0; font-size: 10.5px; justify-content: center; opacity: .85;
+}
+
+.mdh__kick {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 7px 10px; border-radius: 11px;
+  background: color-mix(in srgb, var(--team) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--team) 26%, transparent);
+}
+/* D-day 칩 — 임박할수록 팀 컬러가 진해진다 */
+.mdh__dday {
+  font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .04em;
+  padding: 2.5px 7px; border-radius: 7px; flex: none;
+  color: var(--team);
+  background: color-mix(in srgb, var(--team) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
+}
+.mdh__kick[data-tone='now'] .mdh__dday {
+  color: var(--ink-1000); background: var(--team); border-color: var(--team);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--team) 55%, transparent);
+}
+.mdh__kick[data-tone='far'] .mdh__dday,
+.mdh__kick[data-tone='past'] .mdh__dday {
+  color: var(--text-mid);
+  background: transparent; border-color: var(--line-2);
+}
+.mdh__kdate, .mdh__ktime {
+  /*
+   * 날짜 · 요일 · 시각을 **한 글꼴**로.
+   * 본문 글꼴(Archivo)에는 한글이 없어서 요일 "토" 만 Noto Sans KR 로 떨어졌고,
+   * 시각은 디스플레이 글꼴 17px 이었다 — 한 줄에 글꼴이 셋이라 크기와
+   * 굵기가 제각각으로 보였다. 셋 다 Noto Sans KR 13px 로 맞추고 색으로만 가른다.
+   */
+  font-family: 'Noto Sans KR', var(--font-body); font-size: 13px; font-weight: 700;
+  line-height: 1; letter-spacing: 0; white-space: nowrap;
+}
+.mdh__kdate { display: inline-flex; align-items: baseline; gap: 4px; color: var(--text-hi); }
+.mdh__kdate i { font-style: normal; color: var(--text-mid); }
+.mdh__kdate i[data-wd='6'] { color: #8FB8FF; }
+.mdh__kdate i[data-wd='0'] { color: #FF8DA1; }
+.mdh__ktime { color: color-mix(in srgb, var(--team) 55%, #FFFFFF); }
+
+/* ── 주간 캘린더 ─────────────────────────────────────── */
+.wcal { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  background: var(--panel); backdrop-filter: var(--panel-blur); }
+
+.wcal__bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.wcal__nav, .wcal__today {
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
+  border-radius: 7px; cursor: pointer; font: inherit;
+}
+.wcal__nav { width: 26px; height: 26px; font-size: 16px; line-height: 1; }
+.wcal__today { padding: 4px 10px; font-size: 11px; }
+.wcal__nav:hover, .wcal__today:hover { color: var(--text-hi); border-color: var(--accent); }
+.wcal__label { font-family: var(--font-display); font-size: 14px; color: var(--text-hi); }
+.wcal__spacer { flex: 1; }
+
+.wcal__grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.wcal__cell {
+  min-height: 118px; padding: 8px 7px; border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.wcal__cell:last-child { border-right: 0; }
+.wcal__cell[data-empty] { opacity: .5; }
+.wcal__cell[data-sel] {
+  position: relative;
+  background: color-mix(in srgb, var(--pick, var(--accent)) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pick, var(--accent)) 44%, transparent);
+}
+/* 월간 캘린더(.cal__pulse)와 같은 펄스닷 — 고른 날짜가 살아 있음을 알린다.
+   색은 그 칸에서 지금 보고 있는 경기의 팀 컬러다(일곱 팀이 섞여 있으므로). */
+.wcal__spread { flex: 1 1 auto; }
+.wcal__pulse {
+  position: relative; width: 6px; height: 6px; flex: none; margin-left: 6px;
+  border-radius: 50%; background: var(--pick, var(--accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--pick, var(--accent)) 80%, transparent);
+}
+.wcal__pulse::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid var(--pick, var(--accent));
+  animation: ping 1.9s cubic-bezier(0,.4,.6,1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wcal__pulse::after { animation: none; opacity: .5; }
+}
+
+.wcal__head { display: flex; align-items: center; gap: 0; }
+.wcal__dow { font-size: 10px; color: var(--text-lo); }
+.wcal__cell[data-weekend] .wcal__dow { color: #FF8DA1; }
+.wcal__date { font-family: var(--font-display); font-size: 14px; color: var(--text-mid); }
+.wcal__date[data-today] {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--accent); color: var(--on-accent); font-weight: 700;
+}
+
+.wcal__list { display: flex; flex-direction: column; gap: 4px; }
+.wcal__m {
+  display: grid; grid-template-columns: minmax(0,1fr); gap: 2px;
+  border: 0; border-left: 3px solid var(--team); border-radius: 5px;
+  padding: 5px 6px; cursor: pointer; text-align: left; font: inherit;
+  background: color-mix(in srgb, var(--team) 20%, transparent);
+  color: var(--text-mid);
+}
+.wcal__m:hover { background: color-mix(in srgb, var(--team) 34%, transparent); }
+/* 팀 캘린더의 선택된 막대(.bar[data-sel])와 같은 리듬 —
+   왼쪽 팀 컬러 띠가 숨 쉬면서 "이 경기를 보고 있다" 를 말한다.
+   막대는 6px 라 빛만으로 충분했지만 이 타일은 덩치가 커서, 같은 세기로는
+   거의 안 보인다. 퍼지는 링 + 더 센 글로우 + 아주 작은 확대를 겹친다. */
+.wcal__m[data-on] {
+  animation: wcalPulse 1.7s cubic-bezier(.4,0,.6,1) infinite;
+  position: relative; z-index: 2; transform-origin: left center;
+}
+@keyframes wcalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--team) 52%, transparent),
+                0 0 10px color-mix(in srgb, var(--team) 40%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--team) 24%, transparent),
+                0 0 28px color-mix(in srgb, var(--team) 95%, transparent);
+    transform: scale(1.035);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wcal__m[data-on] { animation: none; }
+}
+.wcal__m[data-on] {
+  outline: 1px solid var(--teamfg);
+  background: color-mix(in srgb, var(--team) 44%, transparent);
+  color: var(--text-hi);
+}
+.wcal__mine, .wcal__opp { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.wcal__mine b { font-size: 10.5px; font-weight: 700; color: var(--text-hi); }
+.wcal__mine i {
+  font-style: normal; font-size: 8px; font-weight: 800; padding: 0 3px; border-radius: 3px;
+  background: rgba(255,255,255,.14); color: var(--text-mid);
+}
+.wcal__opp span {
+  font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/*
+ * 칸에서 제일 먼저 찾는 값인데 11px 회색이라 전혀 눈에 안 들어왔다.
+ * 종료 스코어는 흰색으로 또렷하게, 예정 킥오프는 팀 컬러로 물들여
+ * "끝난 경기" 와 "앞으로 할 경기" 가 색으로도 갈리게 한다.
+ */
+.wcal__t {
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  letter-spacing: .01em; line-height: 1.15;
+  color: color-mix(in srgb, var(--team) 55%, #FFFFFF);
+  text-shadow: 0 1px 10px rgba(4, 12, 28, .9);
+}
+.wcal__t[data-done] {
+  font-size: 13.5px; color: var(--text-hi);
+  text-shadow: 0 1px 12px rgba(4, 12, 28, .95);
+}
+
+.wcal__hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--text-lo); }
+
+/* 좁은 화면: 7열이 무너지므로 가로 스크롤로 */
+@media (max-width: 860px) {
+  .wcal__grid { grid-template-columns: repeat(7, minmax(124px, 1fr)); overflow-x: auto; }
+}
+
+/* ── 우리 팀 선수 강조 (대회 선수 순위) ─────────────── */
+.lbc__row[data-mine] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.lbc__row[data-mine] .lbc__name { color: var(--accent); font-weight: 700; }
+
+/*
+ * 우리 팀이 섞인 대회 순위표(Summary · 팀 탭)에서는, 남의 팀 선수의 등수와
+ * 기록을 **흰색**으로 눕힌다. 예전에는 전부 앱 전역 --accent 로 칠해져서
+ * 스물네 줄이 같은 팀 컬러였고, 정작 우리 선수 줄이 묻혔다.
+ * 팀 컬러는 우리 줄에만 남긴다.
+ */
+.lb3[data-mixed] .lbc__row:not([data-mine]) .lbc__v {
+  color: var(--text-hi); text-shadow: none;
+}
+.lb3[data-mixed] .lbc__row:not([data-mine]) .lbc__rank { color: var(--text-mid); }
+.lb3[data-mixed] .lbc__row:not([data-mine])[data-top='true'] .lbc__rank {
+  color: var(--text-hi); font-weight: 700;
+}
+.lb3[data-mixed] .lbc__row[data-mine] .lbc__v {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ── 이달 경기 결과 "전체 보기" (데스크톱 기본형 — 폰은 mobile.css 가 덮는다) ── */
+.nmore {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 42px; margin-top: 12px;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: rgba(6,16,38,.3); color: var(--text-mid);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.nmore:hover { color: var(--text-hi); border-color: var(--line-2); background: rgba(255,255,255,.04); }
+.nmore .num { color: var(--text-lo); font-weight: 600; }
+
+/* ── 아래 팀 바로가기 ────────────────────────────────── */
+.sum__foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 6px 0 0; font-size: 11.5px; color: var(--text-lo);
+}
+.sum__jump {
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
+  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.sum__jump:hover { color: var(--text-hi); border-color: var(--accent); }
+
+/* ── Summary: 순위표·결과 가시성 다듬기 ─────────────── */
+
+/* 우리 팀 줄은 이름까지 팀 컬러로 — 스무 줄짜리 표에서 색 하나로 찾게 한다 */
+.tbl__row[data-mine] .tbl__team b { color: var(--accent); font-weight: 700; }
+.tbl__row[data-mine] .tbl__line {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.tbl__row[data-mine] .tbl__line:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* 이달의 결과: 우리 팀 옆 HOME/AWAY 배지 */
+/* AWAY 라고 어둡게 둘 이유가 없다 — 원정도 똑같이 읽혀야 하는 정보다.
+   HOME 은 팀 컬러로 채우고, AWAY 는 **밝은 중립색**으로 또렷하게 둔다.
+   (색이 다른 것만으로 홈·원정은 충분히 갈린다) */
+.ml__ha {
+  font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  padding: 2px 6px; border-radius: 4px; flex: none;
+  color: var(--text-hi);
+  border: 1px solid color-mix(in srgb, var(--text-hi) 26%, transparent);
+  background: rgba(255, 255, 255, .07);
+}
+.ml__ha[data-home] {
+  color: var(--c); border-color: color-mix(in srgb, var(--c) 50%, transparent);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+/* 우리 팀이 섞인 목록은 대진 블록을 행 전체로 늘려 스코어를 가운데로 보낸다.
+   1440px 에서 왼쪽 292px 만 쓰고 나머지가 빈 채로 남아 시선이 좌우로 끊겼다.
+   양쪽 1fr + 가운데 고정폭이라 스코어·엠블럼은 모든 행에서 같은 세로선에 선다. */
+.ml__match[data-ours] {
+  /* 원래대로 왼쪽에서 시작한다. 폭만 팀 이름이 들어갈 만큼 넓혔다 —
+     고정폭이라 스코어·엠블럼은 어느 줄에서나 같은 세로선에 선다. */
+  grid-template-columns: 210px 88px 210px;
+  justify-content: start; gap: 0;
+}
+/*
+ * 양쪽 다 **격자**로 고정한다. flex 로 두면 팀 이름 길이에 따라 HOME/AWAY
+ * 배지와 W/D/L 칩이 줄마다 좌우로 밀려 "중구난방" 으로 보인다.
+ * 우리 쪽: [배지 48] [이름 1fr 우정렬] [엠블럼 22]
+ * 상대 쪽: [엠블럼 22] [이름 1fr 좌정렬] [W/D/L 17]
+ */
+.ml__match[data-ours] .ml__side.r {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) 22px; gap: 9px;
+}
+.ml__match[data-ours] .ml__side:not(.r) {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 17px; gap: 9px;
+}
+.ml__match[data-ours] .ml__side b {
+  font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ml__match[data-ours] .ml__side.r b { text-align: right; }
+.ml__match[data-ours] .ml__ha { justify-self: start; }
+.ml__res { justify-self: center; }
+i.ml__res:empty { width: 17px; height: 17px; }
+/* 우리 팀을 왼쪽에 고정했으므로 그쪽을 조금 더 또렷하게 */
+.ml__match[data-ours] .ml__side.r b { color: var(--text-hi); font-weight: 800; }
+.ml__match[data-ours] .ml__side:not(.r) b { color: var(--text-mid); font-weight: 600; }
+
+/* 스코어 — 승패색이 아니라 "누구 골인가" 로 칠한다.
+   우리 득점은 그 팀 컬러(--c), 상대 득점은 --opp(기본 흰색, 뉴캐슬은 하늘색).
+   승패는 W/D/L 칩이 말하므로 스코어까지 삼색으로 칠하면 한 줄에
+   빨강·초록이 두 번 나와 오히려 안 읽힌다. */
+.ml__match[data-ours] .ml__score { font-size: 18px; letter-spacing: 0; }
+/* 팀 탭은 화면 전체가 한 팀 색이라 "누구 골인가" 를 색으로 가른다 —
+   우리 득점은 팀 컬러, 상대는 흰색(뉴캐슬만 하늘색). */
+.ml__su { color: var(--accent); font-weight: 800; }
+.ml__so { color: var(--opp, #fff); font-weight: 700; opacity: .92; }
+.ml__score i { color: var(--text-lo); font-weight: 500; }
+
+/*
+ * Summary(=data-ours)는 다르다. 일곱 팀이 섞인 목록에서 스코어까지 팀
+ * 컬러로 칠하면 한 화면에 여섯 색이 돌아 무엇이 중요한지 사라진다.
+ * 여기서는 스코어가 **결과**를 말하게 한다 — 이긴 경기는 흰색으로
+ * 또렷하게, 진 경기는 회색으로 가라앉힌다. 누구 골인지는 좌우 위치가,
+ * 승패는 W/D/L 칩이 이미 말하고 있으므로 색은 무게만 조절하면 된다.
+ */
+.ml__match[data-ours] .ml__score b { text-shadow: none; }
+.ml__match[data-ours] .ml__score[data-res='W'] b { color: #FFFFFF; opacity: 1; }
+.ml__match[data-ours] .ml__score[data-res='D'] b { color: var(--text-mid); opacity: 1; }
+.ml__match[data-ours] .ml__score[data-res='L'] b { color: var(--text-lo); opacity: 1; }
+/* 좁은 화면에서는 풀네임·HOME/AWAY 대신 약어와 H/A 로 바꾼다.
+   폭이 없는 채로 말줄임에 맡기면 "M.." 처럼 읽을 수 없는 글자만 남는다. */
+.ml__short { display: none; }
+@media (max-width: 760px) {
+  .ml__long { display: none; }
+  .ml__short { display: inline; }
+  .ml__match[data-ours] {
+    grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .ml__match[data-ours] .ml__side.r { grid-template-columns: 20px minmax(0, 1fr) 20px; gap: 5px; }
+  .ml__match[data-ours] .ml__side:not(.r) { grid-template-columns: 20px minmax(0, 1fr) 15px; gap: 5px; }
+  .ml__match[data-ours] .ml__side b { font-size: 13px; }
+  .ml__match[data-ours] .ml__score { font-size: 16px; }
+  .ml__ha { font-size: 8.5px; padding: 1px 3px; letter-spacing: 0; }
+  .ml__res.fchip { width: 15px; height: 15px; font-size: 8.5px; border-radius: 3px; }
+  i.ml__res:empty { width: 15px; height: 15px; }
+}
+
+/* ── 모바일 ──────────────────────────────────────────
+   요약 화면은 섹션이 넷이라 좁은 화면에서 가장 먼저 무너진다.
+   카드 격자와 히어로 글자 크기를 단계적으로 줄인다. */
+@media (max-width: 1080px) {
+  .mdh__rest { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .mdh__rest { grid-template-columns: 1fr; }
+  .mdh__card[data-hero] { padding: 15px 15px 17px; border-radius: 20px; }
+  .mdh__card[data-hero] .mdh__fx { gap: 8px; }
+  .mdt[data-big] .mdt__tile { width: 60px; height: 60px; border-radius: 16px; }
+  .mdt[data-big] .mdt__name { font-size: 13px; }
+  .mdh__card[data-hero] .mdh__vs { font-size: 22px; margin-top: 16px; }
+  .mdh__time b { font-size: 34px; }
+  /* 팀 탭 히어로(.cdu)와 같은 규칙 — 네 칸을 **똑같은 폭**으로 나눈다.
+     min-width 만 주면 칸이 내용 크기대로 잡혀("1" 과 "09" 는 폭이 다르다)
+     칸마다 왼쪽에 절대 배치된 ':' 가 제각각인 자리에 찍힌다. */
+  .mdh__cdu { min-width: 0; flex: 1 1 0; }
+  .mdh__cdu b { font-size: 25px; }
+  .mdh__cdsep { font-size: 19px; left: -2px; top: 2px; }
+  .mdh__ha { margin-left: 0; }
+  .sum__foot { font-size: 11px; }
+}
+@media (max-width: 420px) {
+  .mdh__cdu b { font-size: 21px; }
+  .mdh__cdu i { font-size: 8px; }
+  .mdh__cdsep { font-size: 17px; left: -1px; }
+  .mdh__time b { font-size: 28px; }
+  .mdt[data-big] .mdt__tile { width: 52px; height: 52px; }
+  .wcal__cell { min-height: 96px; }
+}
+
+/* Summary 팀 비교 (SummaryTab #sum-compare) */
+.cmp {
+  border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden;
+  background: var(--panel); backdrop-filter: var(--panel-blur);
+}
+.cmp__head, .cmp__row {
+  display: grid; align-items: center; gap: 8px; padding: 0 14px;
+  grid-template-columns: minmax(130px, 1.4fr) 76px 64px 60px 82px 60px minmax(120px, 1fr);
+}
+.cmp__head {
+  padding-block: 9px; border-bottom: 1px solid var(--line);
+  font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--text-lo);
+}
+.cmp__head > [title] { cursor: help; }
+.cmp__head > .num, .cmp__row > .num { text-align: center; }
+.cmp__row {
+  width: 100%; padding-block: 9px; border-bottom: 1px solid var(--line); text-align: left;
+  font-size: 12.5px; color: var(--text-mid); box-shadow: inset 3px 0 0 var(--team);
+  transition: background .15s;
+}
+.cmp__row:last-child { border-bottom: 0; }
+.cmp__row:hover { background: color-mix(in srgb, var(--team) 9%, transparent); }
+.cmp__team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cmp__team b { color: var(--team); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp__lg { display: inline-flex; align-items: center; gap: 6px; }
+.cmp__lg b { color: var(--text-hi); }
+.cmp__row .num i { font-style: normal; color: var(--text-lo); font-size: 11px; }
+.cmp__ppg { font-weight: 800; color: var(--text-hi); }
+.cmp__form { display: flex; gap: 3px; }
+@media (max-width: 760px) {
+  /* 폰 — 팀 · 리그 · 경기당 · 최근 5경기만 */
+  .cmp__head, .cmp__row { grid-template-columns: minmax(0, 1fr) 62px 46px auto; gap: 6px; padding-inline: 10px; }
+  .cmp__head > :nth-child(3), .cmp__row > :nth-child(3),
+  .cmp__head > :nth-child(5), .cmp__row > :nth-child(5),
+  .cmp__head > :nth-child(6), .cmp__row > :nth-child(6) { display: none; }
+  .cmp__form .fchip { width: 15px; height: 15px; font-size: 8px; }
+}

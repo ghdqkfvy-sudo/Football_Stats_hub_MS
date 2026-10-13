@@ -17,6 +17,8 @@ import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 import { MonthList } from '../components/MonthList';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
+import { pointsPerGame, seasonRecord } from '../lib/compare';
+import { Crest } from '../components/Crest';
 
 /**
  * Summary — 앱에 들어오면 처음 보이는 화면.
@@ -205,6 +207,19 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     return () => { alive = false; clearTimeout(t); };
   }, [needFull, active]);
 
+  /* ── 팀 비교 ─────────────────────────────────────────
+     리그 순위(그 팀 리그 표) + 모든 대회 합산 전적. 리그가 달라 승점을 그대로
+     견줄 수 없어 경기당 승점으로 줄을 세운다(lib/compare). */
+  const compare = useMemo(() => TARGETS.filter((t) => t.kind === 'club').map((t) => {
+    const row = t.league ? tables[t.league]?.table?.rows.find((r) => r.team.id === t.espnTeamId) : undefined;
+    return {
+      t,
+      row,
+      ppg: row ? pointsPerGame(row.points, row.played) : null,
+      season: seasonRecord(feeds[t.id] ?? [], t.espnTeamId),
+    };
+  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds]);
+
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
   const results = useMemo(() => monthResults(teamFeeds, thisMonth), [teamFeeds, thisMonth]);
@@ -317,6 +332,50 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
           onMove={(d) => setWeek((w) => shiftWeek(w, d))}
           onToday={() => { setWeek(weekStartKey(todayKey())); setSelDay(todayKey()); setSelIdx(0); }}
         />
+      </section>
+
+      {/* ── 2½. 팀 비교 ── */}
+      <section id="sum-compare">
+        <div className="sec__head">
+          <h2 className="sec__title">팀 비교</h2>
+          <span className="sec__note">경기당 승점 순 · 시즌 전적은 모든 대회(친선 제외) · 팀을 누르면 그 팀 화면</span>
+        </div>
+        <div className="cmp" role="table" aria-label="우리 클럽 비교">
+          <div className="cmp__head" role="row">
+            <span role="columnheader">팀</span>
+            <span role="columnheader" title="소속 리그 순위">리그</span>
+            <span role="columnheader" className="num" title="리그 승점 / 경기 수">승점</span>
+            <span role="columnheader" className="num" title="리그 경기당 승점">경기당</span>
+            <span role="columnheader" className="num" title="모든 대회 승·무·패">시즌 전적</span>
+            <span role="columnheader" className="num" title="모든 대회 득점·실점">득·실</span>
+            <span role="columnheader" title="모든 대회 최근 5경기 — 오른쪽이 최근">최근 5경기</span>
+          </div>
+          {compare.map(({ t, row, ppg, season }) => (
+            <button
+              key={t.id}
+              className="cmp__row"
+              role="row"
+              style={{ ['--team' as string]: summaryColor(t) }}
+              onClick={() => onOpenTeam(t.id)}
+            >
+              <span className="cmp__team" role="cell">
+                <Crest team={{ id: t.espnTeamId, name: t.name, shortName: t.name, abbr: t.abbr, logo: t.crest }} size={20} />
+                <b>{t.name}</b>
+              </span>
+              <span className="cmp__lg" role="cell">
+                {t.league && <CompCrest k={t.league} size={14} />}
+                {row ? <b className="num">{row.rank}위</b> : <i>–</i>}
+              </span>
+              <span className="num" role="cell">{row ? <>{row.points}<i>/{row.played}</i></> : '–'}</span>
+              <span className="num cmp__ppg" role="cell">{ppg?.toFixed(2) ?? '–'}</span>
+              <span className="num" role="cell">{season.win}-{season.draw}-{season.loss}</span>
+              <span className="num" role="cell">{season.gf}:{season.ga}</span>
+              <span className="cmp__form" role="cell">
+                {season.form.map((f, i) => <i key={i} className="fchip" data-r={f}>{f}</i>)}
+              </span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* ── 3. 대회 순위 ── */}

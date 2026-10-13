@@ -14,6 +14,7 @@ import { ChipCrest } from './Crest';
 const JUMPS: [string, string][] = [
   ['sum-next', '다음 경기'],
   ['sum-week', '주간'],
+  ['sum-compare', '비교'],
   ['sum-table', '순위'],
   ['sum-results', '결과'],
 ];
