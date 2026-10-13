@@ -484,54 +484,47 @@
   .pcard__cards { margin-top: 8px; padding-top: 8px; }
 }
 
-/* 선수 상세 (PlayerDetail) — 폰은 바텀시트(.sheet), 넓은 화면은 가운데 창 */
+/* 선수 상세 (PlayerDetail) — 호버 카드와 같은 두 상자(본체 + 경기 목록).
+   창 자체는 칠하지 않아 카드 상자만 떠 보인다. 폰은 아래에서 올라오는 시트, 넓은 화면은 가운데 */
 .pt__row { cursor: pointer; }
-@media (min-width: 641px) {
-  .sheet--modal .sheet__panel {
-    left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
-    width: min(720px, 92vw); max-height: 86vh; border-radius: 18px; border: 1px solid var(--line-2);
-    padding: 20px 22px 18px; animation: none;
-  }
-  .sheet--modal .sheet__grab { display: none; }
+.pdet.sheet__panel {
+  background: transparent; border: 0; box-shadow: none; backdrop-filter: none;
+  padding: 6px 10px calc(12px + env(safe-area-inset-bottom));
+  max-height: 88vh; outline: none;
 }
-.pdet { outline: none; }
+.pdet .sheet__grab { background: rgba(255,255,255,.35); margin: 2px auto 8px; }
+.pdet__body { display: grid; grid-template-columns: 1fr; gap: 8px; }
+/* 시트 안의 카드 상자는 호버 카드와 같은 모양 — 다만 아래 경기 목록은 길어도 된다 */
+.pdet .pcard__main { position: relative; }
+.pdet .pcard__side { padding: 12px; }
 .pdet__x {
-  position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
-  color: var(--text-lo); font-size: 13px;
+  position: absolute; z-index: 2; top: 22px; right: 20px; width: 28px; height: 28px; border-radius: 50%;
+  color: var(--text-lo); font-size: 12px; background: rgba(255,255,255,.06);
 }
-.pdet__x:hover { color: var(--text-hi); background: rgba(255,255,255,.06); }
-.pdet__top { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
-.pdet__name { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.015em; }
-.pdet__meta { display: block; margin-top: 4px; font-size: 12px; color: var(--text-mid); }
-.pdet__sum { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 16px 0 14px; }
-.pdet__sum div {
-  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center;
-  background: rgba(255,255,255,.02);
+.pdet__x:hover { color: var(--text-hi); background: rgba(255,255,255,.12); }
+.pdet__none { font-size: 11px; color: var(--text-lo); margin: 6px 0 2px; }
+@media (min-width: 641px) {
+  .sheet--modal .pdet.sheet__panel {
+    left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
+    width: min(660px, 94vw); max-height: 88vh; padding: 0; border-radius: var(--r-md); animation: none;
+  }
+  .sheet--modal .pdet .sheet__grab { display: none; }
+  /* 넓은 화면 — 호버 카드처럼 본체(왼쪽) + 경기 목록(오른쪽) */
+  .pdet__body { grid-template-columns: 308px minmax(0, 1fr); gap: 10px; align-items: start; }
+  /* 두 상자 바깥 오른쪽 위 모서리에 — 안에 두면 경기 목록 머리("최신순")를 덮는다 */
+  .pdet__x {
+    top: -12px; right: -12px; background: var(--ink-850); border: 1px solid var(--line-2);
+    box-shadow: 0 6px 18px rgba(3,10,25,.6);
+  }
+  .sheet--modal .pdet.sheet__panel { overflow: visible; }
+  .pdet__body { max-height: 88vh; }
+  .pdet .pcard__side { max-height: calc(88vh - 2px); overflow-y: auto; }
 }
-.pdet__sum b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-hi); }
-.pdet__sum span { display: block; margin-top: 2px; font-size: 10px; color: var(--text-lo); }
-.pdet__h { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-lo); letter-spacing: .04em; margin-bottom: 6px; }
-.pdet__list { list-style: none; margin: 0; padding: 0; }
-.pdet__g {
-  display: grid; align-items: center; gap: 8px;
-  grid-template-columns: 66px 16px minmax(0, 1fr) 70px 110px 74px;
-  padding: 7px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-mid);
-}
-.pdet__when { color: var(--text-lo); font-size: 11px; white-space: nowrap; }
-.pdet__comp { display: grid; place-items: center; }
-.pdet__opp { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.pdet__opp b { font-weight: 600; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pdet__sc { display: inline-flex; align-items: center; gap: 6px; }
-.pdet__min { display: flex; align-items: center; gap: 6px; }
-.pdet__min i { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
-.pdet__min u { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
-.pdet__min i[data-start] u { background: var(--accent); }
-.pdet__min em { font-style: normal; font-size: 11px; width: 34px; text-align: right; }
-.pdet__ga { display: inline-flex; justify-content: flex-end; align-items: center; gap: 4px; }
-.pdet__none, .pdet__key { font-size: 11px; color: var(--text-lo); margin: 10px 0 0; }
 @media (max-width: 640px) {
-  .pdet__sum { grid-template-columns: repeat(3, 1fr); }
-  .pdet__g { grid-template-columns: 58px 14px minmax(0, 1fr) 64px; row-gap: 4px; }
-  .pdet__min { grid-column: 3 / 4; }
-  .pdet__ga { grid-column: 4 / 5; }
+  /* 폰 — 호버 카드의 폰 모양(세로로 쌓은 두 상자)과 같은 크기 */
+  .pdet .pcard__main, .pdet .pcard__side { padding: 11px 12px; }
+  .pdet .pcard__stats > div { padding: 7px 2px; }
+  .pdet .pcard__stats b { font-size: 18px; }
+  .pdet .pcard__hero > div { padding: 8px 4px; }
+  .pdet .pcard__hero b { font-size: 20px; }
 }

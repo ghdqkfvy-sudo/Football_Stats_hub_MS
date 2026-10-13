@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
-import { usePalette } from '../lib/palette';
 import { Headshot } from './Headshot';
-import { Crest } from './Crest';
-import { CompCrest } from './CompCrest';
-import { kstShortDate } from '../lib/kst';
 import { Swap } from './Swap';
 import { PlayerDetail } from './PlayerDetail';
+import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
+
+/** 실제 마우스가 있는 기기인지 — 터치 기기는 "호버" 개념이 없다 (Calendar 와 같은 판정) */
+const HAS_HOVER =
+  typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 const FILTERS: { id: string; label: string }[] = [
   { id: 'ALL', label: '전체' },
   { id: 'G', label: 'GK' },
@@ -229,11 +230,15 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
               else rowRefs.current.delete(p.id);
             }}
             data-active={p.id === activeId}
-            onMouseEnter={(e) => openCard(p, e.currentTarget)}
-            onMouseLeave={closeCard}
+            /* 호버 카드는 마우스가 있는 기기에서만. 폰은 탭 한 번에 진입·초점·클릭
+               신호가 한꺼번에 와서 카드와 상세 시트가 같이 떴다 — 폰은 시트만. */
+            {...(HAS_HOVER ? {
+              onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => openCard(p, e.currentTarget),
+              onMouseLeave: closeCard,
+              onFocus: (e: React.FocusEvent<HTMLDivElement>) => openCard(p, e.currentTarget),
+              onBlur: closeCard,
+            } : {})}
             tabIndex={0}
-            onFocus={(e) => openCard(p, e.currentTarget)}
-            onBlur={closeCard}
             onKeyDown={(e) => {
               if (e.key === 'Escape') closeCard();
               else if (e.key === 'Enter') openDetail(p);
@@ -282,25 +287,6 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
 }
 
 /** 경고·퇴장 — 없으면 줄표 하나로 조용히 둔다 */
-export function Cards({ yellow, red, zero = false }: { yellow: number; red: number; zero?: boolean }) {
-  if (!yellow && !red && !zero) return <i className="cards__none">–</i>;
-  return (
-    <span className="cards">
-      {(yellow > 0 || zero) && (
-        <b className="num" data-c="y">
-          <i />
-          {yellow}
-        </b>
-      )}
-      {(red > 0 || zero) && (
-        <b className="num" data-c="r">
-          <i />
-          {red}
-        </b>
-      )}
-    </span>
-  );
-}
 
 /** 정렬 머리글 — 지금 기준인 열에만 화살표가 뜬다 */
 function SortHead({
@@ -340,7 +326,6 @@ function PlayerCard({
   left: number;
   onClose: () => void;
 }) {
-  const palette = usePalette();
   const recent = p.recent.slice(0, 3);
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: left, y: top });
@@ -368,67 +353,7 @@ function PlayerCard({
       {/* 손가락으로는 마우스를 치울 수가 없다 — 닫기 단추를 준다 */}
       <button className="pcard__x" aria-label="닫기" onClick={onClose}>✕</button>
       <div className="pcard__main">
-        <div className="pcard__top">
-          <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={46} className="pcard__hs" />
-          <div>
-            <b>{p.name}</b>
-            <span>
-              <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
-              {` #${p.jersey}`}
-              {p.age ? ` · ${p.age}세` : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* 숫자 네 칸은 있는 그대로 — 강조 상자는 공격 포인트 하나만 쓴다 */}
-        <div className="pcard__stats">
-          {([
-            ['출전', p.apps, false],
-            ['선발', p.starts, false],
-            ['골', p.goals, true],
-            ['도움', p.assists, true],
-          ] as const).map(([k, v, tint]) => (
-            // 골·도움 숫자는 팀 컬러로 — 상자는 그대로 두고 값만 눈에 띄게
-            <div key={k} data-tint={tint && v > 0 ? true : undefined}>
-              <b className="num">{v}</b>
-              <span>{k}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="pcard__hero">
-          <div className="pcard__mins num">
-            <b>{p.minutes}<i>분</i></b>
-            {/* 경기별 실제 교체 기록이 있으면 모든 대회 합계지만, 없으면
-                시즌 통계(리그 전용)를 쓴 값이라 라벨을 구분해 준다. */}
-            <span>{p.realMinutes ? '출전 시간' : '리그 출전 시간'}</span>
-          </div>
-          <div className="pcard__ap num" data-on={p.points > 0}>
-            <b>{p.points}</b>
-            <span>공격 포인트</span>
-          </div>
-        </div>
-
-        <div className="pcard__cards">
-          <span>카드</span>
-          <Cards yellow={p.yellow} red={p.red} zero />
-        </div>
-
-        {p.byComp.length > 0 && (
-          <div className="pcard__comps">
-            <span className="eyebrow">대회별</span>
-            {p.byComp.map((c) => (
-              <div className="pcard__comp" key={c.competition}>
-                <CompCrest k={c.competition} size={14} />
-                <span className="pcard__cn">{palette.name(c.competition)}</span>
-                <span className="pcard__ca num">{c.apps}경기<i>선발 {c.starts}</i></span>
-                <span className="pcard__cg num">
-                  <b>{c.goals}</b>G <b>{c.assists}</b>A
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <PlayerSummary p={p} />
       </div>
 
       {recent.length > 0 && (
@@ -437,52 +362,7 @@ function PlayerCard({
             <b>최근 {recent.length}경기</b>
             <span>{p.name.split(' ').slice(-1)[0]}</span>
           </div>
-          {recent.map((g) => (
-            <div className="pcard__g" key={g.matchId}>
-              <i className="fchip" data-r={g.result}>{g.result}</i>
-              <span className="pcard__gc">
-                <CompCrest k={g.competition} size={13} />
-                {palette.name(g.competition)}
-              </span>
-              <span className="pcard__when num">{kstShortDate(g.kickoffUtc)}</span>
-
-              <span className="pcard__opp">
-                {/* 상대 표기는 항상 "vs" 로 통일하고 홈/원정은 배지로 —
-                    일정 탭의 최근 경기 폼과 같은 규칙이다. */}
-                <i className="hachip" data-side={g.homeAway === '홈' ? 'H' : 'A'}>
-                  {g.homeAway === '홈' ? 'H' : 'A'}
-                </i>
-                vs
-                <Crest
-                  team={{
-                    id: g.opponentId,
-                    name: g.opponentName,
-                    shortName: g.opponentName,
-                    abbr: g.opponent,
-                    logo: g.opponentLogo ?? '',
-                  }}
-                  size={16}
-                />
-                <b>{g.opponentName}</b>
-              </span>
-              <span className="pcard__sc num">{g.scoreline}</span>
-
-              <span className="pcard__ga num">
-                {/* 선발이면 "선발 90'", 교체면 "교체 60'(30)" —
-                    몇 분에 들어가 몇 분을 뛰었는지가 한눈에 보인다. */}
-                {g.started
-                  ? `선발 · ${g.minutes}'`
-                  : g.subIn !== undefined
-                    ? `교체 ${g.subIn}'(${g.minutes})`
-                    : `교체 · ${g.minutes}'`}
-              </span>
-              <span className="pcard__gb">
-                {g.goals > 0 && <em className="pcard__gg">{g.goals}G</em>}
-                {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
-                <Cards yellow={g.yellow} red={g.red} />
-              </span>
-            </div>
-          ))}
+          {recent.map((g) => <GameRow key={g.matchId} g={g} />)}
         </div>
       )}
     </div>
