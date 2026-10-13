@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SUMMARY_OPP, TARGETS, comp, getTarget, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
-import { loadLeague, loadLeagueTable, loadSchedule } from '../lib/api';
+import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { dayKey, monthKey, todayKey } from '../lib/kst';
 import {
@@ -17,7 +17,7 @@ import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 import { MonthList } from '../components/MonthList';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
-import { pointsPerGame, seasonRecord } from '../lib/compare';
+import { euroStage, pointsPerGame, seasonRecord } from '../lib/compare';
 import { Crest } from '../components/Crest';
 
 /**
@@ -33,6 +33,8 @@ import { Crest } from '../components/Crest';
 
 /** 순위·선수 기록을 보여 줄 대회 */
 const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
+/** 팀 비교의 유럽대항전 칸 — 위에 있는 대회부터 */
+const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
 export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void }) {
   /* ── 모든 팀 일정 ─────────────────────────────────── */
@@ -207,18 +209,40 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
     return () => { alive = false; clearTimeout(t); };
   }, [needFull, active]);
 
+  /* 유럽대항전 라운드 달력(팀 일정 피드의 rounds) — 팀 비교의 "챔스" 칸이
+     지금 리그 페이즈인지 몇 강인지 가리는 데 쓴다 */
+  const [cupRounds, setCupRounds] = useState<Record<string, Record<string, CupRound[]>>>({});
+  useEffect(() => {
+    let alive = true;
+    for (const t of TARGETS) {
+      if (t.kind !== 'club') continue;
+      loadScheduleExtras(t.espnTeamId).then((e) => {
+        if (alive) setCupRounds((r) => ({ ...r, [t.id]: e.rounds }));
+      });
+    }
+    return () => { alive = false; };
+  }, []);
+
   /* ── 팀 비교 ─────────────────────────────────────────
      리그 순위(그 팀 리그 표) + 모든 대회 합산 전적. 리그가 달라 승점을 그대로
      견줄 수 없어 경기당 승점으로 줄을 세운다(lib/compare). */
   const compare = useMemo(() => TARGETS.filter((t) => t.kind === 'club').map((t) => {
     const row = t.league ? tables[t.league]?.table?.rows.find((r) => r.team.id === t.espnTeamId) : undefined;
+    /* 유럽대항전 — 챔스 → 유로파 → 컨퍼런스 중 이 팀이 뛰는 첫 대회 */
+    const mine = feeds[t.id] ?? [];
+    const euro = EUROPE.find((k) => mine.some((m) => m.competition === k));
+    const euroRank = euro ? tables[euro]?.table?.rows.find((r) => r.team.id === t.espnTeamId)?.rank : undefined;
     return {
       t,
       row,
       ppg: row ? pointsPerGame(row.points, row.played) : null,
-      season: seasonRecord(feeds[t.id] ?? [], t.espnTeamId),
+      season: seasonRecord(mine, t.espnTeamId),
+      euro,
+      stage: euro
+        ? euroStage(mine.filter((m) => m.competition === euro), t.espnTeamId, cupRounds[t.id]?.[euro] ?? [], euroRank)
+        : null,
     };
-  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds]);
+  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds]);
 
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
@@ -338,7 +362,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
       <section id="sum-compare">
         <div className="sec__head">
           <h2 className="sec__title">팀 비교</h2>
-          <span className="sec__note">경기당 승점 순 · 시즌 전적은 모든 대회(친선 제외) · 팀을 누르면 그 팀 화면</span>
+          <span className="sec__note">경기당 승점 순 · 챔스는 리그 페이즈 순위 또는 몇 강 · 시즌 전적은 모든 대회(친선 제외)</span>
         </div>
         <div className="cmp" role="table" aria-label="우리 클럽 비교">
           <div className="cmp__head" role="row">
@@ -346,11 +370,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
             <span role="columnheader" title="소속 리그 순위">리그</span>
             <span role="columnheader" className="num" title="리그 승점 / 경기 수">승점</span>
             <span role="columnheader" className="num" title="리그 경기당 승점">경기당</span>
+            <span role="columnheader" title="리그 페이즈면 순위, 토너먼트면 몇 강인지">챔스</span>
             <span role="columnheader" className="num" title="모든 대회 승·무·패">시즌 전적</span>
             <span role="columnheader" className="num" title="모든 대회 득점·실점">득·실</span>
             <span role="columnheader" title="모든 대회 최근 5경기 — 오른쪽이 최근">최근 5경기</span>
           </div>
-          {compare.map(({ t, row, ppg, season }) => (
+          {compare.map(({ t, row, ppg, season, euro, stage }) => (
             <button
               key={t.id}
               className="cmp__row"
@@ -368,6 +393,15 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               </span>
               <span className="num" role="cell">{row ? <>{row.points}<i>/{row.played}</i></> : '–'}</span>
               <span className="num cmp__ppg" role="cell">{ppg?.toFixed(2) ?? '–'}</span>
+              <span className="cmp__euro" role="cell" data-status={stage?.kind === 'ko' ? stage.status : stage ? 'league' : undefined}>
+                {euro && stage ? (
+                  <>
+                    <CompCrest k={euro} size={14} />
+                    <b className="num">{stage.text}</b>
+                    {stage.kind === 'league' && !stage.phaseOver && stage.rank !== undefined && <em>리그 페이즈</em>}
+                  </>
+                ) : <i>–</i>}
+              </span>
               <span className="num" role="cell">{season.win}-{season.draw}-{season.loss}</span>
               <span className="num" role="cell">{season.gf}:{season.ga}</span>
               <span className="cmp__form" role="cell">
