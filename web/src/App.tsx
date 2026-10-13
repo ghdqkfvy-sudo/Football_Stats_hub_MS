@@ -26,6 +26,7 @@ import { dirOf, type SwapDir } from './components/Swap';
 import { futureFor } from './data/future';
 import { formatRoute, parseRoute, rememberRoute, startHash } from './lib/route';
 import { MiniBar } from './components/MiniBar';
+import { BgArt } from './components/BgArt';
 import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
 
@@ -346,23 +347,13 @@ export default function App() {
   return (
     <PaletteProvider target={target}>
     <CrestGlowScope.Provider value={glowScope}>
-    <div style={themeVars}>
-      {/* 팀 배경 아트워크 — 콘텐츠 뒤에서 어둡게 깔린다 */}
-      <div className="bgart" data-kind={summary ? 'summary' : target.bgKind} aria-hidden="true">
-        {/* 요약 화면은 팀이 없으므로 공용 아트워크를 쓴다.
-            사진이 없는 팀은 팀 컬러 그라디언트로 — 사진을 못 구했다고
-            팀을 추가하지 못하는 편이 더 나쁘다. */}
-        <div
-          className="bgart__img"
-          data-empty={!summary && !target.bg ? true : undefined}
-          style={
-            summary
-              ? { backgroundImage: `url(${bgSummary})` }
-              : target.bg ? { backgroundImage: `url(${target.bg})` } : undefined
-          }
-        />
-        <div className="bgart__veil" />
-      </div>
+    <div className="theme-root" style={themeVars}>
+      {/* 팀 배경 아트워크 — 팀을 바꾸면 크로스페이드(components/BgArt).
+          요약 화면은 팀이 없으므로 공용 아트워크, 사진이 없는 팀은 팀 컬러 그라디언트. */}
+      <BgArt
+        kind={summary ? 'summary' : target.bgKind}
+        layer={summary ? { key: 'summary', src: bgSummary } : { key: target.id, src: target.bg }}
+      />
 
       <header className="hdr" ref={hdrRef}>
         <div className="shell hdr__inner">

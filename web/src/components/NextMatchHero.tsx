@@ -6,6 +6,7 @@ import { CompCrest } from './CompCrest';
 import { usePalette } from '../lib/palette';
 import type { FifaOf } from '../lib/fifa';
 import { resolveAssists } from '../lib/assists';
+import { useChanged } from '../lib/motion';
 
 /** 히어로에 붙는 팀 성적 요약 — 리그 순위와 승/무/패 */
 export interface TeamStanding {
@@ -178,6 +179,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
 
   const done = match.status === 'finished';
   const live = match.status === 'live';
+  /* 같은 경기의 스코어가 바뀌었을 때만(경기를 바꾸면 id 가 달라 강조하지 않는다) */
+  const scoreBump = useChanged(`${match.id}:${match.homeScore}-${match.awayScore}`, 1000);
   const cd = done ? null : countdown(match.kickoffUtc, now);
   const tagText = done ? '경기 결과' : live ? '진행 중' : notNext ? '예정 경기' : '다음 경기';
 
@@ -208,7 +211,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
         <TeamTile t={match.home} focus={match.home.id === focusTeamId} standing={standingOf?.(match.home.id)} fifa={fifaOf?.(match.home)} />
         <div className="fxvs">
           {done || live ? (
-            <span className="num">
+            /* 자동 갱신으로 스코어가 바뀌면 한 번 빛나며 커진다(motion.css [data-bump]) */
+            <span className="num" key={scoreBump ?? 'score'} data-bump={scoreBump ? '' : undefined}>
               {match.homeScore ?? 0}
               <i>-</i>
               {match.awayScore ?? 0}
