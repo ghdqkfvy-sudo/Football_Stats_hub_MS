@@ -51,5 +51,7 @@
   }
   /* 손가락에는 "마우스를 치우는" 동작이 없다 — 닫기 단추를 띄운다 */
   .pop__x, .pcard__x { display: grid; }
+  /* 닫기 단추가 첫 경기 머리줄 오른쪽(킥오프 시각·"시각 미정")을 덮었다 — 그만큼 비운다 */
+  .pop__m[data-first='true'] .pop__h { padding-right: 32px; }
   .page { padding-block: 20px 40px; gap: 24px; }
 }

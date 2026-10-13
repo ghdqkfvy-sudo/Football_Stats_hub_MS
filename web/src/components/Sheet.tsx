@@ -41,11 +41,12 @@ export function MatchSheet({
                 </div>
               ) : (
                 <div className="num" style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--accent)' }}>
-                  {kstTime(match.kickoffUtc)}
+                  {/* 시각 미정이면 ESPN 이 임의 시각(대개 05:00 KST)을 채워 보낸다 — TBD 로 */}
+                  {match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}
                 </div>
               )}
               <div style={{ fontSize: 11, color: 'var(--text-lo)', marginTop: 2 }}>
-                {kstFullDate(match.kickoffUtc)} KST
+                {kstFullDate(match.kickoffUtc)} {match.timeTBD && !done ? '· 시각 미정' : 'KST'}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
