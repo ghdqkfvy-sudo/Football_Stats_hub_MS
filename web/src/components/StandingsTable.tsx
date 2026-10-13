@@ -314,10 +314,11 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
       <p className="tbl__key">
         <span><b>P</b> 경기</span>
         <span><b>W·D·L</b> 승·무·패</span>
-        <span><b>GF·GA</b> 득점·실점</span>
+        {/* 득점·실점과 폼 칸은 좁은 화면(≤900px)에서 표에서 빠진다 — 설명도 같이 뺀다 */}
+        <span className="tbl__key-g"><b>GF·GA</b> 득점·실점</span>
         <span><b>GD</b> 득실차</span>
         <span><b>PTS</b> 승점</span>
-        <span><b>FORM</b> 최근 5경기 · 오른쪽이 최근 →</span>
+        <span className="tbl__key-form"><b>FORM</b> 최근 5경기 · 오른쪽이 최근 →</span>
       </p>
     </div>
   );

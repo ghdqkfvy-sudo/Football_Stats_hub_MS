@@ -18,6 +18,11 @@ interface Props {
   onSelectDay: (key: string) => void;
   /** 칩을 눌렀을 때 — 모바일은 바텀시트, 데스크톱은 아래 목록 펼치기 */
   onPick: (m: Match) => void;
+  /**
+   * 터치 기기에서 경기 있는 날을 눌렀을 때 — 그 날 경기 전부(바텀시트).
+   * 터치에는 호버가 없어 미리보기 대신 이것 하나로 통일한다.
+   */
+  onPickDay?: (list: Match[]) => void;
   /** 다음 경기 날짜(KST dayKey) — 그 칸 숫자에 골드 원이 채워진다 */
   nextDay?: string | null;
   /** 지금 보고 있는 팀 — 득점자 옆 팀 약어를 팀 컬러로 칠할 기준 */
@@ -30,7 +35,7 @@ interface Box { x: number; y: number; w: number; h: number }
 const HAS_HOVER =
   typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
-export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, nextDay, focusTeamId }: Props) {
+export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDay, onPick, onPickDay, nextDay, focusTeamId }: Props) {
   /* 미리보기는 경기 막대가 아니라 **날짜 칸 전체**에 마우스를 올리면 뜬다.
      막대는 얇아서 조준하기가 어렵고, 하루에 여러 경기가 있으면 어느 막대에
      올렸는지에 따라 다른 카드가 떠서 산만했다. 이제 그 날 경기를 한 카드에
@@ -157,14 +162,18 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
               tabIndex={0}
               aria-pressed={selected}
               aria-label={`${dnum}일${list.length ? ` 경기 ${list.length}건` : ''}`}
-              onMouseEnter={() => setHoverDay(cell.key)}
-              onMouseLeave={() => setHoverDay((h) => (h === cell.key ? null : h))}
-              onFocus={() => setHoverDay(cell.key)}
-              onBlur={() => setHoverDay((h) => (h === cell.key ? null : h))}
+              /* 미리보기(호버 카드)는 마우스가 있는 기기에서만. 터치는 탭 한 번에 가짜
+                 mouseenter·focus 가 같이 와서, 막대를 누르면 시트 · 날짜를 누르면 미리보기로
+                 갈렸다 — 터치는 어디를 눌러도 그 날 경기를 바텀시트 하나로 연다(onPickDay). */
+              {...(HAS_HOVER ? {
+                onMouseEnter: () => setHoverDay(cell.key),
+                onMouseLeave: () => setHoverDay((h) => (h === cell.key ? null : h)),
+                onFocus: () => setHoverDay(cell.key),
+                onBlur: () => setHoverDay((h) => (h === cell.key ? null : h)),
+              } : {})}
               onClick={() => {
-                /* 터치 기기에는 호버가 없다 — 첫 탭은 미리보기만 띄운다 */
-                if (!HAS_HOVER && list.length > 0 && hoverDay !== cell.key) setHoverDay(cell.key);
                 onSelectDay(cell.key);
+                if (!HAS_HOVER && list.length > 0 && onPickDay) onPickDay(list);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -205,7 +214,9 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                         // 막대는 "열기" 전용 — 미리보기는 날짜 칸 호버가 맡는다
                         e.stopPropagation();
                         onSelectDay(cell.key);
-                        onPick(m);
+                        /* 터치는 날짜 칸을 누른 것과 같게 — 그 날 경기 시트 */
+                        if (!HAS_HOVER && onPickDay) onPickDay(list);
+                        else onPick(m);
                       }}
                     >
                       <span className="bar__info" data-r={res} aria-hidden="true">

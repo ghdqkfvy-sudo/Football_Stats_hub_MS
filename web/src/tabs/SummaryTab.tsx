@@ -36,7 +36,7 @@ const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
 /** 팀 비교의 유럽대항전 칸 — 위에 있는 대회부터 */
 const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
-export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void }) {
+export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string }) => void }) {
   /* ── 모든 팀 일정 ─────────────────────────────────── */
   const [feeds, setFeeds] = useState<Record<string, Match[]>>({});
   const [loading, setLoading] = useState(true);
@@ -302,11 +302,14 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
         </div>
         {hero ? (
           <div className="mdh">
+            {/* 큰 카드를 누르면 그 팀 일정 탭의 이 경기로 (히어로·캘린더에 선택된 채) */}
             <MatchdayCard
               target={targetOf(hero.teamId)}
               match={hero.match}
               standingOf={standingOf}
               hero
+              onSelect={() => onOpenTeam(hero.teamId as TargetId, { matchId: hero.match.id })}
+              label={`${targetOf(hero.teamId).name} 일정에서 이 경기 보기`}
             />
             {/* 나머지는 3장씩 두 줄 — 한 줄에 여섯 장을 밀어 넣으면
                 엠블럼도 팀명도 읽을 수 없는 크기가 된다 */}

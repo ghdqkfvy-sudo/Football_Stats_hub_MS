@@ -653,3 +653,7 @@
   transition: color .15s, border-color .15s;
 }
 .icsbar a:hover { color: var(--text-hi); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+
+/* 바텀시트에 하루 경기가 둘 이상이면 경기마다 줄을 그어 나눈다 (Sheet MatchSheet) */
+.sheet__m + .sheet__m { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+
