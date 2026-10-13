@@ -128,7 +128,8 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
   /* 국가대표는 순위표가 없다 — 대신 FIFA 랭킹을 팀명 아래에 */
   const { fifaOf } = useFifaRank();
   const [pending, setPending] = useState<Set<string>>(new Set());
-  const [sheet, setSheet] = useState<Match | null>(null);
+  /* 폰 바텀시트에 띄운 경기들(그 날의 경기) — 비어 있으면 닫힘 */
+  const [sheet, setSheet] = useState<Match[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
 
   const fetchGoals = async (m: Match) => {
@@ -281,10 +282,15 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
               setSelectedDay(k);
             }}
             onMove={moveMonth}
+            /* 터치 기기 — 날짜 칸·막대 어디를 눌러도 그 날 경기를 바텀시트로 */
+            onPickDay={(list) => {
+              setSheet(list);
+              for (const m of list) if (m.status === 'finished') fetchGoals(m);
+            }}
             onPick={(m) => {
               // 좁은 화면: 바텀시트 / 넓은 화면: 아래 목록에서 펼치고 스크롤
               if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
-                setSheet(m);
+                setSheet([m]);
                 if (m.status === 'finished') fetchGoals(m);
                 return;
               }
@@ -320,9 +326,10 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
       </section>
 
       <MatchSheet
-        match={sheet}
-        loading={!!sheet && pending.has(sheet.id)}
-        onClose={() => setSheet(null)}
+        /* 시트는 열어 둔 사이 득점 기록이 도착하면 새 값으로 — id 로 다시 찾는다 */
+        matches={sheet.map((x) => matches.find((m) => m.id === x.id) ?? x)}
+        loadingIds={pending}
+        onClose={() => setSheet([])}
       />
     </div>
   );
