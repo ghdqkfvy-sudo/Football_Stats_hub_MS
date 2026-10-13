@@ -3,6 +3,7 @@ import type { PlayerSeason } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { kstShortDate } from '../lib/kst';
 import { useIsMobile } from '../lib/useMedia';
+import { useClosing } from '../lib/motion';
 import { Headshot } from './Headshot';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
@@ -21,23 +22,25 @@ const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' }
 export function PlayerDetail({ p, onClose }: { p: PlayerSeason | null; onClose: () => void }) {
   const panel = useRef<HTMLDivElement>(null);
   const mobile = useIsMobile();
+  /* 닫을 때 시트는 내려가고, 가운데 창은 흐려지며 닫힌다(motion.css data-closing) */
+  const [closing, close] = useClosing(onClose);
 
   /* Esc 로 닫고, 열릴 때 창으로 초점을 옮긴다(키보드·스크린리더가 창 안에서 시작) */
   useEffect(() => {
     if (!p) return;
     const back = document.activeElement as HTMLElement | null;
     panel.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
       back?.focus?.({ preventScroll: true });
     };
-  }, [p, onClose]);
+  }, [p, close]);
 
   return (
-    <div className="sheet sheet--modal" data-open={!!p} aria-hidden={!p}>
-      <div className="sheet__scrim" onClick={onClose} />
+    <div className="sheet sheet--modal" data-open={!!p} data-closing={closing || undefined} aria-hidden={!p}>
+      <div className="sheet__scrim" onClick={close} />
       {p && (
         <div
           className={`sheet__panel pdet${mobile ? ' pdet--card' : ''}`}
@@ -48,7 +51,7 @@ export function PlayerDetail({ p, onClose }: { p: PlayerSeason | null; onClose: 
           ref={panel}
         >
           <div className="sheet__grab" />
-          <button className="pdet__x" aria-label="닫기" onClick={onClose}>✕</button>
+          <button className="pdet__x" aria-label="닫기" onClick={close}>✕</button>
           {mobile ? <CardBody p={p} /> : <TableBody p={p} />}
         </div>
       )}

@@ -56,6 +56,96 @@ body { overflow-x: clip; }
   .krr[data-open='true'] > :not(.krr__h) { animation: swapRise .26s cubic-bezier(.2, .8, .3, 1) backwards; }
 }
 
+/* ══ 2026-10-13 추가 — 누름 · 데이터가 나타날 때 · 닫힐 때 ═══════════════════ */
+
+/*
+ * 1) 누름 피드백. 폰의 기본 파란 탭 음영을 껐으니(tokens.css) 대신 "눌렸다" 는 신호를 준다.
+ *    카드·알약은 살짝 작아지고, 표의 줄은 살짝 어두워진다(줄이 작아지면 표가 흔들려 보인다).
+ */
+.mdh__card, .mdr, .wcal__m, .krc, .ncard, .pill, .comps__b, .chipbox, .nmore, .kr__sort button,
+.nf button, .kr__filters button, .pt__filters button, .icsbar a, .pt__more, .bar {
+  transition-property: transform, opacity, border-color, background, box-shadow, color;
+}
+.mdh__card:active, .mdr:active, .wcal__m:active, .krc:active, .ncard:active, .pill:active,
+.comps__b:active, .chipbox:active, .nmore:active, .kr__sort button:active, .nf button:active,
+.kr__filters button:active, .pt__filters button:active, .icsbar a:active, .pt__more:active {
+  transform: scale(.97); transition-duration: .08s;
+}
+.tbl__line:active, .ml__row:active, .cmp__row:active, .pt__row:active, .lbc__row:active, .day:active {
+  filter: brightness(.82); transition: filter .08s;
+}
+
+/*
+ * 2) 게이지가 0 에서 값까지 차오른다 — 처음 보일 때(필터·정렬로 다시 그려질 때도) 한 번.
+ *    폭(width)이 아니라 scaleX 로 키워서 값이 몇이든 같은 곡선으로 움직인다.
+ */
+@keyframes gaugeGrow { from { transform: scaleX(0); } }
+.pt__gauge u, .pitch__chem u, .krcc__bar b, .lbc__meter i, .pdet__min u {
+  transform-origin: left center;
+  animation: gaugeGrow .7s cubic-bezier(.2, .8, .2, 1) .12s backwards;
+}
+
+/*
+ * 3) 목록 순차 등장 — 줄·카드가 위에서부터 28ms 간격으로 떠오른다(12번째부터는 같이).
+ *    처음 그려질 때만 돈다: 자동 갱신으로 값만 바뀌는 줄은 key 가 같아 다시 돌지 않는다.
+ */
+@keyframes listIn { from { opacity: 0; transform: translateY(8px); } }
+.tbl__row, .ml > *, .ngrid > *, .kr__grid > *, .cmp__row, .lbc__row, .pt__row, .fgroup .krc {
+  animation: listIn .38s cubic-bezier(.2, .8, .3, 1) backwards;
+}
+.tbl__row:nth-child(2), .ml > *:nth-child(2), .ngrid > *:nth-child(2), .kr__grid > *:nth-child(2), .cmp__row:nth-child(2), .lbc__row:nth-child(2), .pt__row:nth-child(2), .fgroup .krc:nth-child(2) { animation-delay: 28ms; }
+.tbl__row:nth-child(3), .ml > *:nth-child(3), .ngrid > *:nth-child(3), .kr__grid > *:nth-child(3), .cmp__row:nth-child(3), .lbc__row:nth-child(3), .pt__row:nth-child(3), .fgroup .krc:nth-child(3) { animation-delay: 56ms; }
+.tbl__row:nth-child(4), .ml > *:nth-child(4), .ngrid > *:nth-child(4), .kr__grid > *:nth-child(4), .cmp__row:nth-child(4), .lbc__row:nth-child(4), .pt__row:nth-child(4), .fgroup .krc:nth-child(4) { animation-delay: 84ms; }
+.tbl__row:nth-child(5), .ml > *:nth-child(5), .ngrid > *:nth-child(5), .kr__grid > *:nth-child(5), .cmp__row:nth-child(5), .lbc__row:nth-child(5), .pt__row:nth-child(5), .fgroup .krc:nth-child(5) { animation-delay: 112ms; }
+.tbl__row:nth-child(6), .ml > *:nth-child(6), .ngrid > *:nth-child(6), .kr__grid > *:nth-child(6), .cmp__row:nth-child(6), .lbc__row:nth-child(6), .pt__row:nth-child(6), .fgroup .krc:nth-child(6) { animation-delay: 140ms; }
+.tbl__row:nth-child(7), .ml > *:nth-child(7), .ngrid > *:nth-child(7), .kr__grid > *:nth-child(7), .cmp__row:nth-child(7), .lbc__row:nth-child(7), .pt__row:nth-child(7), .fgroup .krc:nth-child(7) { animation-delay: 168ms; }
+.tbl__row:nth-child(8), .ml > *:nth-child(8), .ngrid > *:nth-child(8), .kr__grid > *:nth-child(8), .cmp__row:nth-child(8), .lbc__row:nth-child(8), .pt__row:nth-child(8), .fgroup .krc:nth-child(8) { animation-delay: 196ms; }
+.tbl__row:nth-child(9), .ml > *:nth-child(9), .ngrid > *:nth-child(9), .kr__grid > *:nth-child(9), .cmp__row:nth-child(9), .lbc__row:nth-child(9), .pt__row:nth-child(9), .fgroup .krc:nth-child(9) { animation-delay: 224ms; }
+.tbl__row:nth-child(10), .ml > *:nth-child(10), .ngrid > *:nth-child(10), .kr__grid > *:nth-child(10), .cmp__row:nth-child(10), .lbc__row:nth-child(10), .pt__row:nth-child(10), .fgroup .krc:nth-child(10) { animation-delay: 252ms; }
+.tbl__row:nth-child(11), .ml > *:nth-child(11), .ngrid > *:nth-child(11), .kr__grid > *:nth-child(11), .cmp__row:nth-child(11), .lbc__row:nth-child(11), .pt__row:nth-child(11), .fgroup .krc:nth-child(11) { animation-delay: 280ms; }
+.tbl__row:nth-child(12), .ml > *:nth-child(12), .ngrid > *:nth-child(12), .kr__grid > *:nth-child(12), .cmp__row:nth-child(12), .lbc__row:nth-child(12), .pt__row:nth-child(12), .fgroup .krc:nth-child(12) { animation-delay: 308ms; }
+.tbl__row:nth-child(n+13), .ml > *:nth-child(n+13), .ngrid > *:nth-child(n+13), .kr__grid > *:nth-child(n+13), .cmp__row:nth-child(n+13), .lbc__row:nth-child(n+13), .pt__row:nth-child(n+13), .fgroup .krc:nth-child(n+13) { animation-delay: 310ms; }
+
+/* 4) 로딩 상자(.skel)가 빠지고 내용이 들어올 때 — .view/.swap 페이드가 맡는다(위) */
+
+/*
+ * 7) 닫힐 때도 움직인다 — 바텀시트·선수 상세 창은 열릴 때만 올라오고 닫힐 땐 툭 사라졌다.
+ *    data-closing 동안(.2초) 내려가며 흐려지고, 그다음 실제로 닫힌다(lib/useClosing).
+ */
+@keyframes sheetDown { to { transform: translateY(26px); opacity: 0; } }
+@keyframes modalOut { to { opacity: 0; transform: translate(-50%, -48%) scale(.98); } }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+.sheet[data-open='true'] .sheet__scrim { animation: fadeIn .2s ease-out; }
+.sheet[data-closing] .sheet__scrim { animation: fadeOut .2s ease-in forwards; }
+.sheet[data-closing] .sheet__panel { animation: sheetDown .2s ease-in forwards; }
+@media (min-width: 641px) {
+  .sheet--modal[data-closing] .sheet__panel { animation: modalOut .18s ease-in forwards; }
+}
+
+/*
+ * 5) 바뀐 값 강조 — 자동 갱신으로 스코어가 바뀌면 그 숫자가 한 번 빛나며 커졌다 돌아온다
+ *    (lib/useChanged → data-bump). 처음 그릴 때는 돌지 않는다.
+ */
+@keyframes bump {
+  0% { transform: scale(1); text-shadow: none; }
+  30% { transform: scale(1.18); text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 90%, transparent); }
+  100% { transform: scale(1); text-shadow: none; }
+}
+[data-bump] { display: inline-block; animation: bump .9s cubic-bezier(.2, .8, .3, 1); }
+
+/*
+ * 6) 팀을 바꿀 때 팀 컬러가 0.45초 동안 섞이며 넘어간다(툭 바뀌지 않게).
+ *    색 변수를 <color> 로 등록해야 브라우저가 중간값을 계산할 수 있다(@property).
+ *    배경 사진은 App 의 BgArt 가 두 장을 겹쳐 크로스페이드한다.
+ */
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #FEBE10; }
+@property --brand { syntax: '<color>'; inherits: true; initial-value: #FEBE10; }
+@property --secondary { syntax: '<color>'; inherits: true; initial-value: #FFFFFF; }
+.theme-root { transition: --accent .45s ease, --brand .45s ease, --secondary .45s ease; }
+@keyframes bgIn { from { opacity: 0; } }
+.bgart__img[data-enter] { animation: bgIn .6s ease-out; }
+
 /*
  * "움직임 줄이기"(윈도우: 설정 › 접근성 › 시각 효과 › 애니메이션 효과 끔,
  * 맥·폰: 동작 줄이기) — 미끄러짐은 빼고 **짧은 페이드만** 남긴다.
@@ -66,4 +156,12 @@ body { overflow-x: clip; }
   .view, .swap, .view[data-dir], .swap[data-dir], .lb3[data-active] > .lbc,
   .krr[data-open='true'] > :not(.krr__h) { animation: swapFade .2s ease-out backwards !important; }
   .tabs__ink { transition: none; }
+  /* 크기·위치가 움직이는 것은 끄고 페이드만 */
+  .tbl__row, .ml > *, .ngrid > *, .kr__grid > *, .cmp__row, .lbc__row, .pt__row, .fgroup .krc, .pt__gauge u, .pitch__chem u, .krcc__bar b, .lbc__meter i, .pdet__min u {
+    animation: swapFade .2s ease-out backwards !important; animation-delay: 0ms !important;
+  }
+  [data-bump] { animation: none; }
+  .sheet[data-closing] .sheet__panel { animation: fadeOut .15s forwards !important; }
+  *:active { transform: none !important; }
+  .theme-root { transition: none; }
 }

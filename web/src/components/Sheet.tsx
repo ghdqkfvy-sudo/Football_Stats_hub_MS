@@ -4,6 +4,7 @@ import { kstFullDate, kstTime } from '../lib/kst';
 import { Crest } from './Crest';
 import { CompBadge } from './Bits';
 import { GoalSheet } from './GoalSheet';
+import { useClosing } from '../lib/motion';
 
 /**
  * 폰 캘린더의 경기 상세 — 아래에서 올라오는 시트.
@@ -16,16 +17,18 @@ export function MatchSheet({
   matches, loadingIds, onClose,
 }: { matches: Match[]; loadingIds: ReadonlySet<string>; onClose: () => void }) {
   const open = matches.length > 0;
+  /* 닫을 때 .2초 내려가며 흐려진 뒤 닫는다(motion.css data-closing) */
+  const [closing, close] = useClosing(onClose);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, close]);
 
   return (
-    <div className="sheet" data-open={open} aria-hidden={!open}>
-      <div className="sheet__scrim" onClick={onClose} />
+    <div className="sheet" data-open={open} data-closing={closing || undefined} aria-hidden={!open}>
+      <div className="sheet__scrim" onClick={close} />
       {open && (
         <div className="sheet__panel" role="dialog" aria-modal="true" aria-label="경기 상세">
           <div className="sheet__grab" />
@@ -36,7 +39,7 @@ export function MatchSheet({
           ))}
 
           <button
-            onClick={onClose}
+            onClick={close}
             style={{
               width: '100%', marginTop: 20, padding: '12px', borderRadius: 10,
               border: '1px solid var(--line-2)', color: 'var(--text-mid)', fontSize: 13,

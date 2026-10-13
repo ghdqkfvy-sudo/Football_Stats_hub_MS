@@ -77,7 +77,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
  *     누르는 요소에서만 선택을 막는다(본문·뉴스 설명 같은 글은 그대로 선택된다).
  * touch-action: manipulation — 두 번 탭 확대를 끄고, 그 대기 시간도 없앤다.
  */
-html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+html { touch-action: manipulation; }
+/* 상속에 기대지 않고 모든 요소에 직접 — 일부 앱 안 브라우저(웹뷰)는 html 에 준 값을
+   자식에게 물려주지 않아 버튼마다 기본 파란 음영이 남았다 */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
 button, [role='button'], [role='tab'], [role='row'], summary,
 .day, .bar, .pt__row, .chipbox, .krc, .wcal__m, .mdh__card, .ml__row, .cmp__row, .pill, .tab {
   -webkit-user-select: none; user-select: none;
