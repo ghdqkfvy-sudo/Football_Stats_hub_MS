@@ -409,7 +409,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId) => void 
               <span className="num" role="cell">
                 {euroRec && euroRec.played > 0 ? `${euroRec.win}-${euroRec.draw}-${euroRec.loss}` : '–'}
               </span>
-              <span className="num" role="cell">{row ? `${row.gf}:${row.ga}` : '–'}</span>
+              <span className="num" role="cell">{row ? `${row.gf}/${row.ga}` : '–'}</span>
               <span className="cmp__form" role="cell">
                 {season.form.map((f, i) => <i key={i} className="fchip" data-r={f}>{f}</i>)}
               </span>
