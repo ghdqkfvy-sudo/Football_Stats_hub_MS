@@ -167,7 +167,9 @@ export function WeekCalendar({
                         showPop(e.currentTarget, m, t);
                       }}
                       /* 키보드로 칸을 옮겨 다녀도 같은 미리보기가 뜬다 — 마우스 전용이었다 */
-                      onFocus={(e) => showPop(e.currentTarget, m, t)}
+                      /* ⚠️ 마우스 기기에서만 — 폰은 탭 한 번에 초점도 같이 와서, 위 히어로로
+                         바뀌는 대신 미리보기가 떴다(2026-10-13). 폰은 탭 = 히어로로 바꾸기뿐 */
+                      onFocus={(e) => { if (HAS_HOVER) showPop(e.currentTarget, m, t); }}
                       onBlur={() => setPop(null)}
                       onKeyDown={(e) => { if (e.key === 'Escape') setPop(null); }}
                       onMouseLeave={() => setPop(null)}
