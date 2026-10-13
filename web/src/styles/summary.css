@@ -622,7 +622,10 @@ i.ml__res:empty { width: 17px; height: 17px; }
 @media (max-width: 760px) {
   /* 폰 — 팀 · 리그 · 챔스 · 최근 5경기. 팀 이름이 잘리지 않게 승점·경기당·시즌 전적·득실은
      숨긴다 (줄은 그대로 경기당 승점 순이다) */
-  .cmp__head, .cmp__row { grid-template-columns: minmax(0, 1fr) 54px 62px auto; gap: 6px; padding-inline: 10px; }
+  /* ⚠️ 마지막 칸을 auto 로 두면 머리줄과 각 줄이 **따로** 폭을 정한다(줄마다 독립된
+     그리드다) — 머리는 "최근 5경기" 글자 폭, 줄은 칩 다섯 개 폭이라 칸이 어긋났다.
+     칩 15px × 5 + 간격 3px × 4 = 87px 로 못 박는다. */
+  .cmp__head, .cmp__row { grid-template-columns: minmax(0, 1fr) 54px 62px 87px; gap: 6px; padding-inline: 10px; }
   .cmp__head > :nth-child(3), .cmp__row > :nth-child(3),
   .cmp__head > :nth-child(4), .cmp__row > :nth-child(4),
   .cmp__head > :nth-child(6), .cmp__row > :nth-child(6),
