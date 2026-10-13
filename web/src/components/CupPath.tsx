@@ -2,6 +2,7 @@ import type { CupRound } from '../lib/api';
 import type { Match } from '../lib/types';
 import { Crest } from './Crest';
 import { kstShortDate } from '../lib/kst';
+import { roundKo } from '../lib/rounds';
 
 /**
  * 컵 대진표 — **실제로 나온 라운드부터** 결승까지.
@@ -15,24 +16,7 @@ import { kstShortDate } from '../lib/kst';
  * 있어서, 우리 경기 날짜를 그 구간에 떨어뜨리면 몇 라운드인지 알 수 있다.
  * 그래서 **우리가 처음 등장한 라운드** 앞쪽은 아예 그리지 않는다.
  */
-const ROUND_KO: Record<string, string> = {
-  'preliminary round': '예선',
-  'first round': '1라운드',
-  'second round': '2라운드',
-  'third round': '3라운드',
-  'fourth round': '4라운드',
-  'fifth round': '5라운드',
-  'sixth round': '6라운드',
-  'round of 32': '32강',
-  'round of 16': '16강',
-  'quarterfinals': '8강',
-  'quarter-finals': '8강',
-  'semifinals': '4강',
-  'semi-finals': '4강',
-  'final': '결승',
-  'third place': '3위 결정전',
-};
-const roundKo = (label: string) => ROUND_KO[label.toLowerCase()] ?? label;
+/* 라운드 이름 번역은 lib/rounds.ts — Summary 팀 비교와 같이 쓴다 */
 
 interface Props {
   rounds: CupRound[];

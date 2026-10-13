@@ -564,25 +564,65 @@ function fillByActualSlots(
   }
   if (!seats.length) return null;
 
-  /* (선수, 자리) 주장 강도 = 그 자리에서의 선발 횟수.
-     강한 주장부터 확정해야 "그 자리 단골" 이 먼저 앉는다. */
-  type Claim = { abbr: string; p: PlayerSeason; n: number };
+  /*
+   * 같은 자리로 셀 묶음.
+   *
+   * ⚠️ 약어 하나하나를 따로 세면 중앙 미드필더가 왼쪽(CM-L)·오른쪽(CM-R)으로
+   * 쪼개진다. 첼시(2026-10) 3-4-2-1 여섯 경기에서 CM-R 선발은 헨더슨 2 · 제임스 1 ·
+   * 라비아 1 … 로 흩어져, 시즌 2경기만 뛴 헨더슨이 "CM-R 최다" 로 베스트 11 에
+   * 들고 중원 3경기 선발인 라비아의 몫은 반으로 갈렸다 — 결과가 마지막 경기
+   * 라인업처럼 보였던 원인이다. 그래서 같은 줄의 좌우 짝은 한 묶음으로 센다:
+   *   · CM-L·CM-R, CD-L·CD-R, CF-L·CF-R, AM-L·AM-R (가운데 CD·AM 은 따로)
+   *   · 두 명뿐인 중원 줄의 LM·RM — ESPN 은 4-2-3-1 의 더블 볼란치를 LM·RM 으로 준다
+   * 3-4-2-1 의 LM·RM(윙백)은 네 명 줄이라 묶지 않는다.
+   */
+  const rows = slotRows(slotShape, shape);
+  if (!rows) return null;
+  const SIDE = /-[LR]$/i;
+  const groupOf = new Map<string, string>();
+  rows.forEach((row, ri) => {
+    const pivot = row.length === 2 && row.every((a) => /^(LM|RM)$/i.test(a));
+    for (const a of row) {
+      const base = a.replace(SIDE, '');
+      const mirrored = SIDE.test(a) && row.some((b) => b !== a && SIDE.test(b) && b.replace(SIDE, '') === base);
+      groupOf.set(a, pivot ? `${ri}:pivot` : mirrored ? `${ri}:${base}` : a);
+    }
+  });
+  const groupAbbrs = new Map<string, string[]>();
+  for (const [a, g] of groupOf) groupAbbrs.set(g, [...(groupAbbrs.get(g) ?? []), a]);
+
+  /* (선수, 자리 묶음) 주장 강도 = 그 묶음에서의 선발 횟수. 같으면 README 의 사용자 규칙 순서로:
+     총 출전 → 출전 시간 → 공격 포인트. (예전에는 동점을 종합 점수로 갈랐다) */
+  type Claim = { group: string; p: PlayerSeason; n: number };
   const claims: Claim[] = [];
-  const needed = new Set(slotShape.map((x) => x.abbr));
   for (const p of players) {
-    for (const [abbr, n] of Object.entries(p.posPlaces)) {
-      if (needed.has(abbr) && n > 0) claims.push({ abbr, p, n });
+    for (const [group, abbrs] of groupAbbrs) {
+      const n = abbrs.reduce((a, abbr) => a + (p.posPlaces[abbr] ?? 0), 0);
+      if (n > 0) claims.push({ group, p, n });
     }
   }
-  claims.sort((a, b) => b.n - a.n || b.p.score - a.p.score);
+  claims.sort((a, b) =>
+    b.n - a.n || b.p.apps - a.p.apps || b.p.minutes - a.p.minutes || b.p.points - a.p.points || b.p.score - a.p.score);
 
   const used = new Set<string>();
   for (const c of claims) {
     if (used.has(c.p.id)) continue;
-    const seat = seats.find((s) => s.abbr === c.abbr && !s.player);
+    const seat = seats.find((s) => groupOf.get(s.abbr) === c.group && !s.player);
     if (!seat) continue;
     seat.player = c.p;
     used.add(c.p.id);
+  }
+
+  /* 묶음 안에서 누가 왼쪽·오른쪽인지 — 각자 많이 선 쪽에 앉도록, 묶음 전체로 맞춘다
+     (먼저 뽑힌 선수가 아무 쪽이나 차지하면 뒤 선수가 제자리를 잃는다). 묶음은 2–3자리뿐이다. */
+  for (const group of new Set(seats.map((s) => groupOf.get(s.abbr)))) {
+    const gs = seats.filter((s) => groupOf.get(s.abbr) === group && s.player);
+    if (gs.length < 2) continue;
+    const ps = gs.map((s) => s.player!);
+    const fit = (order: PlayerSeason[]) => order.reduce((a, p, i) => a + (p.posPlaces[gs[i].abbr] ?? 0), 0);
+    let best = ps;
+    for (const order of permutations(ps)) if (fit(order) > fit(best)) best = order;
+    best.forEach((p, i) => { gs[i].player = p; });
   }
 
   // 남은 빈 자리는 같은 깊이대의 남은 선수 중 점수 순으로 (마지막 수단)
@@ -615,9 +655,6 @@ function fillByActualSlots(
    * 같은 깊이면 좌우로 벌어진 자리가 뒤쪽 줄에, 가운데 자리가 맨 앞줄에 간다
    * — CF-L·CF-R 이 2선, F 가 최전방이 되는 이유다.
    */
-  const rows = slotRows(slotShape, shape);
-  if (!rows) return null;
-
   /* 자리 약어별로 앉을 사람을 꺼내 쓴다 — 같은 약어가 두 자리면 두 명 */
   const pool = new Map<string, (PlayerSeason | null)[]>();
   for (const s of seats) {
@@ -651,6 +688,11 @@ function fillByActualSlots(
     !slotShape.every((x) => COARSE.has(x.abbr.toUpperCase()));
 
   return { slots, verified };
+}
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map((r) => [x, ...r]));
 }
 
 /** 자리 기록이 없을 때 — 포메이션 문자열의 줄 수에 깊이로 맞춰 채운다 */

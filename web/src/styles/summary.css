@@ -590,7 +590,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
 }
 .cmp__head, .cmp__row {
   display: grid; align-items: center; gap: 8px; padding: 0 14px;
-  grid-template-columns: minmax(130px, 1.4fr) 76px 64px 60px 82px 60px minmax(120px, 1fr);
+  grid-template-columns: minmax(130px, 1.4fr) 76px 64px 60px 150px 82px 60px minmax(120px, 1fr);
 }
 .cmp__head {
   padding-block: 9px; border-bottom: 1px solid var(--line);
@@ -612,11 +612,25 @@ i.ml__res:empty { width: 17px; height: 17px; }
 .cmp__row .num i { font-style: normal; color: var(--text-lo); font-size: 11px; }
 .cmp__ppg { font-weight: 800; color: var(--text-hi); }
 .cmp__form { display: flex; gap: 3px; }
+/* 챔스 칸 — 리그 페이즈 순위 / 몇 강. 끝난 라운드는 진출(초록)·탈락(흐림)·우승(금) */
+.cmp__euro { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.cmp__euro b { color: var(--text-hi); }
+.cmp__euro em { font-style: normal; font-size: 10.5px; color: var(--text-lo); }
+.cmp__euro[data-status='through'] b { color: var(--win); }
+.cmp__euro[data-status='out'] b { color: var(--text-lo); font-weight: 600; }
+.cmp__euro[data-status='won'] b { color: #F5C542; }
 @media (max-width: 760px) {
-  /* 폰 — 팀 · 리그 · 경기당 · 최근 5경기만 */
-  .cmp__head, .cmp__row { grid-template-columns: minmax(0, 1fr) 62px 46px auto; gap: 6px; padding-inline: 10px; }
+  /* 폰 — 팀 · 리그 · 챔스 · 최근 5경기. 팀 이름이 잘리지 않게 승점·경기당·시즌 전적·득실은
+     숨긴다 (줄은 그대로 경기당 승점 순이다) */
+  /* ⚠️ 마지막 칸을 auto 로 두면 머리줄과 각 줄이 **따로** 폭을 정한다(줄마다 독립된
+     그리드다) — 머리는 "최근 5경기" 글자 폭, 줄은 칩 다섯 개 폭이라 칸이 어긋났다.
+     칩 15px × 5 + 간격 3px × 4 = 87px 로 못 박는다. */
+  .cmp__head, .cmp__row { grid-template-columns: minmax(0, 1fr) 54px 62px 87px; gap: 6px; padding-inline: 10px; }
   .cmp__head > :nth-child(3), .cmp__row > :nth-child(3),
-  .cmp__head > :nth-child(5), .cmp__row > :nth-child(5),
-  .cmp__head > :nth-child(6), .cmp__row > :nth-child(6) { display: none; }
+  .cmp__head > :nth-child(4), .cmp__row > :nth-child(4),
+  .cmp__head > :nth-child(6), .cmp__row > :nth-child(6),
+  .cmp__head > :nth-child(7), .cmp__row > :nth-child(7) { display: none; }
+  .cmp__euro em { display: none; }
+  .cmp__euro b { font-size: 11.5px; }
   .cmp__form .fchip { width: 15px; height: 15px; font-size: 8px; }
 }

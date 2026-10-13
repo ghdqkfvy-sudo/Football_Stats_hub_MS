@@ -529,9 +529,22 @@
 .pdet__min em { font-style: normal; font-size: 11px; width: 34px; text-align: right; }
 .pdet__ga { display: inline-flex; justify-content: flex-end; align-items: center; gap: 4px; }
 .pdet__none, .pdet__key { font-size: 11px; color: var(--text-lo); margin: 10px 0 0; }
+
+/* 폰 — 호버 카드와 같은 두 상자(.pdet--card, PlayerDetail CardBody).
+   창 자체는 칠하지 않아 카드 상자만 떠 보인다 */
 @media (max-width: 640px) {
-  .pdet__sum { grid-template-columns: repeat(3, 1fr); }
-  .pdet__g { grid-template-columns: 58px 14px minmax(0, 1fr) 64px; row-gap: 4px; }
-  .pdet__min { grid-column: 3 / 4; }
-  .pdet__ga { grid-column: 4 / 5; }
+  .pdet--card.sheet__panel {
+    background: transparent; border: 0; box-shadow: none; backdrop-filter: none;
+    padding: 6px 10px calc(12px + env(safe-area-inset-bottom)); max-height: 88vh;
+  }
+  .pdet--card .sheet__grab { background: rgba(255,255,255,.35); margin: 2px auto 8px; }
+  .pdet__body { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .pdet--card .pcard__main { position: relative; }
+  .pdet--card .pcard__main, .pdet--card .pcard__side { padding: 11px 12px; }
+  .pdet--card .pcard__stats > div { padding: 7px 2px; }
+  .pdet--card .pcard__stats b { font-size: 18px; }
+  .pdet--card .pcard__hero > div { padding: 8px 4px; }
+  .pdet--card .pcard__hero b { font-size: 20px; }
+  .pdet--card .pdet__x { z-index: 2; top: 22px; right: 20px; width: 28px; height: 28px; font-size: 12px; background: rgba(255,255,255,.06); }
+  .pdet--card .pdet__none { margin: 6px 0 2px; }
 }
