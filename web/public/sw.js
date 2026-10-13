@@ -5,7 +5,7 @@
    GitHub Pages 프로젝트 페이지는 https://<user>.github.io/<repo>/ 처럼
    서브패스에서 서빙되므로 경로를 '/'로 하드코딩하지 않고
    registration.scope 에서 실제 베이스 경로를 읽어 쓴다. */
-const SHELL = 'shell-v4';   /* 셸 파일이 바뀌면 올린다 — 낡은 캐시가 남지 않게 */
+const SHELL = 'shell-v5';   /* 셸 파일이 바뀌면 올린다 — 낡은 캐시가 남지 않게 */
 const BASE = new URL(self.registration.scope).pathname; // 예: '/' 또는 '/k-stats-hub/'
 const ASSETS = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`];
 
@@ -30,8 +30,18 @@ self.addEventListener('fetch', (e) => {
     if (rel.startsWith('api/') || rel.startsWith('data/') || rel.startsWith('cal/')) return;
   }
 
+  /* 첫 화면(index.html)은 **매번 서버에 새 버전이 있는지 확인**한다(cache: 'no-cache').
+     ⚠️ 그냥 fetch(e.request) 는 브라우저 HTTP 캐시를 거쳐서, GitHub Pages 의 max-age=600
+     동안 배포 전 index.html 이 그대로 나갔다 — 배포 직후 앱을 열면 예전 화면이 떠
+     "고친 게 되돌아갔다" 로 보였다(2026-10-13). JS·CSS 는 파일명에 해시가 있어
+     index.html 만 새로우면 나머지는 저절로 새 것이다.
+     navigate 요청은 init 을 붙여 다시 만들 수 없어 주소로 새로 요청한다.
+     오프라인이면 설치 때 넣어 둔 셸로 떨어진다. */
   if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match(`${BASE}index.html`)));
+    e.respondWith(
+      fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
+        .catch(() => caches.match(`${BASE}index.html`)),
+    );
     return;
   }
 
