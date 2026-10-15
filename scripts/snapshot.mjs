@@ -75,7 +75,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-20';
+const CODE_VERSION = 'snap-21';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -1439,9 +1439,11 @@ async function koreanPlayer(id, nameKo, carriedPhoto, fallbackLeague = '') {
    * core eventlog 로 옮겼다 — 모든 리그에서 살아 있고, 경기별 statistics 가
    * 출전 여부·출전 시간·골·도움을 한 번에 준다(scripts/lib/athlete.mjs).
    */
+  /* 리그 + 이번 시즌 뛴(또는 참가 중인) 유럽대항전 — 챔스·유로파 경기도 최근 경기에 들어간다 */
   const recent = league
     ? await athleteRecent({
-      get, league, season: SEASON, athleteId: String(id),
+      get, league, leagues: [league, ...stats.map((s) => s.competition).filter((c) => c.startsWith('uefa.'))],
+      season: SEASON, athleteId: String(id),
       meta: await clubMeta(clubId), take: 3,
     })
     : [];

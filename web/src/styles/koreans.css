@@ -242,7 +242,19 @@
 .krr__opp > img, .krr__opp > .mono { flex: none; }
 .krr__opp b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .krr__sc { text-align: right; font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-hi); }
-.krr__m { grid-column: 3 / -1; font-size: 10.5px; color: var(--accent); text-align: right; }
+/* 둘째 줄: 대회 이름표(왼쪽) · 출전 기록(오른쪽) */
+.krr__sub {
+  grid-column: 3 / -1; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; min-width: 0; margin-top: -3px;
+}
+.krr__cl {
+  flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 1px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .02em;
+  color: color-mix(in srgb, var(--c) 80%, white);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
+}
+.krr__m { margin-left: auto; font-size: 10.5px; color: var(--accent); text-align: right; white-space: nowrap; }
 .krr__gg, .krr__aa {
   font-style: normal; margin-left: 5px; padding: 0 4px; border-radius: 3px;
   font-size: 9.5px; font-weight: 700;

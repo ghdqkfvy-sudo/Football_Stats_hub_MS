@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { CREST } from '../config/targets';
+import { CREST, mobileName } from '../config/targets';
 import { tintOf } from '../config/crestTint';
 import { usePalette } from '../lib/palette';
 import type { AthleteInfo } from '../types/feedTypes';
@@ -395,6 +395,19 @@ function RecentPanel({
               <b>{gm.opponent || '—'}</b>
             </span>
             <span className="krr__sc num">{gm.score ?? ''}</span>
+            {/* 둘째 줄 — 왼쪽은 참가 대회(리그 · 챔스 · 친선 …), 오른쪽은 출전 기록.
+                대회는 색 띠로만 구분해서 무슨 대회인지 읽을 수 없었다. 짧은 이름(mobileName)을
+                대회 색으로 — 폰의 좁은 카드에서도 한 줄에 들어간다. 전체 이름은 title 로. */}
+            <span className="krr__sub">
+              {gm.competition && (
+                <span
+                  className="krr__cl"
+                  style={{ ['--c' as string]: palette.color(gm.competition) }}
+                  title={palette.name(gm.competition)}
+                >
+                  {mobileName(gm.competition)}
+                </span>
+              )}
             <span className="krr__m num">
               {/* 선발/교체·출전시간은 경기 로스터에서 온 실제 값일 때만 적는다.
                   없으면 "-" — 예전처럼 0분으로 꾸미지 않는다. */}
@@ -408,6 +421,7 @@ function RecentPanel({
               {gm.goals > 0 && <em className="krr__gg">{gm.goals}G</em>}
               {gm.assists > 0 && <em className="krr__aa">A{gm.assists}</em>}
               {gm.yellow && <em className="krr__y" />}
+            </span>
             </span>
           </div>
         ))
