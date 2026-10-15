@@ -108,10 +108,16 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   }, [hero, heroMatchId, byDay]);
 
   /** 날짜를 누르면 그 날 경기를 히어로로. 같은 날짜를 또 누르면 다음 경기로. */
-  const pickDay = (k: string) => {
+  /**
+   * 경기를 누르면 **그 경기**를 히어로로(index). 예전에는 날짜만 넘겨서, 같은 날 경기를 누를 때마다
+   * 누른 것과 상관없이 그 날 경기가 차례로 돌아가며 떴다. 경기를 모를 때(날짜만)는 예전처럼 순환.
+   */
+  const pickDay = (k: string, index?: number) => {
     const list = byDay.get(k) ?? [];
     if (!list.length) { setSelDay(k); setSelIdx(0); return; }
-    const i = cycleIndex(selDay, k, selIdx, list.length);
+    const i = index !== undefined && index >= 0 && index < list.length
+      ? index
+      : cycleIndex(selDay, k, selIdx, list.length);
     setSelDay(k);
     setSelIdx(i);
 
