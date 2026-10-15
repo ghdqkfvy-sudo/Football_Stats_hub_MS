@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from 'react';
 
 /**
  * 닫힘 애니메이션용 — 닫기를 누르면 잠깐(ms) "닫히는 중" 으로 두었다가 실제로 닫는다.
@@ -41,4 +41,38 @@ export function useChanged(value: unknown, ms = 1000): number | null {
     return () => { window.clearTimeout(on); window.clearTimeout(off); };
   }, [value, ms]);
   return bump;
+}
+
+/**
+ * 길게 누르기(기본 .65초) — 마우스·손가락 모두. 숨은 기능의 입구로 쓴다.
+ * 손가락이 움직이면(스크롤) 취소하고, 길게 누를 때 뜨는 브라우저 메뉴는 막는다.
+ */
+export function useLongPress(onLong: () => void, ms = 650) {
+  const timer = useRef<number | null>(null);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const cancel = useCallback(() => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = null;
+    start.current = null;
+  }, []);
+  useEffect(() => cancel, [cancel]);
+  return {
+    onPointerDown: (e: RPointerEvent) => {
+      cancel();
+      start.current = { x: e.clientX, y: e.clientY };
+      timer.current = window.setTimeout(() => {
+        timer.current = null;
+        try { navigator.vibrate?.(12); } catch { /* 진동 없음 */ }
+        onLong();
+      }, ms);
+    },
+    onPointerMove: (e: RPointerEvent) => {
+      const s = start.current;
+      if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > 10) cancel();
+    },
+    onPointerUp: cancel,
+    onPointerLeave: cancel,
+    onPointerCancel: cancel,
+    onContextMenu: (e: RMouseEvent) => e.preventDefault(),
+  };
 }

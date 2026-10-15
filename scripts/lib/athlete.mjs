@@ -198,8 +198,9 @@ export async function athleteRecent({
   /* eventlog 순서는 날짜순이 아니다 — 일정의 날짜로 세운다.
      일정에 없는 경기(다른 대회 등)는 뒤로 밀되 버리지는 않는다. */
   const dateOf = (eventId) => meta?.get(eventId)?.date ?? '';
+  /* 일정이 "아직 안 끝났다" 고 말하는 경기는 eventlog 가 played 라 해도 뺀다 */
   const candidates = log
-    .filter((x) => x.played)
+    .filter((x) => x.played && meta?.get(x.eventId)?.completed !== false)
     .sort((a, b) => dateOf(b.eventId).localeCompare(dateOf(a.eventId)))
     .slice(0, probe);
 
@@ -212,6 +213,13 @@ export async function athleteRecent({
     const app = appearanceFrom(flat);
     if (!app) continue;                       // 명단에만 들었던 경기
 
+    /* ⚠️ 2026-10 실측: 홍현석(미트윌란) 컨퍼런스리그 401915859 — 팀 일정에 없는
+       경기인데 기록은 "선발 · 0분" 이었다(시즌 합계는 0경기). 날짜·상대·스코어가
+       모두 빈 줄이 최근 경기에 끼었다. 일정에 없고 뛴 시간도 0 이면 출전으로
+       보지 않는다. 일정에 있는 경기는 그대로 믿는다(추가시간 교체 등). */
+    const m = meta?.get(it.eventId) ?? {};
+    if (!m.date && app.minutes <= 0) continue;
+
     let subIn;
     if (!app.starter) {
       subIn = subInMinute(
@@ -219,7 +227,6 @@ export async function athleteRecent({
       );
     }
 
-    const m = meta?.get(it.eventId) ?? {};
     out.push({
       eventId: it.eventId,
       competition: m.competition || it.league,

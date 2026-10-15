@@ -52,6 +52,8 @@ jobs:
           # variables → Actions → Variables 에 VITE_API_BASE 를 등록해 두면
           # 실시간 프록시 티어가 켜진다. 비워 두면 정적 피드 티어만으로 동작한다.
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          # 숨은 "지금 갱신" 시트(RefreshSheet)가 수집 액션을 실행할 저장소
+          VITE_GH_REPO: ${{ github.repository }}
         run: npm run build
 
       - uses: actions/configure-pages@v5

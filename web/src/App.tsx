@@ -27,6 +27,8 @@ import { futureFor } from './data/future';
 import { formatRoute, parseRoute, rememberRoute, startHash } from './lib/route';
 import { MiniBar } from './components/MiniBar';
 import { BgArt } from './components/BgArt';
+import { RefreshSheet } from './components/RefreshSheet';
+import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
 
@@ -78,6 +80,11 @@ export default function App() {
    * 팀 스위처 왼쪽의 칩으로 두고, 앱에 들어오면 여기서 시작한다.
    */
   /* 첫 화면은 주소(#/chelsea/standings)가 말해 준다 — lib/route.ts */
+  /* 숨은 "지금 갱신" — 갱신 시각 배지를 길게 누르면 열린다 */
+  const [refreshOpen, setRefreshOpen] = useState(false);
+  const closeRefresh = useCallback(() => setRefreshOpen(false), []);
+  const refreshPress = useLongPress(() => setRefreshOpen(true));
+
   const [view, setView] = useState<'summary' | 'team'>(() =>
     (TARGETS.some((t) => t.id === START.targetId) ? 'team' : 'summary'));
   const [targetId, setTargetId] = useState<TargetId>(() => {
@@ -459,9 +466,11 @@ export default function App() {
 
             <span className="hdr__spacer" />
 
+            {/* 길게 누르면 숨은 "지금 갱신" 시트(RefreshSheet) — 평소엔 아무 표시도 없다 */}
             <span
               className="srcbadge"
               data-src={source}
+              {...refreshPress}
               title={
                 fetchedAt
                   ? `데이터 기준 ${new Date(fetchedAt).toLocaleString('ko-KR')}`
@@ -576,6 +585,7 @@ export default function App() {
           </div>
         </ErrorBoundary>
       </main>
+      <RefreshSheet open={refreshOpen} onClose={closeRefresh} />
     </div>
     </CrestGlowScope.Provider>
     </PaletteProvider>
