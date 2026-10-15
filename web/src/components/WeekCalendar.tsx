@@ -58,7 +58,8 @@ interface Props {
   selectedDay: string | null;
   /** 선택된 날짜 안에서 몇 번째 경기인지 (같은 날 여러 경기 순환) */
   selectedIndex: number;
-  onPick: (dayKey: string) => void;
+  /** 경기 칸을 눌렀을 때 — 그 날 몇 번째 경기인지(index)까지 넘긴다. 히어로가 **그 경기**로 */
+  onPick: (dayKey: string, index?: number) => void;
   onMove: (delta: number) => void;
   onToday: () => void;
 }
@@ -161,7 +162,7 @@ export function WeekCalendar({
                       data-on={on || undefined}
                       /* accent — brand 가 거의 검정인 팀은 띠가 안 보인다 */
                       style={{ ['--team' as string]: summaryColor(t), ['--teamfg' as string]: summaryColor(t) }}
-                      onClick={() => onPick(k)}
+                      onClick={() => onPick(k, idx)}
                       onMouseEnter={(e) => {
                         if (!HAS_HOVER) return;
                         showPop(e.currentTarget, m, t);
