@@ -201,3 +201,36 @@ test('athleteRecent: eventlog 가 비면 조용히 빈 배열', async () => {
   });
   assert.deepEqual(rows, []);
 });
+
+test('athleteRecent: 리그와 챔스 eventlog 를 합쳐 최신순 — 챔스 경기도 최근 경기에 든다', async () => {
+  /* 2026-10 회귀: 자국 리그 eventlog 만 불러 챔스 3라운드가 최근 경기에서 빠졌다 */
+  const ev = (id, team = '132', played = true) => ({
+    event: { $ref: `http://x/events/${id}` }, teamId: team, played, statistics: { $ref: 'x' },
+  });
+  const LOGS = {
+    'ger.1': { events: { items: [ev('9001'), ev('9002')] } },
+    'uefa.champions': { events: { items: [ev('9101'), ev('9002')] } },   // 9002 는 겹쳐도 한 번만
+  };
+  const META = new Map([
+    ['9001', { date: '2026-10-04T13:30Z', competition: 'ger.1' }],
+    ['9002', { date: '2026-09-27T13:30Z', competition: 'ger.1' }],
+    ['9101', { date: '2026-10-14T19:00Z', competition: 'uefa.champions' }],
+  ]);
+  const calls = [];
+  const get = async (url) => {
+    calls.push(url);
+    const lg = url.match(/leagues\/([^/]+)\//)?.[1];
+    if (url.includes('/eventlog')) return LOGS[lg] ?? null;
+    if (url.includes('/statistics/0')) return STATS_PLAYED;
+    return null;
+  };
+  const rows = await athleteRecent({
+    get, league: 'ger.1', leagues: ['ger.1', 'uefa.champions'], season: 2026, athleteId: '157688',
+    meta: META, take: 3,
+  });
+  assert.deepEqual(rows.map((r) => r.eventId), ['9101', '9001', '9002']);
+  assert.equal(rows[0].competition, 'uefa.champions');
+  // 챔스 경기의 기록은 챔스 슬러그 주소로 부른다
+  assert.ok(calls.some((u) => u.includes('leagues/uefa.champions/events/9101/') && u.endsWith('/statistics/0')));
+  assert.ok(!calls.some((u) => u.includes('leagues/ger.1/events/9101/')));
+});

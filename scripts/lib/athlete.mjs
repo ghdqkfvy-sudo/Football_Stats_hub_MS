@@ -163,18 +163,36 @@ export const teamScheduleUrl = (teamId) =>
   `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${teamId}/schedule`;
 
 /**
- * 그 선수가 **실제로 뛴** 최근 경기들.
+ * 그 선수가 **실제로 뛴** 최근 경기들 — 리그와 유럽대항전을 **합쳐서**.
+ *
+ * ⚠️ eventlog 는 대회(리그 슬러그)마다 따로다. 예전에는 자국 리그 하나만 불러서
+ * 챔스·유로파 경기가 최근 경기에 아예 나오지 않았다 — 2026-10-14·15 챔스 3라운드
+ * (아틀레티코 2-0 맨유의 이강인, 비킹 3-3 바이에른의 김민재 …)가 빠져 있었다.
+ * 대회마다 eventlog 를 받아 합치고, 일정 날짜로 세워 최근 take 경기를 고른다.
+ * 경기별 기록 주소도 그 경기의 대회 슬러그로 만든다.
  *
  * @param get      (url) => Promise<json|null>  — 재시도·로깅은 호출자 책임
+ * @param league   자국 리그 (하위 호환 — leagues 가 없으면 이것 하나)
+ * @param leagues  볼 대회들 (리그 + 유럽대항전). 순서는 상관없다
  * @param meta     scheduleMeta() 결과 (없으면 날짜·상대가 빈다)
  * @param take     몇 경기까지
  * @param probe    후보를 몇 경기까지 확인할지 (명단만 든 경기를 건너뛰어야 하므로 여유를 둔다)
  */
 export async function athleteRecent({
-  get, league, season, athleteId, meta, take = 3, probe = 8,
+  get, league, leagues, season, athleteId, meta, take = 3, probe = 8,
 }) {
-  if (!league || !athleteId) return [];
-  const log = eventLogItems(await get(eventLogUrl(league, season, athleteId)));
+  const comps = [...new Set((leagues?.length ? leagues : [league]).filter(Boolean))];
+  if (!comps.length || !athleteId) return [];
+
+  const log = [];
+  const seen = new Set();
+  for (const lg of comps) {
+    for (const it of eventLogItems(await get(eventLogUrl(lg, season, athleteId)))) {
+      if (seen.has(it.eventId)) continue;     // 같은 경기가 두 대회 기록에 겹치면 한 번만
+      seen.add(it.eventId);
+      log.push({ ...it, league: lg });
+    }
+  }
   if (!log.length) return [];
 
   /* eventlog 순서는 날짜순이 아니다 — 일정의 날짜로 세운다.
@@ -189,7 +207,7 @@ export async function athleteRecent({
   for (const it of candidates) {
     if (out.length >= take) break;
     const flat = flattenStats(
-      await get(eventStatsUrl(league, it.eventId, it.teamId, athleteId)),
+      await get(eventStatsUrl(it.league, it.eventId, it.teamId, athleteId)),
     );
     const app = appearanceFrom(flat);
     if (!app) continue;                       // 명단에만 들었던 경기
@@ -197,14 +215,14 @@ export async function athleteRecent({
     let subIn;
     if (!app.starter) {
       subIn = subInMinute(
-        await get(lineupEntryUrl(league, it.eventId, it.teamId, athleteId)),
+        await get(lineupEntryUrl(it.league, it.eventId, it.teamId, athleteId)),
       );
     }
 
     const m = meta?.get(it.eventId) ?? {};
     out.push({
       eventId: it.eventId,
-      competition: m.competition || league,
+      competition: m.competition || it.league,
       date: m.date ?? '',
       opponent: m.opponent ?? '',
       opponentId: m.opponentId ?? '0',
