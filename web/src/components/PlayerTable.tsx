@@ -248,7 +248,12 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
           >
             <span className="pt__who">
               <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={30} />
-              <b>{p.name}</b>
+              {/* 폰에서는 "João Pe…" 처럼 거의 모두 잘렸다 — 포메이션 그림과 같은
+                  성(마지막 단어)만. 전체 이름은 눌러서 여는 상세에 있다. */}
+              <b title={p.name}>
+                <span className="m-full">{p.name}</span>
+                <span className="m-short">{p.name.split(' ').slice(-1)[0]}</span>
+              </b>
               <em data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
             </span>
             <span className="num">{p.apps}</span>

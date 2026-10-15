@@ -398,6 +398,8 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   font-size: 13.5px; color: var(--text-hi);
   text-shadow: 0 1px 12px rgba(4, 12, 28, .95);
 }
+/* 진 경기는 이달의 결과·히어로 목록과 같은 규칙으로 한 톤 낮춘다 */
+.wcal__t[data-r='L'] { color: var(--text-mid); }
 
 .wcal__hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line);
   font-size: 11px; color: var(--text-lo); }
@@ -633,4 +635,67 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .cmp__euro em { display: none; }
   .cmp__euro b { font-size: 11.5px; }
   .cmp__form .fchip { width: 15px; height: 15px; font-size: 8px; }
+}
+
+/*
+ * ── Summary "이달의 경기 결과" — 넓은 화면 한 줄 배치 ──────────────────
+ * 예전에는 대진 블록(508px)이 왼쪽에 붙고 대회·상태가 오른쪽 끝에 떨어져,
+ * 1400px 화면에서 W/D/L 칩과 대회명 사이가 600px 넘게 비었다. 시선이
+ * 스코어 → (빈 칸) → 승패 → (빈 칸) → 대회로 끊겼다.
+ *
+ * 마크업은 그대로 두고(폰 배치는 손대지 않는다) 넓은 화면에서만 대진·메타
+ * 묶음을 display: contents 로 풀어 행 하나의 격자로 다시 앉힌다.
+ *   [날짜][택][H/A][우리 팀 ▸][엠블럼][ W  4 - 3 ][엠블럼][◂ 상대][대회 ……][종료 ⌄]
+ *  · 승패 칩은 스코어 캡슐 **안** 왼쪽 — "W 4-3" 이 한 덩어리로 읽힌다.
+ *    캡슐 테두리도 결과색을 아주 옅게 띤다(숫자는 기존 규칙대로 흰/회색).
+ *  · 대회명은 상대 팀 바로 다음 고정 열 — 모든 행에서 같은 세로선에 선다.
+ *  · 펼침 표시(종료 ⌄)는 관례대로 오른쪽 끝.
+ */
+@media (min-width: 961px) {
+  .ml__row[data-ours] {
+    grid-template-columns: 40px 3px 54px 148px 24px 136px 24px 148px minmax(0, 1fr) auto;
+    column-gap: 12px;
+  }
+  /* 기존 .ml__match[data-ours] .ml__side.r { display: grid } 보다 강해야 풀린다 */
+  .ml__row[data-ours] .ml__match[data-ours],
+  .ml__row[data-ours] .ml__match[data-ours] .ml__side.ml__side,
+  .ml__row[data-ours] .ml__meta { display: contents; }
+  .ml__row[data-ours] > *,
+  .ml__row[data-ours] .ml__match > *,
+  .ml__row[data-ours] .ml__side > *,
+  .ml__row[data-ours] .ml__meta > * { grid-row: 1; }
+
+  /* 배지는 이름 쪽으로 붙인다 — 왼쪽 끝에 두면 짧은 이름(Chelsea)과 사이가 휑했다 */
+  .ml__row[data-ours] .ml__ha { grid-column: 3; justify-self: end; }
+  .ml__row[data-ours] .ml__side.r > b { grid-column: 4; text-align: right; min-width: 0; }
+  .ml__row[data-ours] .ml__side.r > :last-child { grid-column: 5; justify-self: center; }
+  .ml__row[data-ours] .ml__score,
+  .ml__row[data-ours] .ml__vs { grid-column: 6; }
+  .ml__row[data-ours] .ml__side:not(.r) > :first-child { grid-column: 7; justify-self: center; }
+  .ml__row[data-ours] .ml__side:not(.r) > b { grid-column: 8; min-width: 0; }
+  .ml__row[data-ours] .ml__res { grid-column: 6; justify-self: start; margin-left: 9px; z-index: 1; }
+  .ml__row[data-ours] i.ml__res:empty { display: none; }
+  .ml__row[data-ours] .ml__comp { grid-column: 9; justify-self: start; }
+  .ml__row[data-ours] .ml__status,
+  .ml__row[data-ours] .ml__ko { grid-column: 10; justify-self: end; }
+
+  /* 스코어 캡슐 — 칩 자리만큼 양쪽을 똑같이 비워 숫자는 정확히 가운데 */
+  .ml__row[data-ours] .ml__score {
+    --r: var(--text-lo);
+    justify-self: stretch; display: flex; align-items: center; justify-content: center;
+    height: 34px; padding-inline: 30px; border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--r) 30%, transparent);
+    background: color-mix(in srgb, var(--r) 7%, rgba(255, 255, 255, .02));
+    transition: border-color .18s, background .18s;
+  }
+  .ml__row[data-ours] .ml__score[data-res='W'] { --r: var(--win); }
+  .ml__row[data-ours] .ml__score[data-res='D'] { --r: var(--draw); }
+  .ml__row[data-ours] .ml__score[data-res='L'] { --r: var(--loss); }
+  .ml__item:hover .ml__row[data-ours] .ml__score {
+    border-color: color-mix(in srgb, var(--r) 45%, transparent);
+  }
+  .ml__row[data-ours] .ml__vs { justify-self: center; }
+
+  /* 대회명 — 상대 이름보다 한 단계 낮은 무게, 엠블럼은 그대로 */
+  .ml__row[data-ours] .ml__comp { font-size: 12px; color: var(--text-mid); }
 }

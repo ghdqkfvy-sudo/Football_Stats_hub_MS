@@ -1,6 +1,7 @@
 import type { Match, TeamRef } from '../lib/types';
 import type { H2HGame, LastFiveGame } from '../lib/api';
 import { Crest } from './Crest';
+import { oursFirst } from '../lib/form';
 
 /**
  * 다음 경기 미리보기 — "요즘 어떤가" 와 "만나면 어땠나" 두 가지만 본다.
@@ -190,8 +191,8 @@ function FormColumn({
       {games.length > 0 && (
         <div className="mprev__games">
           {games.map((g, i) => {
-            const [ms, ts] = String(g.score ?? '').split('-');
             const res = (g.result || undefined) as 'W' | 'D' | 'L' | undefined;
+            const [ms, ts] = oursFirst(g.score, res);
             return (
               <div className="mprev__g" key={`${g.date}-${i}`} title={g.competition}>
                 {/* 상대 표기는 항상 "vs" 로 통일하고, 홈/원정은 따로 배지로 —
@@ -213,7 +214,7 @@ function FormColumn({
                   />
                   <b>{g.opponentName || g.opponent}</b>
                 </span>
-                <Score a={num(ms)} b={num(ts)} res={res} />
+                <Score a={ms} b={ts} res={res} />
               </div>
             );
           })}
@@ -222,8 +223,3 @@ function FormColumn({
     </div>
   );
 }
-
-const num = (v?: string) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
-};

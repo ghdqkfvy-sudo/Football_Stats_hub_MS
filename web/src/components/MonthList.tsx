@@ -103,6 +103,7 @@ export function MonthList({
           >
             <button
               className="ml__row"
+              data-ours={ours ? true : undefined}
               aria-expanded={done ? isOpen : undefined}
               /* 미래 경기도 누를 수 있다 — 위의 히어로·캘린더가 그 경기로 맞춰진다 */
               onClick={() => onToggle(m)}

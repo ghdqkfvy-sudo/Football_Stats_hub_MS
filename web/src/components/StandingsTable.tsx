@@ -378,7 +378,8 @@ function SplitCol({
               <Crest team={opp} size={17} />
               <span className="split__o">{opp.shortName}</span>
               <span className="split__s num" data-res={res ?? undefined}>
-                {done ? `${m.homeScore} : ${m.awayScore}` : '예정'}
+                {/* 행이 "vs 상대" 라 우리 득점부터 — 원정 경기도 승패와 숫자가 같은 방향 */}
+                {done ? (m.home.id === teamId ? `${m.homeScore} : ${m.awayScore}` : `${m.awayScore} : ${m.homeScore}`) : '예정'}
               </span>
               {res && (
                 <i className="fchip" data-r={res}>
