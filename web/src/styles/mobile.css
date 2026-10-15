@@ -503,3 +503,18 @@
   .kr__filters button { flex: none; white-space: nowrap; }
   .kr__bar .kr__sort { margin-left: auto; }
 }
+
+/*
+ * 선수 스탯 목록 (폰 전용) — 이름을 성만 쓰게 바꾼 뒤(PR #11) 이름 길이가 줄마다
+ * 달라져, 바로 뒤에 붙던 포지션 배지가 지그재그로 흩어졌다.
+ * 이름이 남은 폭을 다 가져가게 해 배지를 열 오른쪽 끝 같은 세로선에 세운다.
+ */
+@media (max-width: 640px) {
+  .pt__who b { flex: 1 1 auto; min-width: 0; }
+  .pt__who em { min-width: 26px; text-align: center; }
+}
+/* 360px 대 좁은 폰 — "Rog…" 처럼 성마저 잘리지 않게 간격·배지만 조금 줄인다 */
+@media (max-width: 380px) {
+  .pt__who { gap: 7px; }
+  .pt__who em { min-width: 22px; padding: 1px 2px; font-size: 9px; letter-spacing: .04em; }
+}
