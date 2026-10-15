@@ -234,3 +234,35 @@ test('athleteRecent: 리그와 챔스 eventlog 를 합쳐 최신순 — 챔스 �
   assert.ok(calls.some((u) => u.includes('leagues/uefa.champions/events/9101/') && u.endsWith('/statistics/0')));
   assert.ok(!calls.some((u) => u.includes('leagues/ger.1/events/9101/')));
 });
+
+test('athleteRecent: 일정에 없는 "선발 0분" 경기와 일정상 미완료 경기는 최근 경기에서 뺀다', async () => {
+  /* 2026-10 회귀: 홍현석 컨퍼런스리그 401915859 가 날짜·상대 없이 "선발 0분" 으로 끼었다 */
+  const ev = (id) => ({ event: { $ref: `http://x/events/${id}` }, teamId: '1', played: true, statistics: { $ref: 'x' } });
+  const LOGS = {
+    'den.1': { events: { items: [ev('7001')] } },
+    'uefa.europa.conf': { events: { items: [ev('7101'), ev('7102')] } },
+  };
+  const ZERO_START = { splits: { categories: [{ name: 'general', stats: [
+    { name: 'appearances', value: 0 }, { name: 'minutes', value: 0 }, { name: 'starts', value: 1 },
+  ] }] } };
+  const META = new Map([
+    ['7001', { date: '2026-10-11T16:00Z', competition: 'den.1', completed: true }],
+    ['7102', { date: '2026-10-23T16:45Z', competition: 'uefa.europa.conf', completed: false }],
+  ]);
+  const calls = [];
+  const get = async (url) => {
+    calls.push(url);
+    const lg = url.match(/leagues\/([^/]+)\//)?.[1];
+    if (url.includes('/eventlog')) return LOGS[lg] ?? null;
+    if (url.includes('7101') && url.includes('/statistics/0')) return ZERO_START;
+    if (url.includes('/statistics/0')) return STATS_PLAYED;
+    return null;
+  };
+  const rows = await athleteRecent({
+    get, league: 'den.1', leagues: ['den.1', 'uefa.europa.conf'], season: 2026, athleteId: '1',
+    meta: META, take: 3,
+  });
+  assert.deepEqual(rows.map((r) => r.eventId), ['7001']);
+  // 일정상 미완료 경기는 기록을 부르지도 않는다
+  assert.ok(!calls.some((u) => u.includes('/events/7102/')));
+});
