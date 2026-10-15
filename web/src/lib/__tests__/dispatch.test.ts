@@ -21,7 +21,8 @@ describe('runLabel — 최근 실행 한 줄', () => {
     expect(runLabel(run('in_progress', null), now)).toEqual({ text: '실행 중 · 12분째', tone: 'busy' });
   });
   it('대기·완료·실패', () => {
-    expect(runLabel(run('queued', null), now).text).toBe('대기 중');
+    expect(runLabel(run('queued', null), now).text).toBe('대기 중 · 앞 실행이 끝나면 자동으로 시작');
+    expect(runLabel(run('pending', null), now).tone).toBe('busy');
     expect(runLabel(run('completed', 'success'), now)).toEqual({ text: '완료 · 12분 전', tone: 'ok' });
     expect(runLabel(run('completed', 'failure', '2026-10-16T06:30:00Z'), now)).toEqual({ text: '실패 · 2시간 전', tone: 'bad' });
   });

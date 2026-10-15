@@ -75,7 +75,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-22';
+const CODE_VERSION = 'snap-23';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -133,6 +133,18 @@ const FUTURE = [
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/*
+ * 요청 시간 제한.
+ *
+ * ⚠️ 2026-10-15 22시(UTC)부터 리그 잡이 세 번 연속 45분 제한에 걸려 취소됐다.
+ * ESPN 은 멀쩡했고(같은 주소·0.1~0.7초) 사진 소스 TheSportsDB 가 거절도 응답도
+ * 없이 한 요청을 40초씩 붙잡았다. fetch 에 제한이 없어 그대로 기다렸고, 사진
+ * 단계가 한 줄로 서 있어 그 40초가 선수 수만큼 쌓였다. 정상 응답은 1초 안에
+ * 오므로 ESPN·기타는 10초, 지난 값을 이어 쓰면 되는 사진 소스는 5초면 넉넉하다.
+ */
+const TIMEOUT_MS = 10_000;
+const PHOTO_TIMEOUT_MS = 5_000;
+
 /**
  * 독립적인 요청을 동시에 n 개까지 굴린다.
  *
@@ -168,11 +180,17 @@ async function get(url, tries = 3) {
     try {
       const res = await fetch(url, {
         headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`);
+        /* "없다" 는 다시 물어도 없다 — 404 등은 재시도하지 않는다(429·5xx 만 다시) */
+        err.final = res.status >= 400 && res.status < 500 && res.status !== 429;
+        throw err;
+      }
       return await res.json();
     } catch (e) {
-      if (i === tries - 1) {
+      if (e?.final || i === tries - 1) {
         console.error(`  ✗ ${url} — ${e.message}`);
         return null;
       }
@@ -611,7 +629,7 @@ const tsdbCache = new Map();
 async function urlOk(url) {
   if (!url) return false;
   try {
-    const res = await fetch(url, { method: 'HEAD' });
+    const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS) });
     return urlVerdict(res.status) === 'keep';
   } catch {
     return true;   // 확인 못 했다 ≠ 없다
@@ -633,16 +651,21 @@ const REVERIFY_BUCKETS = 6;
 const RUN_BUCKET = Math.floor(Date.now() / 3_600_000) % REVERIFY_BUCKETS;
 const dueNow = (id) => dueForReverify(id, RUN_BUCKET, REVERIFY_BUCKETS);
 
-const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8 });
+/* maxFailures — 연속이 아니라 **누적** 실패. 중간중간 한 번씩 성공하면 연속
+   카운트가 0 으로 돌아가 "느리지만 가끔 되는" 상태에서 끝없이 기다렸다(2026-10-15) */
+const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8, maxFailures: 20 });
 
 /** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
 function tsdbGet(path) {
   return tsdbLimit.run(async () => {
     const res = await fetch(`${TSDB}/${path}`, {
       headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
+      signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
     }).catch(() => null);
-    if (!res || !res.ok) return { ok: false, value: undefined };   // 429 도 여기로
-    return { ok: true, value: await res.json().catch(() => null) };
+    if (!res || !res.ok) return { ok: false, value: undefined };   // 429·시간 초과도 여기로
+    const value = await res.json().catch(() => undefined);
+    /* 본문을 받다 끊기면(시간 초과) 못 물어본 것으로 — 실패로 센다 */
+    return value === undefined ? { ok: false, value: undefined } : { ok: true, value };
   });
 }
 
@@ -763,7 +786,7 @@ function espnHeadshot(id) {
   if (hsCache.has(key)) return hsCache.get(key);
   const p = (async () => {
     try {
-      const res = await fetch(ESPN_HS(key), { method: 'HEAD' });
+      const res = await fetch(ESPN_HS(key), { method: 'HEAD', signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS) });
       return res.ok ? ESPN_HS(key) : undefined;
     } catch {
       return undefined;
@@ -796,7 +819,10 @@ async function wikipediaPhoto(name, age) {
     const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json'
       + '&generator=search&gsrlimit=5&gsrsearch=' + encodeURIComponent(`${name} footballer`)
       + '&prop=pageimages|description&piprop=thumbnail|original&pithumbsize=250';
-    const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': WIKI_UA } });
+    const res = await fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': WIKI_UA },
+      signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
+    });
     if (res.ok) {
       const j = await res.json();
       const ok = [];
@@ -1273,7 +1299,7 @@ async function googleNewsKo(q) {
   try {
     const res = await fetch(
       `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`,
-      { headers: { 'user-agent': 'Mozilla/5.0 (compatible; k-stats-hub/1.0)' } },
+      { headers: { 'user-agent': 'Mozilla/5.0 (compatible; k-stats-hub/1.0)' }, signal: AbortSignal.timeout(TIMEOUT_MS) },
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
@@ -1561,7 +1587,10 @@ async function fifaRanking() {
   const url = 'https://en.wikipedia.org/w/index.php?title=Module:SportsRankings/data/FIFA_World_Rankings&action=raw';
   let text = '';
   try {
-    const res = await fetch(url, { headers: { 'user-agent': 'k-stats-hub-snapshot/1.0 (github actions)' } });
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'k-stats-hub-snapshot/1.0 (github actions)' },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     text = await res.text();
   } catch (e) {

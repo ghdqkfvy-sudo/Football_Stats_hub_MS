@@ -106,17 +106,18 @@ export function kindFromUrl(url) {
  * `limit` 회 연속 실패하면 회로를 열어 그 뒤 호출은 곧바로 건너뛴다
  * (막힌 API 를 200번 더 때려 봐야 워크플로만 길어진다).
  */
-export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8 } = {}) {
+export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8, maxFailures = Infinity } = {}) {
   let chain = Promise.resolve();
   let last = 0;
   let strikes = 0;
+  let failures = 0;      // 누적 — 가끔 성공해도 줄지 않는다
   let open = false;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   return {
     get broken() { return open; },
-    reset() { strikes = 0; open = false; },
+    reset() { strikes = 0; failures = 0; open = false; },
     /** @param fn () => Promise<{ok:boolean, value:any}> */
     run(fn) {
       if (open) return Promise.resolve(undefined);
@@ -130,7 +131,8 @@ export function rateLimiter({ minIntervalMs = 1200, breakAfter = 8 } = {}) {
           strikes = 0;
         } else {
           strikes++;
-          if (strikes >= breakAfter) open = true;
+          failures++;
+          if (strikes >= breakAfter || failures >= maxFailures) open = true;
         }
         return res?.value;
       });
