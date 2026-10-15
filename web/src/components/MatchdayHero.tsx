@@ -315,8 +315,10 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         {live ? (
           <em className="mdr__live">LIVE</em>
         ) : done ? (
+          /* 이 줄은 "우리 팀 vs 상대" 순서라 스코어도 우리 득점부터 —
+             홈-원정 순서로 두면 원정 승리가 진 것처럼 읽혔다 */
           <b className="mdr__score num" data-r={ours > theirs ? 'W' : ours < theirs ? 'L' : 'D'}>
-            {match.homeScore}<i>-</i>{match.awayScore}
+            {ours}<i>-</i>{theirs}
           </b>
         ) : (
           <em className="mdr__dday" data-tone={dd.tone}>{dd.text}</em>

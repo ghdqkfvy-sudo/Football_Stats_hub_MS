@@ -465,6 +465,9 @@
     transition: transform .18s;
   }
   .krr[data-open='true'] .krr__h::after { transform: rotate(180deg); }
+  /* 폰에서는 카드 안에 펼쳐지므로 이름이 바로 위 카드 제목과 겹친다
+     ("최근 3경기 기록  Andrey Santos") — 호버 툴팁인 데스크톱에서만 남긴다 */
+  .krr__h > b { display: none; }
   /* 클럽/국가대표 두 칸짜리 — 접혀 있을 때도 두 칸 제목은 남기고 내용만 숨긴다 */
   .krr--split:not([data-open='true']) > .krr__col { display: block; }
   .krr--split:not([data-open='true']) .krr__col > :not(.krr__h) { display: none; }
@@ -480,4 +483,23 @@
   .sec__head { margin-bottom: 10px; }
   .hero, .mdh__card[data-hero] { padding: 15px 16px 17px; border-radius: 22px; }
   .krc { padding: 12px 13px; }
+}
+
+/*
+ * 코리안리거 리그 필터 (폰 전용) — 칩 11개가 다섯 줄로 쌓여 첫 화면의 절반을 덮었다.
+ * 한 줄로 두고 옆으로 민다. 화면 끝까지 붙여(.shell 여백만큼 바깥으로)
+ * 잘린 칩이 "더 있다" 는 신호가 되게 하고, 오른쪽 끝은 살짝 흐리게.
+ */
+@media (max-width: 640px) {
+  .kr__bar .kr__filters {
+    flex: 1 1 100%;
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
+    margin-inline: -14px; padding: 2px 14px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 28px), transparent);
+  }
+  .kr__bar .kr__filters::-webkit-scrollbar { display: none; }
+  .kr__filters button { flex: none; white-space: nowrap; }
+  .kr__bar .kr__sort { margin-left: auto; }
 }

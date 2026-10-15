@@ -154,6 +154,8 @@ export function WeekCalendar({
                   const mine = m.home.id === t.espnTeamId;
                   const opp = mine ? m.away : m.home;
                   const done = m.status === 'finished';
+                  const ours = (mine ? m.homeScore : m.awayScore) ?? 0;
+                  const theirs = (mine ? m.awayScore : m.homeScore) ?? 0;
                   const on = isSel && idx === selectedIndex;
                   return (
                     <button
@@ -193,8 +195,15 @@ export function WeekCalendar({
                       </span>
                       {/* 종료 스코어와 예정 킥오프는 이 칸에서 제일 먼저 찾는 값이다 —
                           data-done 으로 갈라 서로 다른 무게를 준다 */}
-                      <span className="wcal__t num" data-done={done || undefined}>
-                        {done ? `${m.homeScore}-${m.awayScore}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
+                      {/* 칸은 "우리 팀 → 상대" 순서라 스코어도 우리 득점부터.
+                          홈-원정 순서로 찍던 때 원정 승리(RMA @ROMA 4-3)가 "3-4" 로
+                          진 것처럼 읽혔다. 패배는 이달의 결과처럼 한 톤 낮춘다. */}
+                      <span
+                        className="wcal__t num"
+                        data-done={done || undefined}
+                        data-r={done ? (ours > theirs ? 'W' : ours < theirs ? 'L' : 'D') : undefined}
+                      >
+                        {done ? `${ours}-${theirs}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
                       </span>
                     </button>
                   );
@@ -209,10 +218,10 @@ export function WeekCalendar({
 
       {pop && <TilePop pop={pop} />}
 
-      {/* 같은 날 경기가 여럿이면 다시 눌러 넘길 수 있다는 안내 */}
+      {/* 같은 날 경기가 여럿이면 다른 칸을 눌러 바꿔 볼 수 있다는 안내 */}
       {selectedDay && (byDay.get(selectedDay)?.length ?? 0) > 1 && (
         <p className="wcal__hint num">
-          이 날 경기 {byDay.get(selectedDay)!.length}개 · 날짜를 다시 누르면 다음 경기로
+          이 날 경기 {byDay.get(selectedDay)!.length}개 · 경기를 눌러 바꿔 보기
           ({selectedIndex + 1}/{byDay.get(selectedDay)!.length})
         </p>
       )}
