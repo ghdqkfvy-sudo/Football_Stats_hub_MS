@@ -63,7 +63,11 @@ export interface AthleteInfo {
   posAbbr?: string;
   /** 팀 로스터가 주는 나이 */
   age?: number;
+  /** 팀 로스터가 주는 국적 — 이름 · 3글자 약어 · 국기 주소 (2026-10 부터 수집) */
+  nat?: Nationality;
 }
+
+export interface Nationality { name?: string; code?: string; flag?: string }
 
 export interface Lineup {
   teamId: string;

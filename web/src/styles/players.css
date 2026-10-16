@@ -297,6 +297,26 @@
 .pt__row[data-active='true'] { box-shadow: inset 3px 0 0 var(--accent); }
 
 .pt__who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pt__hs { position: relative; flex: none; display: inline-grid; }
+/* 사진이 없어 원 안에 등번호를 그린 경우엔 배지를 겹쳐 달지 않는다 */
+.pt__hs:has(.hs--fallback) .pt__no { display: none; }
+.pt__no {
+  position: absolute; right: -12px; bottom: -5px;
+  min-width: 14px; height: 13px; padding: 0 3px; border-radius: 7px;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 9px; font-weight: 700; font-style: normal;
+  background: var(--accent); color: var(--on-accent); border: 1.5px solid var(--ink-900);
+}
+/* 국적 — 카드 포지션 옆 */
+.natf { display: inline-flex; align-items: center; gap: 4px; margin: 0 4px 0 8px; vertical-align: -1px; }
+.natf img {
+  width: 17px; height: 12px; object-fit: cover; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.18);
+}
+.natf span { font-size: .92em; font-weight: 700; letter-spacing: .03em; color: var(--text-mid); }
+/* 카드 머리의 `span { display: block }` 에 걸리지 않게 */
+.pcard__top span.natf { display: inline-flex; margin-top: 0; }
+.pcard__top .natf span { display: inline; margin-top: 0; font-size: .92em; }
 
 .pt__who b {
   font-size: 13px; font-weight: 500; color: var(--text-hi);

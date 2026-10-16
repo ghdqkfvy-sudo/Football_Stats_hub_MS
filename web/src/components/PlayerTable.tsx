@@ -250,7 +250,12 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
             title="눌러서 시즌 전 경기 기록 보기"
           >
             <span className="pt__who">
-              <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={30} />
+              {/* 등번호는 사진 **밖** 오른쪽 아래(사진과 이름 사이 틈)에 — 30px 사진 안에 얹으면
+                  얼굴(턱)을 가렸다. 따로 칸을 두면 폰에서 이름 칸이 더 좁아진다. */}
+              <span className="pt__hs">
+                <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={p.jersey !== undefined ? String(p.jersey) : undefined} size={30} />
+                {p.jersey !== undefined && <i className="pt__no num">{p.jersey}</i>}
+              </span>
               {/* 폰에서는 "João Pe…" 처럼 거의 모두 잘렸다 — 포메이션 그림과 같은
                   성(마지막 단어)만. 전체 이름은 눌러서 여는 상세에 있다. */}
               <b title={p.name}>
