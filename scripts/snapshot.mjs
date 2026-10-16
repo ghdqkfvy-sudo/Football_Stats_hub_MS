@@ -36,6 +36,7 @@ import {
   rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
+import { substitutionsFrom } from './lib/subs.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -75,7 +76,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-23';
+const CODE_VERSION = 'snap-24';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -1802,6 +1803,8 @@ async function main() {
 
     const lineups = {};
     const athletes = {};
+    let subPlayed = 0;      // 교체로 실제 뛴 선수 수
+    let subKnown = 0;       // 그중 "누구 대신" 을 찾은 수
     /* 경기 16건이 서로 무관하다 — 한 건씩 기다리면 팀마다 16번의 왕복이
        그대로 시간이 된다(팀이 늘어날수록 선형으로 늘어난다). */
     await pool(done, 4, async (ev) => {
@@ -1866,6 +1869,18 @@ async function main() {
             }
           }
           if (!subs) console.log(`    ${t.slug} ${ev.id}: 교체 시각 0건`);
+        }
+        /* (3) 교체 기록 — 들어간 선수가 **누구 대신**인지(11번째 칸).
+           앱은 이걸로 교체 선수가 실제로 선 자리를 정한다(나간 선수의 자리). */
+        const replaced = substitutionsFrom(sum, mine.roster);
+        for (const x of entries) {
+          if (x[2]) continue;
+          const forId = replaced.get(x[0]) ?? null;
+          x[10] = forId;
+          if (x[3] != null || forId) {
+            subPlayed++;
+            if (forId) subKnown++;
+          }
         }
         lineups[String(ev.id)] = {
           teamId: t.id,
@@ -1945,6 +1960,7 @@ async function main() {
       console.log(
         `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
           ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})` +
+          ` · 교체 기록 ${subKnown}/${subPlayed}` +
           (tsdbLimit.broken ? ' · ⚠ SportsDB 한도 — 다음 회차에 이어 채움' : ''),
       );
     } else {
@@ -2029,11 +2045,14 @@ async function main() {
     }
   }
 
-  await save(ONLY === 'slow' ? 'meta-slow.json' : 'meta.json', {
-    generatedAt: new Date().toISOString(),
-    only: ONLY,
-    codeVersion: CODE_VERSION,
-  });
+  /* all(버튼의 전체 갱신)이면 빠른·느린 두 기록을 다 새로 쓴다 */
+  for (const name of [wants('fast') && 'meta.json', wants('slow') && 'meta-slow.json'].filter(Boolean)) {
+    await save(name, {
+      generatedAt: new Date().toISOString(),
+      only: ONLY,
+      codeVersion: CODE_VERSION,
+    });
+  }
 
   if (problems.length) {
     console.error(`\n⚠ 문제 ${problems.length}건`);

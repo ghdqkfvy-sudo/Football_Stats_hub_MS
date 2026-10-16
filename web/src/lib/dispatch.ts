@@ -21,7 +21,7 @@ export interface Job {
    빠른 갱신 수집 25~35초, 전체 갱신 수집 약 3분. */
 export const JOBS: Job[] = [
   { file: 'snapshot.yml', label: '빠른 갱신', desc: '팀 일정·경기 결과·뉴스', eta: '약 3분' },
-  { file: 'snapshot-leagues.yml', label: '전체 갱신', desc: '순위·스쿼드·코리안리거·Future', eta: '약 5분' },
+  { file: 'snapshot-leagues.yml', label: '전체 갱신', desc: '빠른 갱신 항목 + 순위·스쿼드·코리안리거·Future', eta: '약 5분' },
 ];
 
 /** 토큰 만드는 화면 — 이름·저장소·권한을 고르는 GitHub 페이지 */

@@ -19,6 +19,7 @@ export type LineupEntry = [
   string?,                // 포지션 약어
   number?,                // 경고
   number?,                // 퇴장
+  (string | null)?,       // 교체 선수가 **누구 대신** 들어왔나 (나간 선수 id · 경기 요약의 교체 기록)
 ];
 
 export interface AthleteInfo {
