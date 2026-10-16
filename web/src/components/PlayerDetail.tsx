@@ -98,12 +98,14 @@ function TableBody({ p }: { p: PlayerSeason }) {
       </div>
     </div>
 
+    {/* 호버 카드와 같은 규칙 — 골·도움은 값이 있으면 숫자만 팀 컬러,
+        강조 **상자**는 공격 포인트 하나만(여섯 칸이 다 빛나면 어디를 볼지 모른다) */}
     <div className="pdet__sum num">
       {([
-        ['출전', p.apps], ['선발', p.starts], ['분', p.minutes],
-        ['골', p.goals], ['도움', p.assists], ['공격P', p.points],
-      ] as const).map(([k, v]) => (
-        <div key={k}><b>{v}</b><span>{k}</span></div>
+        ['출전', p.apps, ''], ['선발', p.starts, ''], ['분', p.minutes, ''],
+        ['골', p.goals, 'tint'], ['도움', p.assists, 'tint'], ['공격P', p.points, 'ap'],
+      ] as const).map(([k, v, hl]) => (
+        <div key={k} data-hl={v > 0 && hl ? hl : undefined}><b>{v}</b><span>{k}</span></div>
       ))}
     </div>
 

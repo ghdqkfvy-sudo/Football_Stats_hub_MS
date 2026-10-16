@@ -515,6 +515,23 @@
 }
 .pdet__sum b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-hi); }
 .pdet__sum span { display: block; margin-top: 2px; font-size: 10px; color: var(--text-lo); }
+/* 골·도움 — 숫자만 팀 컬러 (호버 카드 .pcard__stats[data-tint] 와 같은 규칙) */
+.pdet__sum div[data-hl='tint'] b {
+  color: var(--accent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* 공격 포인트 — 빛나는 강조 상자 (호버 카드 .pcard__ap[data-on] 과 같은 규칙) */
+.pdet__sum div[data-hl='ap'] {
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+              rgba(255,255,255,.04);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.pdet__sum div[data-hl='ap'] b {
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 85%, transparent),
+               0 0 42px color-mix(in srgb, var(--accent) 45%, transparent);
+}
 .pdet__h { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-lo); letter-spacing: .04em; margin-bottom: 6px; }
 .pdet__list { list-style: none; margin: 0; padding: 0; }
 .pdet__g {
