@@ -711,15 +711,34 @@ function tsdbKey() {
   return tsdbKeyPick;
 }
 
-/** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
+/*
+ * 이 키로는 없는 엔드포인트 — 404 가 한 번 나면 그 회차 내내 다시 부르지 않는다.
+ * 2026-10-16: 키 123 은 팀 검색(searchteams)에 200 인데, 사진 요청은 404 만 여덟 번
+ * 나오고 끊겼다. 무료 키에서 막힌 엔드포인트(팀 전체 로스터로 보인다)를 붙잡고
+ * 한도를 다 써 버렸고, 그 뒤 이름 검색까지 가지도 못했다.
+ */
+const TSDB_GONE = Symbol('tsdb-gone');
+const tsdbGone = new Set();
+const endpointOf = (path) => path.split('?')[0];
+
+/** 한도를 존중하며 TheSportsDB 를 한 번 부른다
+    (막히면 undefined · 이 키로 없는 엔드포인트면 TSDB_GONE) */
 async function tsdbGet(path) {
   const key = await tsdbKey();
   if (!key) return undefined;
-  return tsdbLimit.run(async () => {
+  const ep = endpointOf(path);
+  if (tsdbGone.has(ep)) return TSDB_GONE;
+  const v = await tsdbLimit.run(async () => {
     const r = await tsdbFetch(key, path);
-    countStatus(r.status);
-    return r.status === '200' ? { ok: true, value: r.value } : { ok: false, value: undefined };   // 429·시간 초과도 실패
+    countStatus(`${ep} ${r.status}`);
+    if (r.status === 'HTTP 404') {
+      if (!tsdbGone.has(ep)) console.log(`  SportsDB ${ep}: 404 — 이 키로는 없는 기능, 이번 회차는 건너뜀`);
+      tsdbGone.add(ep);
+      return { ok: true, value: TSDB_GONE };   // 한도·장애가 아니다 — 실패로 세지 않는다
+    }
+    return r.status === '200' ? { ok: true, value: r.value } : { ok: false, value: undefined };   // 429·시간 초과는 실패
   });
+  return v;
 }
 
 /* ── TheSportsDB 팀 로스터 ────────────────────────────────
@@ -746,10 +765,13 @@ function sportsdbRoster(clubName) {
        이 둘을 뭉개면 "확인했고 없다" 로 잘못 읽혀 멀쩡한 사진을 버린다. */
     const t = await tsdbGet(`searchteams.php?t=${encodeURIComponent(clubName)}`);
     if (t === undefined) return undefined;
+    /* 팀 검색·로스터가 이 키로 없으면 로스터 없이 — 아래 이름 검색이 맡는다 */
+    if (t === TSDB_GONE) return [];
     const id = String(t?.teams?.[0]?.idTeam ?? '');
     if (!id) return [];
     const r = await tsdbGet(`lookup_all_players.php?id=${id}`);
     if (r === undefined) return undefined;
+    if (r === TSDB_GONE) return [];
     const list = Array.isArray(r?.player) ? r.player : [];
     if (list.length) console.log(`    TheSportsDB 로스터 ${clubName}: ${list.length}명`);
     return list;
@@ -802,7 +824,9 @@ function sportsdbPhoto(name, club, age, { have = null, reverify = false } = {}) 
        */
       if (have && !reverify) return undefined;           // 이번 회차는 건드리지 않는다
       searched = await tsdbGet(`searchplayers.php?p=${encodeURIComponent(name)}`);
-      if (searched === undefined) return undefined;      // 한도 — 확인 못 함
+      /* 한도 — 확인 못 함. 이름 검색까지 없는 키면 그것도 "확인 못 함" 이다 —
+         "없다" 로 읽으면 지난 회차 컷아웃을 버린다(choosePhoto) */
+      if (searched === undefined || searched === TSDB_GONE) return undefined;
       /* 2순위 — 이름 검색. 소속팀과 나이가 맞는 후보만 받는다. */
       hit = pickSportsdbPlayer(searched?.player, club, normName, age);
     }
@@ -2124,7 +2148,12 @@ async function main() {
       codeVersion: CODE_VERSION,
       /* 이번 회차 TheSportsDB 점검 결과 — 사진을 찾을 일이 있었던 느린 회차에만 */
       ...(name === 'meta-slow.json' && tsdbPicked ? {
-        tsdb: { ...tsdbPicked, statuses: Object.fromEntries(tsdbStatus), at: new Date().toISOString() },
+        tsdb: {
+          ...tsdbPicked, statuses: Object.fromEntries(tsdbStatus),
+          /* 이 키로 404 가 난 엔드포인트 — 시트에 "이 키로 안 되는 기능" 으로 보인다 */
+          gone: [...tsdbGone],
+          at: new Date().toISOString(),
+        },
       } : {}),
     });
   }
