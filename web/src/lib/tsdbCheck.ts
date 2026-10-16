@@ -113,5 +113,7 @@ export interface ServerTsdb {
   tried: { key: string; status: string }[];
   /** 응답 상태별 횟수 { "200": 120, "HTTP 429": 8 } */
   statuses?: Record<string, number>;
+  /** 이 키로 404 가 난 엔드포인트(무료 키로 막힌 기능) */
+  gone?: string[];
   at: string;
 }

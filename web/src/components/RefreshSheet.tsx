@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useClosing } from '../lib/motion';
 import { TsdbCheck } from './TsdbCheck';
+import { PhotoProbe } from './PhotoProbe';
 import {
   JOBS, TOKEN_NEW_URL, REPO, clearToken, dispatch, getToken, latestRun, runLabel, setToken,
   type Outcome, type Run,
@@ -165,6 +166,8 @@ export function RefreshSheet({ open, onClose }: { open: boolean; onClose: () => 
 
           {/* 사진(컷아웃) 소스가 막혔는지 — GitHub 토큰 없이도 쓸 수 있다 */}
           <TsdbCheck />
+          {/* 대안 사진 소스 시험 — 보기 전용(수집·데이터는 그대로) */}
+          <PhotoProbe />
 
           <button className="rf__close" onClick={close}>닫기</button>
         </div>

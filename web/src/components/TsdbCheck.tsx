@@ -69,6 +69,9 @@ export function TsdbCheck() {
                 <> · 응답 {Object.entries(server.statuses).map(([st, n]) => `${st}×${n}`).join(' · ')}</>
               )}
             </p>
+            {!!server.gone?.length && (
+              <p className="tsc__sub">이 키로 안 되는 기능(404): {server.gone.join(' · ')} — 건너뛰고 이름 검색으로 받습니다</p>
+            )}
           </>
         )}
       </div>
@@ -113,7 +116,9 @@ export function TsdbCheck() {
             ? best.verdict === 'ok'
               ? `→ ${maskKey(best.key)} 키로 전체 로스터를 받을 수 있습니다.`
               : `→ ${maskKey(best.key)} 키는 되지만 로스터 일부만 줍니다(무료 키 제한).`
-            : '→ 이 기기에서 되는 키가 없습니다.'}
+            : server?.key
+              ? `→ 이 기기에서는 연결이 안 되지만, 수집 서버는 키 ${server.key} 로 연결됩니다 — 수집에는 문제없습니다.`
+              : '→ 이 기기에서 되는 키가 없습니다.'}
           {best && server && !server.key && ' 수집 서버는 실패 중 — 서버 쪽이 막힌 것일 수 있습니다.'}
         </p>
       )}

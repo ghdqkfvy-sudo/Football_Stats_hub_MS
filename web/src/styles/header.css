@@ -249,6 +249,27 @@
 .tsc__sub { font-size: 11.5px; color: var(--text-lo); line-height: 1.5; word-break: break-all; }
 .tsc__sum { color: var(--text-hi) !important; font-size: 12.5px !important; }
 
+/* 사진 소스 비교 (시험) */
+.pp { display: grid; gap: 8px; }
+.pp__run { justify-self: start; padding: 9px 16px; }
+.pp__sum { margin: 0; font-size: 12px !important; color: var(--text-mid) !important; }
+.pp__sum b { color: var(--text-hi); }
+.pp__sum em { font-style: normal; color: var(--text-lo); }
+.pp__grid, .pp__row { display: grid; grid-template-columns: minmax(0, 1fr) 46px 46px 46px; gap: 6px; align-items: center; }
+.pp__row { grid-column: 1 / -1; padding: 4px 0; border-top: 1px solid var(--line); }
+.pp__h { font-size: 10.5px; color: var(--text-lo); text-align: center; }
+.pp__h:first-child { text-align: left; }
+.pp__nm { font-size: 12.5px; color: var(--text-hi); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp__nm i { display: block; font-style: normal; font-size: 10px; color: var(--text-lo); }
+.pp__img {
+  width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; overflow: hidden;
+  background: rgba(255, 255, 255, .05); border: 1px solid var(--line); font-size: 11px; color: var(--text-lo);
+}
+.pp__img img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.pp__img[data-st='ok'] { border-color: color-mix(in srgb, var(--win) 55%, transparent); }
+.pp__img[data-st='fail'] { border-color: color-mix(in srgb, var(--loss) 55%, transparent); }
+.pp__img[data-st='fail'] img { opacity: .15; }
+
 .rf__forget { align-self: center; font-size: 11.5px; color: var(--text-lo); text-decoration: underline; padding: 2px 6px; }
 .rf__close {
   width: 100%; padding: 12px; border-radius: 10px; margin-top: 2px;
