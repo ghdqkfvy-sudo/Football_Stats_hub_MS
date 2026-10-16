@@ -126,21 +126,29 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
   const subAssists = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.assists, 0);
   return (
     <div className="bench">
-      <div className="bench__top">
-        <span className="bench__t">교체 출전</span>
-        <span className="bench__k num"><b>{b.subs}</b>회<i>팀 {b.team}경기 중</i></span>
-        <span className="bench__k num">평균 <b>{b.avgIn}&apos;</b> 투입</span>
-        <span className="bench__k num">교체로 <b>{b.minutes}</b>분</span>
-        {subGoals > 0 && <em className="pcard__gg">{subGoals}G</em>}
-        {subAssists > 0 && <em className="pcard__aa">{subAssists}A</em>}
+      <div className="bench__head">
+        <span className="eyebrow">교체 출전</span>
+        <span className="bench__note num">팀 {b.team}경기 기준</span>
+      </div>
+      {/* 위 카드의 출전·선발 칸과 같은 모양 — 숫자는 같은 글꼴·크기, 이름표는 아래 */}
+      <div className="pcard__stats bench__stats">
+        <div><b className="num">{b.subs}</b><span>교체 출전</span></div>
+        <div><b className="num">{b.avgIn}&apos;</b><span>평균 투입</span></div>
+        <div><b className="num">{b.minutes}<i>분</i></b><span>교체로 뛴 시간</span></div>
+        <div data-tint={subGoals + subAssists > 0 || undefined} title={`교체로 ${subGoals}골 ${subAssists}도움`}>
+          <b className="num">{subGoals + subAssists}</b>
+          <span>교체 공격P</span>
+        </div>
       </div>
       {b.changes.length > 0 && (
         <>
+          <div className="bench__head">
+            <span className="eyebrow" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후</span>
+          </div>
           <div className="bench__sum">
-            <span className="bench__lbl" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후 스코어 흐름</span>
-            <span className="bench__pill" data-d="1" title="열세→동점·리드, 동점→리드">▲ 개선 <b>{tally[1]}</b></span>
-            <span className="bench__pill" data-d="0" title="들어갈 때와 같은 상황으로 끝남">= 유지 <b>{tally[0]}</b></span>
-            <span className="bench__pill" data-d="-1" title="리드→동점·열세, 동점→열세">▼ 악화 <b>{tally[-1]}</b></span>
+            <span className="bench__pill" data-d="1" title="열세→동점·리드, 동점→리드"><i>▲ 개선</i><b className="num">{tally[1]}</b></span>
+            <span className="bench__pill" data-d="0" title="들어갈 때와 같은 상황으로 끝남"><i>= 유지</i><b className="num">{tally[0]}</b></span>
+            <span className="bench__pill" data-d="-1" title="리드→동점·열세, 동점→열세"><i>▼ 악화</i><b className="num">{tally[-1]}</b></span>
           </div>
           {/* 3×3 — 세로 = 들어갈 때, 가로 = 나올 때. 경기 수가 늘어도 크기가 같다.
               대각선 = 유지, 왼쪽 아래 = 개선(초록), 오른쪽 위 = 악화(빨강) */}
