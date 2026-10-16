@@ -270,14 +270,9 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
           <div className="kclub__seg" role="tablist" aria-label="순위 대회 고르기">
             <button role="tab" aria-selected={!showEuro} data-on={!showEuro || undefined} onClick={() => setView('league')}>
               <CompCrest k={lg} size={13} />리그
-              {leagueT && (() => {
-                const r = leagueT.rows.find((x) => x.team.id === club.espnTeamId);
-                return r ? <em className="num">{r.rank}위</em> : null;
-              })()}
             </button>
             <button role="tab" aria-selected={showEuro} data-on={showEuro || undefined} onClick={() => setView('euro')}>
               <CompCrest k={euro} size={13} />{euro === 'uefa.champions' ? '챔스' : comp(euro).name}
-              {stage && <em className="num">{stage.kind === 'ko' ? stage.round : stage.rank ? `${stage.rank}위` : ''}</em>}
             </button>
           </div>
         )}
