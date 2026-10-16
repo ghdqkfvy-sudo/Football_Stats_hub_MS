@@ -149,6 +149,14 @@
 }
 .kclub__tr[data-me] + .kclub__tr { border-top-color: transparent; }
 .kclub__tr[data-me] b { color: var(--accent); }
+.kclub__cap { margin: 2px 0 4px; font-size: 10px; color: var(--text-lo); }
+/* 머리줄 — 표 줄과 같은 칸 */
+.kclub__tr--h {
+  padding-block: 4px 6px; border-top: 0; font-size: 10.5px; font-weight: 600; color: var(--text-lo);
+}
+.kclub__tr--h > span:first-child { text-align: center; }
+.kclub__tr--h > span:last-child { text-align: right; }
+.kclub__tr--h + .kclub__tr { border-top: 0; }
 
 /* 순위 카드의 리그 / 챔스 전환 */
 .kclub__seg {
