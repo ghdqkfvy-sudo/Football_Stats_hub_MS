@@ -350,17 +350,29 @@ function RecentPanel({
     const el = bare ? ref.current?.parentElement : ref.current;
     if (!el || !open) return;
     el.style.removeProperty('--krr-shift');
-    delete el.dataset.flip;
-    if (getComputedStyle(el).position !== 'absolute') return;
-    const r = el.getBoundingClientRect();
+    el.style.removeProperty('--krr-vshift');
+    delete el.dataset.side;
+    if (getComputedStyle(el).position !== 'absolute') return;   // 폰 — 카드 안에 펼침
     const pad = 12;
-    const shift = r.left < pad ? pad - r.left
-      : r.right > window.innerWidth - pad ? window.innerWidth - pad - r.right : 0;
-    if (shift) el.style.setProperty('--krr-shift', `${Math.round(shift)}px`);
-    /* 카드 아래로 띄웠는데 화면 밑으로 잘리면, 위쪽 공간이 더 넓을 때만 위로 뒤집는다 */
-    const card = el.parentElement?.getBoundingClientRect();
-    if (card && r.bottom > window.innerHeight - pad && card.top - pad > window.innerHeight - card.bottom) {
-      el.dataset.flip = 'up';
+    const vw = window.innerWidth;
+    /* 1) 오른쪽 옆 → 2) 왼쪽 옆 → 3) 둘 다 안 되면 카드 아래 */
+    let r = el.getBoundingClientRect();
+    if (r.right > vw - pad) {
+      el.dataset.side = 'left';
+      r = el.getBoundingClientRect();
+      if (r.left < pad) {
+        el.dataset.side = 'below';
+        r = el.getBoundingClientRect();
+        const shift = r.left < pad ? pad - r.left : r.right > vw - pad ? vw - pad - r.right : 0;
+        if (shift) el.style.setProperty('--krr-shift', `${Math.round(shift)}px`);
+        return;
+      }
+    }
+    /* 옆에 띄웠는데 화면 밑으로 잘리면 그만큼 위로(머리줄 아래까지만) */
+    const over = r.bottom - (window.innerHeight - pad);
+    if (over > 0) {
+      const up = Math.min(over, Math.max(0, r.top - 64));
+      if (up > 0) el.style.setProperty('--krr-vshift', `${-Math.round(up)}px`);
     }
   }, [open, bare]);
 

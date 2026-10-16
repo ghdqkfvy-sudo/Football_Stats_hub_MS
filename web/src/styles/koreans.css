@@ -201,15 +201,14 @@
 .krc__nata em { font-style: normal; opacity: .75; }
 .krc__none { margin: 14px 0 2px; font-size: 12px; color: var(--text-lo); line-height: 1.6; }
 
-/* 최근 3경기 호버 패널 */
+/* 최근 3경기 호버 패널 — 카드 **옆**(오른쪽, 자리가 없으면 왼쪽)에 띄운다.
+   예전에는 카드 머리 밑(top: 52px)에 열려 그 카드의 기록을 덮었다.
+   양옆 모두 자리가 없으면(좁은 화면) 카드 아래로. 위치는 StatCard 가 재서
+   data-side 와 --krr-vshift(화면 밑으로 잘릴 때 위로 올리는 양)를 붙인다. */
 .krr {
-  /* 카드 **바깥** 아래에 띄운다 — 예전(top: 52px)에는 카드 머리 바로 밑에 열려
-     그 카드의 A매치·리그·합계 기록을 통째로 덮었다. 아래 공간이 없으면
-     StatCard 가 data-flip="up" 을 붙여 카드 위쪽으로 뒤집는다. */
-  position: absolute; z-index: 60; left: 50%; top: calc(100% + 8px);
-  /* --krr-shift: 화면 밖으로 나가면 StatCard 가 재서 안쪽으로 민다 */
-  transform: translateX(calc(-50% + var(--krr-shift, 0px)));
-  width: min(330px, 96%); padding: 13px 14px;
+  position: absolute; z-index: 60; left: calc(100% + 10px); top: 0;
+  transform: translateY(var(--krr-vshift, 0px));
+  width: 340px; padding: 13px 14px;
   border: 1px solid var(--line-2); border-radius: var(--r-md);
   background: color-mix(in srgb, var(--ink-1000) 96%, transparent);
   backdrop-filter: blur(20px); box-shadow: 0 22px 54px rgba(0,0,0,.78);
@@ -217,17 +216,18 @@
   opacity: 0; visibility: hidden; transition: opacity .14s;
 }
 .krr[data-open='true'] { opacity: 1; visibility: visible; }
-.krr[data-flip='up'] { top: auto; bottom: calc(100% + 8px); }
-/* 코리안리거 — 클럽(왼쪽) · 국가대표(오른쪽) 두 칸 */
-.krr--split {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-  width: min(660px, calc(100vw - 24px));
+.krr[data-side='left'] { left: auto; right: calc(100% + 10px); }
+.krr[data-side='below'] {
+  left: 50%; right: auto; top: calc(100% + 8px);
+  transform: translateX(calc(-50% + var(--krr-shift, 0px)));
 }
-/* 닫혀 있을 때는 자리도 차지하지 않게 — 투명해도 660px 상자가 오른쪽 열 카드 밖으로
+/* 코리안리거 — 클럽 위 · 국가대표 아래 (옆에 띄우려면 폭이 좁아야 한다) */
+.krr--split { display: grid; grid-template-columns: 1fr; gap: 12px; }
+/* 닫혀 있을 때는 자리도 차지하지 않게 — 투명한 상자가 오른쪽 열 카드 밖으로
    나가 페이지에 가로 스크롤을 만들었다(위치 보정은 열릴 때만 한다) */
 .krr--split:not([data-open='true']) { display: none; }
 .krr__col { min-width: 0; }
-.krr__col + .krr__col { border-left: 1px solid var(--line); padding-left: 16px; }
+.krr__col + .krr__col { border-top: 1px solid var(--line); padding-top: 12px; }
 .krr__h {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
   margin-bottom: 10px; padding-bottom: 9px; border-bottom: 1px solid var(--line);
