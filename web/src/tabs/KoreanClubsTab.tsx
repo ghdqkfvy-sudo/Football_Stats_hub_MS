@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { KOREAN_CLUBS, comp, themeVarsOf, type KoreanClub, type TargetId } from '../config/targets';
-import type { Match, StandingRow, StandingTable } from '../lib/types';
-import { loadLeagueTable, loadSchedule } from '../lib/api';
+import type { CompetitionKey, Match, StandingRow, StandingTable } from '../lib/types';
+import { loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable } from '../lib/league';
 import { nextUpOf } from '../lib/summary';
-import { seasonRecord } from '../lib/compare';
+import { euroStage, seasonRecord, type EuroStage } from '../lib/compare';
+import { roundKo } from '../lib/rounds';
 import { kstParts, kstTime } from '../lib/kst';
 import { PaletteProvider } from '../lib/palette';
 import { Crest, CrestGlowScope } from '../components/Crest';
@@ -210,30 +211,169 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
         </div>
       </div>
 
-      <div className="kclub__table">
-        <div className="kclub__th">
-          <span className="eyebrow">{leagueName} 순위</span>
-          <span className="num">경기 · 승무패 · 승점</span>
+      <ClubTables club={club} matches={matches} leagueTable={table ? t ?? null : undefined} around={around} leagueName={leagueName} />
+    </div>
+  );
+}
+
+/** 유럽대항전 — 이 클럽이 뛰는 첫 대회(챔스 → 유로파 → 컨퍼런스) */
+const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+
+/** 순위표 한 줄 */
+function TableRow({ r, me }: { r: StandingRow; me: boolean }) {
+  return (
+    <div className="kclub__tr" data-me={me || undefined}>
+      <span className="num kclub__rk">{r.rank}</span>
+      <span className="kclub__tn">
+        <Crest team={r.team} size={16} />
+        <b>{r.team.name}</b>
+      </span>
+      <span className="num">{r.played}</span>
+      <span className="num">{r.win}-{r.draw}-{r.loss}</span>
+      <b className="num kclub__pts">{r.points}</b>
+    </div>
+  );
+}
+
+/** 그 클럽 앞뒤 다섯 줄 */
+function aroundOf(t: StandingTable | null | undefined, teamId: string): StandingRow[] {
+  if (!t) return [];
+  const i = t.rows.findIndex((r) => r.team.id === teamId);
+  if (i < 0) return t.rows.slice(0, 5);
+  const from = Math.max(0, Math.min(i - 2, t.rows.length - 5));
+  return t.rows.slice(from, from + 5);
+}
+
+/**
+ * 순위 카드 — 리그 / 유럽대항전을 전환해서 본다.
+ * 유럽대항전은 리그 페이즈면 순위표(앞뒤 다섯 줄), 토너먼트로 올라가면
+ * 지금 라운드("16강")와 그 라운드 경기(1·2차전)를 보여 준다 — Summary 팀 비교의
+ * "챔스" 칸과 같은 판정(euroStage)이다.
+ */
+function ClubTables({ club, matches, leagueTable, around, leagueName }: {
+  club: KoreanClub; matches: Match[]; leagueTable: StandingTable | null | undefined;
+  around: StandingRow[]; leagueName: string;
+}) {
+  const euro = EUROPE.find((k) => matches.some((m) => m.competition === k));
+  const [view, setView] = useState<'league' | 'euro'>('league');
+
+  const [et, setEt] = useState<{ k: string; t: StandingTable | null } | null>(null);
+  const [rounds, setRounds] = useState<CupRound[] | null>(null);
+  useEffect(() => {
+    if (!euro) return;
+    let alive = true;
+    loadLeagueTable(euro, comp(euro).name, club.espnTeamId).then((r) => {
+      if (alive) setEt({ k: euro, t: buildTable(r.data.table, r.data.matches, euro, comp(euro).name) });
+    });
+    loadScheduleExtras(club.espnTeamId).then((e) => {
+      if (alive) setRounds(e.rounds[euro] ?? []);
+    });
+    return () => { alive = false; };
+  }, [euro, club.espnTeamId]);
+
+  const euroT = et && et.k === euro ? et.t : undefined;
+  const euroGames = useMemo(() => (euro ? matches.filter((m) => m.competition === euro) : []), [matches, euro]);
+  const euroRow = euroT?.rows.find((r) => r.team.id === club.espnTeamId);
+  const stage = useMemo<EuroStage | null>(
+    () => (euro && rounds ? euroStage(euroGames, club.espnTeamId, rounds, euroRow?.rank) : null),
+    [euro, rounds, euroGames, club.espnTeamId, euroRow?.rank],
+  );
+  const euroAround = useMemo(() => aroundOf(euroT, club.espnTeamId), [euroT, club.espnTeamId]);
+
+  /* 토너먼트 라운드의 경기 — 지금 라운드 기간에 떨어지는 경기(1·2차전) */
+  const koGames = useMemo(() => {
+    if (stage?.kind !== 'ko' || !rounds) return [];
+    const r = rounds.find((x) => roundKo(x.label) === stage.round);
+    return r ? euroGames.filter((m) => m.kickoffUtc >= r.start && m.kickoffUtc <= r.end) : [];
+  }, [stage, rounds, euroGames]);
+
+  const showEuro = !!euro && view === 'euro';
+  const euroName = euro ? comp(euro).name : '';
+
+  return (
+    <div className="kclub__table">
+      {euro && (
+        <div className="kclub__seg" role="tablist" aria-label="순위 대회 고르기">
+          <button role="tab" aria-selected={!showEuro} data-on={!showEuro || undefined} onClick={() => setView('league')}>
+            <CompCrest k={club.league!} size={13} />리그
+          </button>
+          <button role="tab" aria-selected={showEuro} data-on={showEuro || undefined} onClick={() => setView('euro')}>
+            <CompCrest k={euro} size={13} />{euro === 'uefa.champions' ? '챔스' : euroName}
+            {stage && <em className="num">{stage.kind === 'ko' ? stage.round : stage.rank ? `${stage.rank}위` : ''}</em>}
+          </button>
         </div>
-        {!table ? (
-          <div className="skel" style={{ height: 200 }} />
-        ) : around.length ? (
-          around.map((r) => (
-            <div key={r.team.id} className="kclub__tr" data-me={r.team.id === club.espnTeamId || undefined}>
-              <span className="num kclub__rk">{r.rank}</span>
-              <span className="kclub__tn">
-                <Crest team={r.team} size={16} />
-                <b>{r.team.name}</b>
-              </span>
-              <span className="num">{r.played}</span>
-              <span className="num">{r.win}-{r.draw}-{r.loss}</span>
-              <b className="num kclub__pts">{r.points}</b>
-            </div>
-          ))
-        ) : (
-          <p className="kclub__none">순위표가 아직 없습니다.</p>
-        )}
-      </div>
+      )}
+
+      {!showEuro ? (
+        <>
+          <div className="kclub__th">
+            <span className="eyebrow">{leagueName} 순위</span>
+            <span className="num">경기 · 승무패 · 승점</span>
+          </div>
+          {leagueTable === undefined ? (
+            <div className="skel" style={{ height: 200 }} />
+          ) : around.length ? (
+            around.map((r) => <TableRow key={r.team.id} r={r} me={r.team.id === club.espnTeamId} />)
+          ) : (
+            <p className="kclub__none">순위표가 아직 없습니다.</p>
+          )}
+        </>
+      ) : stage?.kind === 'ko' ? (
+        <>
+          <div className="kclub__th">
+            <span className="eyebrow">{euroName} · 토너먼트</span>
+            {euroRow && <span className="num">리그 페이즈 {euroRow.rank}위</span>}
+          </div>
+          <div className="kclub__ko" data-st={stage.status}>
+            <b>{stage.round}</b>
+            {stage.text !== stage.round && <span>{stage.text}</span>}
+          </div>
+          {koGames.map((m, i) => <KoGame key={m.id} m={m} teamId={club.espnTeamId} leg={koGames.length > 1 ? i + 1 : 0} />)}
+        </>
+      ) : (
+        <>
+          <div className="kclub__th">
+            <span className="eyebrow">{euroName} · 리그 페이즈{stage?.kind === 'league' && stage.phaseOver ? ' 종료' : ''}</span>
+            <span className="num">경기 · 승무패 · 승점</span>
+          </div>
+          {euroT === undefined || !rounds ? (
+            <div className="skel" style={{ height: 200 }} />
+          ) : euroAround.length ? (
+            <>
+              {euroAround.map((r) => <TableRow key={r.team.id} r={r} me={r.team.id === club.espnTeamId} />)}
+              {stage?.kind === 'league' && stage.phaseOver && <p className="kclub__konote">{stage.text}</p>}
+            </>
+          ) : (
+            <p className="kclub__none">순위표가 아직 없습니다.</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 토너먼트 경기 한 줄 — 1차전/2차전 · 상대 · 점수(또는 일시) */
+function KoGame({ m, teamId, leg }: { m: Match; teamId: string; leg: number }) {
+  const home = m.home.id === teamId;
+  const opp = home ? m.away : m.home;
+  const p = kstParts(m.kickoffUtc);
+  const done = m.status === 'finished';
+  const ours = home ? m.homeScore : m.awayScore;
+  const theirs = home ? m.awayScore : m.homeScore;
+  return (
+    <div className="kclub__kg">
+      <span className="kclub__kgl">{leg ? `${leg}차전` : '단판'}</span>
+      <span className="kclub__next">
+        <i className="hachip" data-side={home ? 'H' : 'A'}>{home ? 'H' : 'A'}</i>
+        <span>vs</span>
+        <Crest team={opp} size={16} />
+        <b>{opp.name}</b>
+      </span>
+      <b className="num kclub__kgs">
+        {done && ours !== undefined && theirs !== undefined
+          ? `${ours} : ${theirs}`
+          : `${p.month}.${p.date} ${m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc)}`}
+      </b>
     </div>
   );
 }
