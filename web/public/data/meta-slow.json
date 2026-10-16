@@ -1,1 +1,1 @@
-{"generatedAt":"2026-10-16T12:08:19.226Z","only":"all","codeVersion":"snap-27","tsdb":{"key":null,"tried":[{"key":"123","status":"TimeoutError"},{"key":"3","status":"TimeoutError"}],"statuses":{},"gone":[],"at":"2026-10-16T12:08:19.226Z"}}
+{"generatedAt":"2026-10-16T12:20:21.579Z","only":"slow","codeVersion":"snap-28","tsdb":{"key":null,"tried":[{"key":"123","status":"TimeoutError"},{"key":"3","status":"TimeoutError"}],"statuses":{},"gone":[],"at":"2026-10-16T12:20:21.579Z"}}
