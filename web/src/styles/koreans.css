@@ -203,7 +203,10 @@
 
 /* 최근 3경기 호버 패널 */
 .krr {
-  position: absolute; z-index: 60; left: 50%; top: 52px;
+  /* 카드 **바깥** 아래에 띄운다 — 예전(top: 52px)에는 카드 머리 바로 밑에 열려
+     그 카드의 A매치·리그·합계 기록을 통째로 덮었다. 아래 공간이 없으면
+     StatCard 가 data-flip="up" 을 붙여 카드 위쪽으로 뒤집는다. */
+  position: absolute; z-index: 60; left: 50%; top: calc(100% + 8px);
   /* --krr-shift: 화면 밖으로 나가면 StatCard 가 재서 안쪽으로 민다 */
   transform: translateX(calc(-50% + var(--krr-shift, 0px)));
   width: min(330px, 96%); padding: 13px 14px;
@@ -214,6 +217,7 @@
   opacity: 0; visibility: hidden; transition: opacity .14s;
 }
 .krr[data-open='true'] { opacity: 1; visibility: visible; }
+.krr[data-flip='up'] { top: auto; bottom: calc(100% + 8px); }
 /* 코리안리거 — 클럽(왼쪽) · 국가대표(오른쪽) 두 칸 */
 .krr--split {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;

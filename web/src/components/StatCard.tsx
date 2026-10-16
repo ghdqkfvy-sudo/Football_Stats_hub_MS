@@ -350,12 +350,18 @@ function RecentPanel({
     const el = bare ? ref.current?.parentElement : ref.current;
     if (!el || !open) return;
     el.style.removeProperty('--krr-shift');
+    delete el.dataset.flip;
     if (getComputedStyle(el).position !== 'absolute') return;
     const r = el.getBoundingClientRect();
     const pad = 12;
     const shift = r.left < pad ? pad - r.left
       : r.right > window.innerWidth - pad ? window.innerWidth - pad - r.right : 0;
     if (shift) el.style.setProperty('--krr-shift', `${Math.round(shift)}px`);
+    /* 카드 아래로 띄웠는데 화면 밑으로 잘리면, 위쪽 공간이 더 넓을 때만 위로 뒤집는다 */
+    const card = el.parentElement?.getBoundingClientRect();
+    if (card && r.bottom > window.innerHeight - pad && card.top - pad > window.innerHeight - card.bottom) {
+      el.dataset.flip = 'up';
+    }
   }, [open, bare]);
 
   return (
