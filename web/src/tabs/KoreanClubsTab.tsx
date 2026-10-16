@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KOREAN_CLUBS, comp, themeVarsOf, type KoreanClub, type TargetId } from '../config/targets';
+import { KOREAN_CLUBS, comp, mobileName, themeVarsOf, type KoreanClub, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingRow, StandingTable } from '../lib/types';
 import { loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable } from '../lib/league';
@@ -269,10 +269,12 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
         {euro && (
           <div className="kclub__seg" role="tablist" aria-label="순위 대회 고르기">
             <button role="tab" aria-selected={!showEuro} data-on={!showEuro || undefined} onClick={() => setView('league')}>
-              <CompCrest k={lg} size={13} />리그
+              <CompCrest k={lg} size={13} />
+              <span className="m-full">{comp(lg).name}</span><span className="m-short">{mobileName(lg)}</span>
             </button>
             <button role="tab" aria-selected={showEuro} data-on={showEuro || undefined} onClick={() => setView('euro')}>
-              <CompCrest k={euro} size={13} />{euro === 'uefa.champions' ? '챔스' : comp(euro).name}
+              <CompCrest k={euro} size={13} />
+              <span className="m-full">{comp(euro).name}</span><span className="m-short">{mobileName(euro)}</span>
             </button>
           </div>
         )}
