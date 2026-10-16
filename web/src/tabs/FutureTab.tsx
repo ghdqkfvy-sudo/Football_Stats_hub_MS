@@ -172,6 +172,7 @@ function FutureCard({
       pos={feed?.pos && feed.clubId !== '0' ? feed.pos : p.pos ?? 'M'}
       photo={feed?.photo}
       photoKind={feed?.photoKind}
+      sofascoreId={feed?.sofascoreId}
       fallbackLabel={p.name.slice(0, 1)}
       clubId={feed?.clubId && feed.clubId !== '0' ? feed.clubId : undefined}
       club={feed?.club || p.club}

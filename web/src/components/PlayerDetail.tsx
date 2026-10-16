@@ -88,7 +88,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
   return (
     <>
     <div className="pdet__top">
-      <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={54} />
+      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={54} />
       <div>
         <b className="pdet__name">{p.name}</b>
         <span className="pdet__meta">

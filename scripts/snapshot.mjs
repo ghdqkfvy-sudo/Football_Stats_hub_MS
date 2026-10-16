@@ -37,6 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
+import { footballerIds, needsLookup, pickSofascore } from './lib/sofascore.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -76,7 +77,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-27';
+const CODE_VERSION = 'snap-28';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -885,6 +886,69 @@ function espnHeadshot(id) {
  * 문서 설명에 `(born 1999)` 처럼 생년이 들어 있으므로 ESPN 이 준 나이와
  * 대조한다. 나이를 아는데 맞는 후보가 하나도 없으면 **사진을 포기한다**.
  */
+/* ── SofaScore 선수 ID (위키데이터) ─────────────────────
+ * 사진 1순위(2026-10-16 사용자 결정): SofaScore → 받아 둔 컷아웃 → ESPN → 위키.
+ * 수집기는 ID 만 찾고, 사진 주소는 앱이 ID 로 만든다(lib/sofascore.mjs 설명 참고).
+ * 찾은 ID 는 sofascore-ids.json 에 남겨 선수당 한 번만 찾는다 — 못 찾은 선수는 7일 뒤 다시.
+ * 지금 사진(photo · photoKind)은 그대로 둔다 — SofaScore 이미지가 안 뜰 때의 2순위다.
+ */
+const WD_API = 'https://www.wikidata.org/w/api.php';
+const ssLimit = rateLimiter({ minIntervalMs: 250, breakAfter: 6, maxFailures: 30 });
+const ssStats = { known: 0, found: 0, missing: 0, failed: 0 };
+let ssMapP = null;
+function sofascoreMap() {
+  ssMapP ??= readFile(join(OUT, 'sofascore-ids.json'), 'utf8')
+    .then((t) => JSON.parse(t)?.ids ?? {})
+    .catch(() => ({}));
+  return ssMapP;
+}
+const wdGet = (params) => ssLimit.run(async () => {
+  try {
+    const q = new URLSearchParams({ format: 'json', ...params });
+    const res = await fetch(`${WD_API}?${q}`, {
+      headers: { accept: 'application/json', 'user-agent': WIKI_UA },
+      signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
+    });
+    if (!res.ok) return { ok: false, value: undefined };
+    const value = await res.json().catch(() => undefined);
+    return value === undefined ? { ok: false, value } : { ok: true, value };
+  } catch { return { ok: false, value: undefined }; }
+});
+
+/** 그 선수의 SofaScore ID — 확인 못 하면 undefined(기록을 바꾸지 않는다) · 없으면 null */
+async function lookupSofascore(name, age) {
+  if (!normName(name)) return null;
+  const s = await wdGet({ action: 'wbsearchentities', type: 'item', language: 'en', limit: '7', search: name });
+  if (s === undefined) return undefined;
+  const ids = footballerIds(s?.search);
+  if (!ids.length) return null;
+  const e = await wdGet({ action: 'wbgetentities', ids: ids.join('|'), props: 'claims' });
+  if (e === undefined) return undefined;
+  return pickSofascore(ids, e?.entities, age) ?? null;
+}
+
+/**
+ * 선수 목록에 sofascoreId 를 붙인다 — list: [{ id, name, age, target }] (target 에 값을 쓴다).
+ * 기록(sofascore-ids.json)에 있으면 그대로, 없거나 다시 볼 때가 된 선수만 찾는다.
+ */
+async function attachSofascore(list) {
+  const map = await sofascoreMap();
+  await pool(list, 3, async ({ id, name, age, target }) => {
+    const key = String(id);
+    let entry = map[key];
+    if (needsLookup(entry) && !ssLimit.broken) {
+      const r = await lookupSofascore(name, age);
+      if (r === undefined) ssStats.failed++;
+      else {
+        entry = { ss: r?.ss ?? null, qid: r?.qid ?? null, name, at: new Date().toISOString() };
+        map[key] = entry;
+        if (r) ssStats.found++; else ssStats.missing++;
+      }
+    } else if (entry?.ss) ssStats.known++;
+    if (entry?.ss) target.sofascoreId = entry.ss;
+  });
+}
+
 async function wikipediaPhoto(name, age) {
   const want = normName(name);
   if (!want) return undefined;
@@ -2044,6 +2108,7 @@ async function main() {
         }
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
       });
+      await attachSofascore(Object.entries(athletes).map(([id, a]) => ({ id, name: a.name, age: a.age, target: a })));
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
         codeVersion: CODE_VERSION,
@@ -2091,6 +2156,7 @@ async function main() {
       koreanPlayer(id, '', carried.get(String(id)), lg));
     const players = got.filter(Boolean);
     if (players.length) {
+      await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
       await save('future.json', { format: 2, players, season: SEASON, fetchedAt: new Date().toISOString() });
       console.log(`    퓨처 리소스 ${players.length}/${FUTURE.length}명`);
     } else if (await fileExists('future.json')) {
@@ -2112,6 +2178,7 @@ async function main() {
     const year = new Date().getUTCFullYear();
     if (games.length) for (const p of players) p.national = nationalFor(games, p.id, year);
     if (players.length) {
+      await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
       await save('koreans.json', {
         players, season: SEASON,
         nationalSource: NATIONAL_SOURCE, nationalGames: games,
@@ -2138,6 +2205,17 @@ async function main() {
     } else {
       console.error('  ! FIFA 랭킹: 받지 못함 — 기존 파일 유지');
     }
+  }
+
+  /* SofaScore ID 기록 — 다음 회차가 이어받아 선수당 한 번만 찾는다 */
+  if (wants('slow') && ssMapP) {
+    const ids = await ssMapP;
+    await save('sofascore-ids.json', { format: 1, ids, updatedAt: new Date().toISOString() });
+    console.log(
+      `    SofaScore ID: 기록 ${ssStats.known} · 새로 찾음 ${ssStats.found} · 없음 ${ssStats.missing}` +
+        (ssStats.failed ? ` · 확인 못 함 ${ssStats.failed}` : '') +
+        (ssLimit.broken ? ' · ⚠ 위키데이터 한도 — 다음 회차에 이어서' : ''),
+    );
   }
 
   /* all(버튼의 전체 갱신)이면 빠른·느린 두 기록을 다 새로 쓴다 */

@@ -250,7 +250,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
             title="눌러서 시즌 전 경기 기록 보기"
           >
             <span className="pt__who">
-              <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={30} />
+              <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={30} />
               {/* 폰에서는 "João Pe…" 처럼 거의 모두 잘렸다 — 포메이션 그림과 같은
                   성(마지막 단어)만. 전체 이름은 눌러서 여는 상세에 있다. */}
               <b title={p.name}>

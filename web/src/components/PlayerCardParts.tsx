@@ -41,7 +41,7 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
   return (
     <>
     <div className="pcard__top">
-      <Headshot id={p.id} src={p.photo} kind={p.photoKind} jersey={p.jersey} size={46} className="pcard__hs" />
+      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={46} className="pcard__hs" />
       <div>
         <b>{p.name}</b>
         <span>

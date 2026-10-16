@@ -27,6 +27,7 @@ export interface PlayerSeason {
   photo?: string;
   /** 그 사진의 출처 — 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 */
   photoKind?: AthleteInfo['photoKind'];
+  sofascoreId?: string;
   apps: number;
   starts: number;
   minutes: number;
@@ -232,6 +233,7 @@ export function buildSquad(
         p = {
           id, name: info.name, jersey: info.jersey, pos: info.pos, photo: info.photo,
           photoKind: info.photoKind,
+          sofascoreId: info.sofascoreId,
           age: info.age,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
           yellow: 0, red: 0,

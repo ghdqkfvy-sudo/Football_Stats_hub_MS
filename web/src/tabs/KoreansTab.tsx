@@ -250,6 +250,7 @@ export function KoreansTab() {
               national={nationalOf(p)}
               photo={p.photo}
               photoKind={p.photoKind}
+              sofascoreId={p.sofascoreId}
               fallbackLabel={p.nameKo.slice(0, 1)}
               clubId={p.clubId}
               club={p.club}
