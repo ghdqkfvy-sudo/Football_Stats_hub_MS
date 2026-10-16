@@ -689,12 +689,18 @@ const tsdbFetch = async (key, path) => {
 /* 처음 부를 때 한 번만 키를 고른다 — 모든 키가 안 되면 이번 회차는 아예 부르지 않는다
    (예전에는 안 되는 키로 여덟 번을 기다린 뒤에야 포기했다) */
 let tsdbKeyPick = null;
+let tsdbPicked = null;
 function tsdbKey() {
   tsdbKeyPick ??= pickTsdbKey(TSDB_KEYS, async (key) => {
     const r = await tsdbFetch(key, 'searchteams.php?t=Arsenal');
     const ok = r.status === '200' && Array.isArray(r.value?.teams) && r.value.teams.length > 0;
     return { ok, status: ok ? '200' : r.status === '200' ? 'empty' : r.status };
   }).then((r) => {
+    /* 앱의 숨은 갱신 시트가 "수집 서버 결과" 로 보여 준다(meta-slow.json 의 tsdb) */
+    tsdbPicked = {
+      key: r.key ? maskTsdbKey(r.key) : null,
+      tried: r.tried.map((t) => ({ key: maskTsdbKey(t.key), status: t.status })),
+    };
     const log = r.tried.map((t) => `${maskTsdbKey(t.key)}: ${t.status}`).join(' · ');
     if (r.key) console.log(`  SportsDB 키 ${maskTsdbKey(r.key)} 사용 (${log})`);
     else note('SportsDB 사진', `답하는 키가 없음 — ${log}`);
@@ -2114,6 +2120,10 @@ async function main() {
       generatedAt: new Date().toISOString(),
       only: ONLY,
       codeVersion: CODE_VERSION,
+      /* 이번 회차 TheSportsDB 점검 결과 — 사진을 찾을 일이 있었던 느린 회차에만 */
+      ...(name === 'meta-slow.json' && tsdbPicked ? {
+        tsdb: { ...tsdbPicked, statuses: Object.fromEntries(tsdbStatus), at: new Date().toISOString() },
+      } : {}),
     });
   }
 
