@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
-import { SUMMARY_OPP, comp, koreansIn, summaryColor, type Target } from '../config/targets';
+import { SUMMARY_OPP, comp, koreansOf, summaryColor, type Target } from '../config/targets';
 import { countdown, dayKey, kstFullDate, kstParts, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { KorFlag } from './KorFlag';
@@ -107,7 +107,12 @@ function Side({
       <span className="mdt__tile">
         <Crest team={team} size={big ? 52 : 30} />
       </span>
-      <span className="mdt__name">{big ? team.shortName : team.abbr}</span>
+      {/* 코리안리거 이름표는 **그 선수의 팀 이름 옆**에 — 머리줄(팀 · 대회 · HOME)에 두면
+          "Bayern Munich · 김민재 · Champions League" 가 좁은 카드에서 두 줄로 꺾였다 */}
+      <span className="mdt__nm">
+        <span className="mdt__name">{big ? team.shortName : team.abbr}</span>
+        {koreansOf(team.id).map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
+      </span>
       {standing && (
         <span className="mdt__rec num">
           {standing.rank !== undefined && <b>{standing.rank}위</b>}
@@ -163,10 +168,6 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
               LIVE 일 때는 LIVE 배지가 이미 깜빡이므로 내보내지 않는다. */}
           {hero && !live && !done && <span className="mdh__pulse" aria-hidden="true" />}
         </span>
-        {/* 코리안리거 소속팀 경기면 누가 뛰는지 (대한민국 자리에 클럽 경기가 올라올 때) */}
-        {koreansIn(match.home.id, match.away.id).map((n) => (
-          <span key={n} className="kortag mdh__kor"><KorFlag />{n}</span>
-        ))}
         <span className="mdh__comp">
           <CompCrest k={match.competition} size={hero ? 16 : 13} />
           {c.name}
@@ -305,17 +306,18 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         />
       </span>
       <span className="mdr__mid">
+        {/* 이름표는 첫 줄에 — 우리 팀 선수면 vs 앞("🇰🇷이강인 vs Espanyol"), 상대 팀 선수면 상대 이름 뒤.
+            둘째 줄(대회 · HOME)에 두면 대회명이 "Cha…" 로 잘렸다 */}
         <span className="mdr__vs">
+          {koreansOf(target.espnTeamId).map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
           <i>vs</i>
           <Crest team={opp} size={16} />
           <b>{opp.shortName}</b>
+          {koreansOf(opp.id).map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
         </span>
         <span className="mdr__meta">
           <CompCrest k={match.competition} size={12} />
           <span className="mdr__comp">{c.name}</span>
-          {koreansIn(match.home.id, match.away.id).map((n) => (
-            <span key={n} className="kortag"><KorFlag />{n}</span>
-          ))}
           <span className="mdr__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</span>
         </span>
       </span>

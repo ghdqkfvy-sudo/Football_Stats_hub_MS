@@ -4,7 +4,7 @@ import {
   betterPhoto, birthYearOf, choosePhoto, dueForReverify, isBadPhoto, kindFromUrl, matchInRoster,
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
   rateLimiter, urlVerdict,
-  canonicalPhotoUrl,
+  canonicalPhotoUrl, maskTsdbKey, pickTsdbKey,
 } from './photos.mjs';
 
 /** 테스트를 고정하기 위한 '오늘' — 2026-09-23 */
@@ -368,4 +368,30 @@ test('canonicalPhotoUrl — www.thesportsdb.com 이미지는 r2 로 (브라우�
 test('betterPhoto — 옛 www 주소로 이어받은 사진도 r2 주소로 나온다', () => {
   const old = { url: 'https://www.thesportsdb.com/images/media/player/cutout/z.png', kind: 'cutout' };
   assert.equal(betterPhoto(old, null).url, 'https://r2.thesportsdb.com/images/media/player/cutout/z.png');
+});
+
+test('pickTsdbKey: 답하는 첫 키를 고르고, 앞선 실패 사유를 남긴다', async () => {
+  const seen = [];
+  const r = await pickTsdbKey(['', 'paid', '123', '3'], async (k) => {
+    seen.push(k);
+    return k === '123' ? { ok: true, status: '200' } : { ok: false, status: k === 'paid' ? 'HTTP 401' : 'HTTP 429' };
+  });
+  assert.equal(r.key, '123');
+  assert.deepEqual(seen, ['paid', '123']);   // 빈 키는 건너뛰고, 고른 뒤에는 더 묻지 않는다
+  assert.deepEqual(r.tried, [{ key: 'paid', status: 'HTTP 401' }, { key: '123', status: '200' }]);
+});
+
+test('pickTsdbKey: 전부 실패하면 null — 예외도 실패 사유로 남긴다', async () => {
+  const r = await pickTsdbKey(['123', '3', '3'], async (k) => {
+    if (k === '3') throw Object.assign(new Error('t'), { name: 'TimeoutError' });
+    return { ok: false, status: 'empty' };
+  });
+  assert.equal(r.key, null);
+  assert.deepEqual(r.tried, [{ key: '123', status: 'empty' }, { key: '3', status: 'TimeoutError' }]);
+});
+
+test('maskTsdbKey: 공개 테스트 키만 그대로, 나머지는 가린다', () => {
+  assert.equal(maskTsdbKey('123'), '123');
+  assert.equal(maskTsdbKey('3'), '3');
+  assert.equal(maskTsdbKey('a1b2c3'), 'secret');
 });

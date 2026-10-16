@@ -60,7 +60,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
     return () => { alive = false; };
   }, []);
 
-  /** 팀 탭이 있는 일곱 팀 — 이달의 결과·팀 비교는 여기만 */
+  /** 팀 탭이 있는 일곱 팀 — 팀 비교는 여기만 */
   const teamFeeds = useMemo<TeamFeed[]>(
     () => TARGETS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [] })),
     [feeds],
@@ -277,7 +277,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
-  const results = useMemo(() => monthResults(teamFeeds, thisMonth), [teamFeeds, thisMonth]);
+  /* 코리안리거 소속팀 경기도 넣는다 — 일곱 팀이 앞이라 맨유 vs 아틀레티코 같은 경기는 한 번만(맨유 쪽) */
+  const results = useMemo(() => monthResults(allFeeds, thisMonth), [allFeeds, thisMonth]);
   const [openId, setOpenId] = useState<string | null>(null);
   /*
    * 최근 경기 몇 개만 먼저(데스크톱 10 · 폰 6) — 한 달치를 다 그리면

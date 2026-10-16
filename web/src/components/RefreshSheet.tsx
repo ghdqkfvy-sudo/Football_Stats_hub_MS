@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useClosing } from '../lib/motion';
+import { TsdbCheck } from './TsdbCheck';
 import {
   JOBS, TOKEN_NEW_URL, REPO, clearToken, dispatch, getToken, latestRun, runLabel, setToken,
   type Outcome, type Run,
@@ -161,6 +162,9 @@ export function RefreshSheet({ open, onClose }: { open: boolean; onClose: () => 
               </details>
             </>
           )}
+
+          {/* 사진(컷아웃) 소스가 막혔는지 — GitHub 토큰 없이도 쓸 수 있다 */}
+          <TsdbCheck />
 
           <button className="rf__close" onClick={close}>닫기</button>
         </div>

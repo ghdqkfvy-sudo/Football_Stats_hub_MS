@@ -44,6 +44,9 @@ jobs:
       # (빠른 갱신 항목)까지 같이 뜬다 — 한 번 누르면 전부 최신이 되게. 빠른 쪽은 30초 남짓.
       # 정기 회차는 빠른 잡(snapshot.yml)이 따로 20분마다 돌므로 리그 쪽만 뜬다.
       - name: ESPN 리그·스쿼드·코리안리거 수집
+        # TSDB_KEY — TheSportsDB 유료 키(저장소 Secret). 없으면 공개 테스트 키로 간다
+        env:
+          TSDB_KEY: ${{ secrets.TSDB_KEY }}
         run: node scripts/snapshot.mjs web/public/data --only=${{ github.event_name == 'workflow_dispatch' && 'all' || 'slow' }}
 
       # 수집 직후에 한 번 본다 — 깨진 JSON 을 커밋하지 않게
