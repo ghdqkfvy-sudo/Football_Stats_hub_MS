@@ -93,9 +93,12 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
           <div className="pcard__comp" key={c.competition}>
             <CompCrest k={c.competition} size={14} />
             <span className="pcard__cn">{palette.name(c.competition)}</span>
-            <span className="pcard__ca num">{c.apps}경기<i>선발 {c.starts}</i></span>
+            <span className="pcard__ca num">
+              <b>{c.apps}</b>경기<i>선발 <b>{c.starts}</b></i>
+            </span>
             <span className="pcard__cg num">
-              <b>{c.goals}</b>G <b>{c.assists}</b>A
+              <span className="g" data-zero={c.goals === 0}><b>{c.goals}</b>G</span>
+              <span className="a" data-zero={c.assists === 0}><b>{c.assists}</b>A</span>
             </span>
           </div>
         ))}
