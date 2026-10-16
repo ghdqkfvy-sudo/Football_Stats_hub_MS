@@ -1,1 +1,1 @@
-{"generatedAt":"2026-10-16T12:59:15.815Z","only":"slow","codeVersion":"snap-29","tsdb":{"key":null,"tried":[{"key":"123","status":"HTTP 403"},{"key":"3","status":"TimeoutError"}],"statuses":{},"gone":[],"at":"2026-10-16T12:59:15.815Z"}}
+{"generatedAt":"2026-10-16T13:09:09.275Z","only":"slow","codeVersion":"snap-29","tsdb":{"key":"3","tried":[{"key":"123","status":"HTTP 403"},{"key":"3","status":"200"}],"statuses":{"searchteams.php 200":1,"lookup_all_players.php 200":1,"searchplayers.php 200":8,"searchplayers.php HTTP 429":8},"gone":[],"at":"2026-10-16T13:09:09.275Z"}}
