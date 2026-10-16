@@ -244,7 +244,7 @@ function NextLine({ m, teamId }: { m: Match; teamId: string }) {
   return (
     <span className="kclub__next">
       <i className="hachip" data-side={home ? 'H' : 'A'}>{home ? 'H' : 'A'}</i>
-      <span>{home ? 'vs' : '@'}</span>
+      <span>vs</span>
       <Crest team={opp} size={16} />
       <b>{opp.name}</b>
       <CompCrest k={m.competition} size={13} />
