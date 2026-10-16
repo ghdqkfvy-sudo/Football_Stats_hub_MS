@@ -114,7 +114,7 @@ export function RefreshSheet({ open, onClose }: { open: boolean; onClose: () => 
                       <span className="rf__js" data-tone={st.tone}>
                         <i aria-hidden="true" />
                         {runs[j.file] === undefined ? '상태 확인 중…' : st.text}
-                        {running && ' — 지금 눌러도 이어서 한 번 더 돕니다'}
+                        {running && runs[j.file]?.status === 'in_progress' && ' — 지금 누르면 끝난 뒤 한 번 더'}
                       </span>
                     </button>
                   );

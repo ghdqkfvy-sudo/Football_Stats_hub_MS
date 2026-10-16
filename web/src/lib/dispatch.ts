@@ -17,9 +17,11 @@ export interface Job {
   eta: string;
 }
 
+/* eta = 수집 + 사이트 배포(1~2분)까지 — 2026-10 실행 기록으로 잰 값.
+   빠른 갱신 수집 25~35초, 전체 갱신 수집 약 3분. */
 export const JOBS: Job[] = [
-  { file: 'snapshot.yml', label: '빠른 갱신', desc: '팀 일정·경기 결과·뉴스', eta: '약 10분' },
-  { file: 'snapshot-leagues.yml', label: '전체 갱신', desc: '순위·스쿼드·코리안리거·Future', eta: '약 20분' },
+  { file: 'snapshot.yml', label: '빠른 갱신', desc: '팀 일정·경기 결과·뉴스', eta: '약 3분' },
+  { file: 'snapshot-leagues.yml', label: '전체 갱신', desc: '순위·스쿼드·코리안리거·Future', eta: '약 5분' },
 ];
 
 /** 토큰 만드는 화면 — 이름·저장소·권한을 고르는 GitHub 페이지 */
@@ -108,7 +110,9 @@ export function runLabel(run: Run | null, now = Date.now()): { text: string; ton
     return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`;
   };
   if (run.status === 'in_progress') return { text: `실행 중 · ${mins(run.createdAt)}분째`, tone: 'busy' };
-  if (run.status !== 'completed') return { text: '대기 중', tone: 'busy' };
+  /* queued·pending·waiting — 이 액션은 한 번에 하나만 돈다(concurrency).
+     앞 실행이 끝나면 자동으로 시작하므로 다시 누를 필요가 없다 */
+  if (run.status !== 'completed') return { text: '대기 중 · 앞 실행이 끝나면 자동으로 시작', tone: 'busy' };
   if (run.conclusion === 'success') return { text: `완료 · ${ago(run.updatedAt)}`, tone: 'ok' };
   if (run.conclusion === 'cancelled') return { text: `취소됨 · ${ago(run.updatedAt)}`, tone: 'idle' };
   return { text: `실패 · ${ago(run.updatedAt)}`, tone: 'bad' };

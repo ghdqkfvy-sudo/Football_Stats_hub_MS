@@ -169,6 +169,17 @@ test('rateLimiter: 연속 실패하면 회로를 열고 더 부르지 않는다'
   assert.equal(await lim.run(async () => ({ ok: true, value: 'x' })), 'x');
 });
 
+test('rateLimiter: 가끔 성공해도 누적 실패가 maxFailures 에 닿으면 회로를 연다', async () => {
+  /* 2026-10-15 회귀: TheSportsDB 가 느리게 실패하다 가끔 성공 → 연속 카운트만 보던
+     회로가 끝내 안 열려 리그 잡이 45분 제한에 걸렸다 */
+  const lim = rateLimiter({ minIntervalMs: 0, breakAfter: 8, maxFailures: 4 });
+  let calls = 0;
+  const step = (ok) => lim.run(async () => { calls++; return { ok, value: ok ? 'v' : undefined } });
+  for (let i = 0; i < 10; i++) { await step(false); await step(true); }   // 실패·성공 번갈아
+  assert.equal(lim.broken, true);
+  assert.equal(calls, 7, '누적 실패 4번째(일곱 번째 호출)에서 멈춰야 한다');
+});
+
 test('rateLimiter: 한 건이 예외를 던져도 줄이 끊기지 않는다', async () => {
   const lim = rateLimiter({ minIntervalMs: 0, breakAfter: 99 });
   const boom = lim.run(async () => { throw new Error('boom') });
