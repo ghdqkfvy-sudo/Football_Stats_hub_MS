@@ -2,6 +2,7 @@ import { lineKind, lineLabels, LINE_COLOR, type PlayerSeason, type Slot } from '
 import { Headshot } from './Headshot';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
+import { KorFlag } from './KorFlag';
 
 interface Props {
   slots: Slot[];
@@ -17,11 +18,13 @@ interface Props {
   /** 클릭으로 고정 선택된 선수 — 마우스를 치워도 하이라이트가 남는다 */
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
+  /** 코리안리거(id → 한국어 이름) — 칩에 태극기를 달고 한국어 이름으로 (소속팀 화면) */
+  marks?: ReadonlyMap<string, string>;
 }
 
 /** 세로 축구장 — 아래가 골키퍼, 위가 공격 */
 export function Pitch({
-  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect, tally,
+  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect, tally, marks,
 }: Props) {
   const picked = tally?.find((x) => x.shape === formation)?.n;
   const total = tally?.reduce((a, x) => a + x.n, 0) ?? 0;
@@ -80,6 +83,7 @@ export function Pitch({
                   selected={!!s.player && s.player.id === selectedId}
                   onHover={onHover}
                   onSelect={onSelect}
+                  ko={s.player ? marks?.get(s.player.id) : undefined}
                 />
               ))}
             </div>
@@ -93,7 +97,7 @@ export function Pitch({
 }
 
 function PlayerChip({
-  p, tag, color, active, selected, onHover, onSelect,
+  p, tag, color, active, selected, onHover, onSelect, ko,
 }: {
   p: PlayerSeason | null;
   tag: string;
@@ -102,13 +106,15 @@ function PlayerChip({
   selected: boolean;
   onHover: (id: string | null) => void;
   onSelect?: (id: string | null) => void;
+  /** 코리안리거면 한국어 이름 */
+  ko?: string;
 }) {
   if (!p) return <div className="chipbox" aria-hidden="true" />;
 
-  const last = p.name.split(' ').slice(-1)[0];
+  const last = ko ?? p.name.split(' ').slice(-1)[0];
   return (
     <div
-      className="chipbox"
+      className={`chipbox${ko ? ' chipbox--kor' : ''}`}
       data-active={active}
       data-selected={selected}
       style={{ ['--pc' as string]: color }}
@@ -148,6 +154,7 @@ function PlayerChip({
           className="chipbox__hs"
         />
         {p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
+        {ko && <KorFlag className="chipbox__flag" />}
       </span>
       <span className="chipbox__name">{last}</span>
       {/*

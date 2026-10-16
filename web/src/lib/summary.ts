@@ -50,6 +50,22 @@ export function nextUpBoard(feeds: TeamFeed[], now: number = Date.now()): NextUp
     .sort((a, b) => byKickoff(a.match, b.match));
 }
 
+/**
+ * 한 자리를 여러 팀이 나눠 쓴다 — 대한민국 카드에는 국가대표와 코리안리거 소속팀
+ * (뮌헨·아틀레티코·LAFC) 중 **가장 빠른 경기** 하나만 올린다. 소속팀마다 카드를
+ * 따로 두면 다음 경기 줄이 열 장이 넘는다.
+ *
+ * @param feeds   자리마다 하나씩(소속팀 제외)의 일정
+ * @param group   slotId 자리를 함께 쓰는 팀들의 일정(slotId 팀 자신 포함)
+ */
+export function nextUpBoardShared(
+  feeds: TeamFeed[], group: TeamFeed[], slotId: string, now: number = Date.now(),
+): NextUp[] {
+  const rest = nextUpBoard(feeds.filter((f) => f.id !== slotId), now);
+  const shared = nextUpBoard(group, now)[0];
+  return shared ? [...rest, shared].sort((a, b) => byKickoff(a.match, b.match)) : rest;
+}
+
 /* ── 주간 캘린더 ─────────────────────────────────────── */
 
 const DAY = 86400000;

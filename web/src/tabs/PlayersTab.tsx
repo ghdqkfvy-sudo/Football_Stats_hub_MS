@@ -9,8 +9,18 @@ import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { PlayerDetail } from '../components/PlayerDetail';
 import type { PlayerSeason } from '../lib/squad';
+import { KorFlag } from '../components/KorFlag';
 
-export function PlayersTab({ target, matches }: { target: Target; matches: Match[] }) {
+export function PlayersTab({
+  target, matches, embedded = false, marks,
+}: {
+  target: Target;
+  matches: Match[];
+  /** 다른 탭 안에 들어갈 때(대한민국 › 소속팀) — 바깥 .page 를 두르지 않는다 */
+  embedded?: boolean;
+  /** 코리안리거(id → 한국어 이름) — 베스트 11·목록에 태극기로 표시 */
+  marks?: ReadonlyMap<string, string>;
+}) {
   /*
    * 강조는 마우스를 올린 동안만(hoverId). 포메이션에서 선수를 누르면 목록에서
    * 누른 것과 같은 선수 상세 창이 뜬다 — 예전에는 누르면 "고정 강조" 만 되고
@@ -49,6 +59,13 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     [players, formation, slotShape],
   );
 
+  /** 베스트 11 에 못 든 코리안리거 — 포메이션 위에 한 줄로 알린다(목록에서는 강조) */
+  const outOfXi = useMemo(() => {
+    if (!marks?.size) return [];
+    const inXi = new Set(xi.slots.map((s) => s.player?.id).filter(Boolean));
+    return players.filter((p) => marks.has(p.id) && !inXi.has(p.id));
+  }, [marks, xi, players]);
+
   /** 베스트 11(공격→골키퍼) 먼저, 나머지는 선발·출전·득점 순 */
   const ordered = useMemo(() => orderForList(players, xi.slots), [players, xi]);
 
@@ -58,26 +75,28 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
       [...players, ...departed]
         .filter((p) => p.points > 0)
         .map((p) => ({
-          name: p.name,
+          name: marks?.get(p.id) ?? p.name,
           teamId: target.espnTeamId,
           goals: p.goals,
           assists: p.assists,
           points: p.points,
         })),
-    [players, departed, target.espnTeamId],
+    [players, departed, target.espnTeamId, marks],
   );
+
+  const Wrap = embedded ? EmbeddedWrap : PageWrap;
 
   if (loadingSquad) {
     return (
-      <div className="page">
+      <Wrap>
         <div className="skel" style={{ height: 700 }} />
-      </div>
+      </Wrap>
     );
   }
 
   if (!players.length) {
     return (
-      <div className="page">
+      <Wrap>
         <div className="empty">
           <h3>{target.nameEn} 라인업 기록이 아직 없습니다</h3>
           <p>
@@ -86,12 +105,12 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             정적 피드(<code>/data/squad-*.json</code>) 중 하나는 연결되어 있어야 합니다.
           </p>
         </div>
-      </div>
+      </Wrap>
     );
   }
 
   return (
-    <div className="page">
+    <Wrap>
       <section>
         <div className="sec__head">
           <h2 className="sec__title">선수 스탯</h2>
@@ -101,6 +120,17 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
           </span>
         </div>
 
+        {outOfXi.map((p) => (
+          <p className="squad__kor" key={p.id}>
+            <KorFlag />
+            <b>{marks?.get(p.id)}</b>
+            <span className="num">
+              베스트 11 밖 · {p.apps}경기(선발 {p.starts}/{covered}) · {p.minutes}분
+            </span>
+            <em>아래 목록에 강조</em>
+          </p>
+        ))}
+
         <div className="squad">
           <Pitch
             slots={xi.slots}
@@ -109,6 +139,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             covered={covered}
             chem={teamCohesion(xi.slots, covered)}
             tally={formationTally}
+            marks={marks}
             activeId={activeId}
             onHover={setHoverId}
             onSelect={(id) => {
@@ -122,6 +153,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             onHover={setHoverId}
             onClose={() => setHoverId(null)}
             onOpen={setDetail}
+            marks={marks}
           />
           <PlayerDetail p={detail} onClose={closeDetail} />
         </div>
@@ -134,6 +166,9 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
         </div>
         <LeaderBoard rows={leaders} variant="bar" />
       </section>
-    </div>
+    </Wrap>
   );
 }
+
+const PageWrap = ({ children }: { children: React.ReactNode }) => <div className="page">{children}</div>;
+const EmbeddedWrap = ({ children }: { children: React.ReactNode }) => <>{children}</>;

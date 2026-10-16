@@ -131,11 +131,13 @@ export async function loadLeague(slug: string, name: string): Promise<Loaded<Lea
  *
  * 공격포인트 순위처럼 경기별 선수 기록이 필요한 화면은 `loadLeague` 를 쓴다.
  */
-export async function loadLeagueTable(slug: string, name: string): Promise<Loaded<LeagueData>> {
-  const pick = (json: any): LeagueData => ({
-    matches: matchesFromSchedule(json),
-    table: json?.standings ? standingsFrom(json.standings, slug, name)[0] : undefined,
-  });
+export async function loadLeagueTable(slug: string, name: string, teamId?: string): Promise<Loaded<LeagueData>> {
+  /* 조가 나뉜 리그(MLS 동·서부)는 teamId 가 든 조를 고른다. 없으면 첫 표 */
+  const pick = (json: any): LeagueData => {
+    const groups = json?.standings ? standingsFrom(json.standings, slug, name) : [];
+    const mine = teamId ? groups.find((g) => g.rows.some((r) => r.team.id === teamId)) : undefined;
+    return { matches: matchesFromSchedule(json), table: mine ?? groups[0] };
+  };
   const empty = (v: LeagueData) => !v.matches.length && !v.table;
 
   const slim = await load<LeagueData>({

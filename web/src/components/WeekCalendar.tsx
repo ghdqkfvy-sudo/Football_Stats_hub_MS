@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SUMMARY_OPP, summaryColor, type Target } from '../config/targets';
+import { SUMMARY_OPP, koreansIn, summaryColor, type Target } from '../config/targets';
 import type { Match } from '../lib/types';
 import { kstTime, todayKey } from '../lib/kst';
 import { weekKeys, weekLabel, type DayMatch } from '../lib/summary';
 import { Crest } from './Crest';
+import { KorFlag } from './KorFlag';
 import { MatchPopCard } from './MatchPop';
 import { Swap, type SwapDir } from './Swap';
 
@@ -198,13 +199,27 @@ export function WeekCalendar({
                       {/* 칸은 "우리 팀 → 상대" 순서라 스코어도 우리 득점부터.
                           홈-원정 순서로 찍던 때 원정 승리(RMA @ROMA 4-3)가 "3-4" 로
                           진 것처럼 읽혔다. 패배는 이달의 결과처럼 한 톤 낮춘다. */}
-                      <span
-                        className="wcal__t num"
-                        data-done={done || undefined}
-                        data-r={done ? (ours > theirs ? 'W' : ours < theirs ? 'L' : 'D') : undefined}
-                      >
-                        {done ? `${ours}-${theirs}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
-                      </span>
+                      {(() => {
+                        const time = (
+                          <span
+                            className="wcal__t num"
+                            data-done={done || undefined}
+                            data-r={done ? (ours > theirs ? 'W' : ours < theirs ? 'L' : 'D') : undefined}
+                          >
+                            {done ? `${ours}-${theirs}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
+                          </span>
+                        );
+                        /* 코리안리거 소속팀 경기 — 이름표를 시각·스코어와 **같은 줄**에.
+                           줄을 하나 더 쓰면 그 칸만 길어져 주간 표가 들쭉날쭉해진다 */
+                        const ko = koreansIn(m.home.id, m.away.id);
+                        if (!ko.length) return time;
+                        return (
+                          <span className="wcal__tl">
+                            {time}
+                            {ko.map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
+                          </span>
+                        );
+                      })()}
                     </button>
                   );
                 })}
