@@ -336,7 +336,10 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
               standingOf={standingOf}
               hero
               onSelect={() => onOpenTeam(hero.teamId as TargetId, { matchId: hero.match.id })}
-              label={`${targetOf(hero.teamId).name} 일정에서 이 경기 보기`}
+              /* 코리안리거 소속팀 경기면 대한민국 › 소속팀 의 그 클럽으로 간다(App.openTeam) */
+              label={KOREAN_CLUBS.some((c) => c.id === hero.teamId)
+                ? `대한민국 소속팀에서 ${targetOf(hero.teamId).name} 보기`
+                : `${targetOf(hero.teamId).name} 일정에서 이 경기 보기`}
             />
             {/* 나머지는 3장씩 두 줄 — 한 줄에 여섯 장을 밀어 넣으면
                 엠블럼도 팀명도 읽을 수 없는 크기가 된다 */}
