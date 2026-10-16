@@ -137,6 +137,8 @@ export function buildSquad(
   teamId: string,
 ): {
   players: PlayerSeason[];
+  /** 지금 팀 로스터에 없는 선수 — 목록·베스트 11 에서 뺐다(팀 공격 포인트용으로만 돌려준다) */
+  departed: PlayerSeason[];
   formation: string | null;
   covered: number;
   /** 포메이션별 채택 경기 수 (많은 순) — 화면에 근거로 보여 준다 */
@@ -361,7 +363,13 @@ export function buildSquad(
 
   players.sort((a, b) => b.score - a.score);
 
-  return { players, formation, covered, formationTally, slotShape };
+  /* 지금 팀 로스터에 없는 선수(시즌 중 이적·임대, 1군 밖 유스)는 선수 목록과
+     베스트 11 후보에서 뺀다. 그 선수가 이 팀에서 올린 골·도움은 실제 팀 기록이라
+     따로 돌려준다(팀 공격 포인트 순위에는 남긴다). */
+  const departed = players.filter((p) => athletes[p.id]?.onRoster === false);
+  const active = departed.length ? players.filter((p) => athletes[p.id]?.onRoster !== false) : players;
+
+  return { players: active, departed, formation, covered, formationTally, slotShape };
 }
 
 /**

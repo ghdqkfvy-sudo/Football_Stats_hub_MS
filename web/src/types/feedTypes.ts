@@ -33,6 +33,11 @@ export interface AthleteInfo {
    */
   minutesSeason?: number;
   /**
+   * 지금 팀 로스터(ESPN /teams/{id}/roster)에 있나. false = 시즌 중 떠난 선수(이적·임대)나
+   * 1군 밖 유스 — 선수 목록·베스트 11 에서 뺀다. 판단할 수 없었으면(대표팀·응답 실패) 없다.
+   */
+  onRoster?: boolean;
+  /**
    * ESPN 팀 로스터(`/teams/{id}/roster`)가 알려 준 실제 헤드샷 주소.
    * 축구는 **일부 선수만** 사진이 있고, 그 사실을 알려 주는 응답이 여기
    * 하나뿐이다(경기 로스터·선수 프로필에는 사진 필드 자체가 없다).

@@ -112,9 +112,8 @@ function PlayerChip({
       data-active={active}
       data-selected={selected}
       style={{ ['--pc' as string]: color }}
-      /* ⚠️ 터치에서는 호버를 달지 않는다. 탭 한 번에 가짜 mouseenter(호버=이 선수)와
-         click(고정 토글)이 같이 와서, 이미 고정된 선수를 다시 누르면 고정만 풀리고
-         activeId 는 그대로라 카드가 다시 안 떴다. 터치는 탭 = 고정 토글 하나뿐이다. */
+      /* ⚠️ 터치에서는 호버를 달지 않는다 — 탭 한 번에 가짜 mouseenter 와 click 이
+         같이 온다. 터치는 탭 = 선수 상세 열기 하나뿐이다. */
       {...(HAS_HOVER
         ? {
           onMouseEnter: () => onHover(p.id),
@@ -123,16 +122,16 @@ function PlayerChip({
           onBlur: () => onHover(null),
         }
         : {})}
-      // 클릭하면 선택이 고정된다 — 오른쪽 선수 목록도 그 선수로 따라간다
-      onClick={() => onSelect?.(selected ? null : p.id)}
+      // 누르면 선수 목록에서 누른 것과 같은 선수 상세 창이 뜬다(PlayersTab)
+      onClick={() => onSelect?.(p.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onSelect?.(selected ? null : p.id);
+          onSelect?.(p.id);
         }
       }}
       role="button"
-      aria-pressed={selected}
+      aria-haspopup="dialog"
       tabIndex={0}
       title={`${p.name} · ${p.apps}경기(선발 ${p.starts}) ${p.goals}골 ${p.assists}도움`}
     >
