@@ -224,8 +224,9 @@
 /* 코리안리거 — 클럽 위 · 국가대표 아래 (옆에 띄우려면 폭이 좁아야 한다) */
 .krr--split { display: grid; grid-template-columns: 1fr; gap: 12px; }
 /* 닫혀 있을 때는 자리도 차지하지 않게 — 투명한 상자가 오른쪽 열 카드 밖으로
-   나가 페이지에 가로 스크롤을 만들었다(위치 보정은 열릴 때만 한다) */
-.krr--split:not([data-open='true']) { display: none; }
+   나가 페이지에 가로 스크롤을 만들었다(위치 보정은 열릴 때만 한다).
+   한 칸짜리(Future)도 같다 — 카드 오른쪽에 340px 이 숨어 있어 249px 넘쳤다 */
+.krr:not([data-open='true']) { display: none; }
 .krr__col { min-width: 0; }
 .krr__col + .krr__col { border-top: 1px solid var(--line); padding-top: 12px; }
 .krr__h {
@@ -289,6 +290,7 @@
   }
   /* 폰 폭에 두 칸은 좁다 — 클럽 위, 국가대표 아래로 쌓는다 */
   .krr--split { grid-template-columns: 1fr; gap: 10px; width: auto; }
+  .krr:not([data-open='true']) { display: block; }
   .krr--split:not([data-open='true']) { display: grid; }
   .krr__col + .krr__col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 10px; }
 }
