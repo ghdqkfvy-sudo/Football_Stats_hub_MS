@@ -4,6 +4,7 @@ import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { kstShortDate } from '../lib/kst';
 import { Headshot } from './Headshot';
+import { NatFlag } from './NatFlag';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 
@@ -41,11 +42,12 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
   return (
     <>
     <div className="pcard__top">
-      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={46} className="pcard__hs" />
+      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={String(p.jersey)} size={46} className="pcard__hs" />
       <div>
         <b>{p.name}</b>
         <span>
           <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
+          <NatFlag nat={p.nat} />
           {` #${p.jersey}`}
           {p.age ? ` · ${p.age}세` : ''}
         </span>

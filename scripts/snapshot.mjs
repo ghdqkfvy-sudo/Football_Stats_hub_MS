@@ -569,6 +569,20 @@ async function coreLineupInfo(leagueSlug, eventId, teamId) {
    결론 내렸었다. 실제로는 갈린다(실측: 353951 있음 / 296410·149945 404).
    그래서 팀 단위로 한 번 받아 두고 선수별 실제 주소를 박아 준다. */
 const rosterPhotoCache = new Map();
+
+/**
+ * 로스터 선수의 국적 — 선수 카드의 포지션 옆 국기(2026-10-16 요청).
+ * ESPN 로스터는 citizenship(이름) · citizenshipCountry.abbreviation(3글자) · flag.href 를 준다.
+ * 국기 주소가 없고 약어만 있으면 ESPN 국기 경로로 만든다. 아무것도 없으면 undefined.
+ */
+function nationalityOf(a) {
+  const name = String(a?.citizenship ?? a?.flag?.alt ?? '').trim() || undefined;
+  const code = String(a?.citizenshipCountry?.abbreviation ?? '').trim().toUpperCase() || undefined;
+  const flag = a?.flag?.href
+    ? String(a.flag.href)
+    : code ? `https://a.espncdn.com/i/teamlogos/countries/500/${code.toLowerCase()}.png` : undefined;
+  return name || code || flag ? { name, code, flag } : undefined;
+}
 async function teamPhotos(leagueSlug, teamId) {
   const key = `${leagueSlug}|${teamId}`;
   const hit = rosterPhotoCache.get(key);
@@ -590,6 +604,7 @@ async function teamPhotos(leagueSlug, teamId) {
       // 시즌 포지션(G/D/M/F) — 경기 요약이 자리 약어를 안 줄 때의 대비책이다
       posAbbr: a?.position?.abbreviation ? String(a.position.abbreviation) : undefined,
       age: Number(a?.age) || undefined,
+      nat: nationalityOf(a),
     });
   }
   rosterPhotoCache.set(key, map);
@@ -2081,6 +2096,7 @@ async function main() {
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
         if (meta?.age) athletes[id].age = meta.age;
+        if (meta?.nat) athletes[id].nat = meta.nat;
 
         /*
          * 사진은 **등급으로** 고른다 — 컷아웃 > 썸네일 > ESPN > 위키.

@@ -7,7 +7,7 @@
  * 많이 쓴 것을 쓴다.
  */
 import type { Match } from './types';
-import type { AthleteInfo, Lineup } from '../types/feedTypes';
+import type { AthleteInfo, Lineup, Nationality } from '../types/feedTypes';
 
 export interface CompSplit {
   competition: string;
@@ -39,6 +39,8 @@ export interface PlayerSeason {
   red: number;
   /** 팀 로스터가 알려 준 나이 */
   age?: number;
+  /** 국적 — 카드의 포지션 옆 국기 */
+  nat?: Nationality;
   /** formationPlace → 선발 횟수 */
   slots: Record<number, number>;
   modalSlot: number;
@@ -235,6 +237,7 @@ export function buildSquad(
           photoKind: info.photoKind,
           sofascoreId: info.sofascoreId,
           age: info.age,
+          nat: info.nat,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
           yellow: 0, red: 0,
           slots: {}, modalSlot: 0, posPlaces: {}, posAny: {}, modalPos: '',

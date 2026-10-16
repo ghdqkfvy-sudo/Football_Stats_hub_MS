@@ -5,6 +5,7 @@ import { kstShortDate } from '../lib/kst';
 import { useIsMobile } from '../lib/useMedia';
 import { useClosing } from '../lib/motion';
 import { Headshot } from './Headshot';
+import { NatFlag } from './NatFlag';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { BenchLine, Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
@@ -88,11 +89,12 @@ function TableBody({ p }: { p: PlayerSeason }) {
   return (
     <>
     <div className="pdet__top">
-      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} jersey={p.jersey} size={54} />
+      <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={String(p.jersey)} size={54} />
       <div>
         <b className="pdet__name">{p.name}</b>
         <span className="pdet__meta">
           <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
+          <NatFlag nat={p.nat} />
           {` #${p.jersey}`}{p.age ? ` · ${p.age}세` : ''}
         </span>
       </div>
