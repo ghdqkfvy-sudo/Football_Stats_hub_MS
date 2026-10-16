@@ -671,11 +671,11 @@ const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8, maxFailures:
 const tsdbStatus = new Map();
 const countStatus = (st) => tsdbStatus.set(st, (tsdbStatus.get(st) ?? 0) + 1);
 
-const tsdbFetch = async (key, path) => {
+const tsdbFetch = async (key, path, timeoutMs = PHOTO_TIMEOUT_MS) => {
   try {
     const res = await fetch(`${TSDB_ROOT}/${key}/${path}`, {
       headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
-      signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return { status: `HTTP ${res.status}`, value: undefined };
     const value = await res.json().catch(() => undefined);
@@ -692,7 +692,9 @@ let tsdbKeyPick = null;
 let tsdbPicked = null;
 function tsdbKey() {
   tsdbKeyPick ??= pickTsdbKey(TSDB_KEYS, async (key) => {
-    const r = await tsdbFetch(key, 'searchteams.php?t=Arsenal');
+    /* 키 점검 한 번은 넉넉히 기다린다 — 느린 것과 죽은 것을 가르려고
+       (2026-10-16 서버 기록: 5초에 두 키 모두 시간 초과) */
+    const r = await tsdbFetch(key, 'searchteams.php?t=Arsenal', 15_000);
     const ok = r.status === '200' && Array.isArray(r.value?.teams) && r.value.teams.length > 0;
     return { ok, status: ok ? '200' : r.status === '200' ? 'empty' : r.status };
   }).then((r) => {

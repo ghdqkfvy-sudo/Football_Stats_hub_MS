@@ -243,7 +243,8 @@
 .tsc__line b { color: var(--text-hi); font-weight: 800; min-width: 42px; }
 .tsc__v { font-weight: 700; color: var(--text-hi); }
 .tsc__line[data-tone='bad'] .tsc__v { color: var(--loss); }
-.tsc__d { flex: 1 0 100%; padding-left: 15px; font-size: 11.5px; color: var(--text-lo); }
+.tsc__d { flex: 1 0 100%; padding-left: 15px; font-size: 11.5px; color: var(--text-lo); word-break: break-word; }
+.tsc__d a { color: var(--accent); }
 .tsc__line em { font-style: normal; font-size: 11px; color: var(--text-lo); margin-left: auto; }
 .tsc__sub { font-size: 11.5px; color: var(--text-lo); line-height: 1.5; word-break: break-all; }
 .tsc__sum { color: var(--text-hi) !important; font-size: 12.5px !important; }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { feed } from '../lib/feed';
-import { PUBLIC_KEYS, checkKey, maskKey, type KeyCheck, type KeyVerdict, type ServerTsdb } from '../lib/tsdbCheck';
+import { PUBLIC_KEYS, checkKey, maskKey, probeUrl, type KeyCheck, type KeyVerdict, type ServerTsdb } from '../lib/tsdbCheck';
 
 const LABEL: Record<KeyVerdict, string> = {
   ok: '성공', limited: '일부', denied: '실패', blocked: '차단', error: '오류',
@@ -96,7 +96,13 @@ export function TsdbCheck() {
               <b>{maskKey(r.key)}</b>
               <span className="tsc__v">{LABEL[r.verdict]}</span>
               <em className="num">{r.ms}ms</em>
-              <span className="tsc__d">{r.detail}</span>
+              <span className="tsc__d">
+                {r.detail}
+                {/* 공개 키만 — 유료 키를 주소창·방문 기록에 남기지 않는다 */}
+                {PUBLIC_KEYS.includes(r.key) && (
+                  <> · <a href={probeUrl(r.key)} target="_blank" rel="noreferrer">직접 열기</a></>
+                )}
+              </span>
             </li>
           ))}
         </ul>

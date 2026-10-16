@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskKey, verdictOfRoster, verdictOfStatus } from '../tsdbCheck';
+import { bodyHint, maskKey, verdictOfRoster, verdictOfStatus } from '../tsdbCheck';
 
 describe('TheSportsDB 키 점검', () => {
   it('공개 테스트 키만 그대로 보이고 나머지는 가린다', () => {
@@ -13,6 +13,15 @@ describe('TheSportsDB 키 점검', () => {
     expect(verdictOfStatus(401).verdict).toBe('denied');
     expect(verdictOfStatus(404).verdict).toBe('denied');
     expect(verdictOfStatus(500).verdict).toBe('error');
+  });
+
+  it('503 은 키 문제가 아니라고 말하고, 본문으로 이유를 가른다', () => {
+    const v = verdictOfStatus(503, '<html><title>Just a moment...</title><script>x()</script></html>');
+    expect(v.verdict).toBe('error');
+    expect(v.detail).toContain('키 문제가 아님');
+    expect(v.detail).toContain('Cloudflare');
+    expect(bodyHint('<h1>Service   Unavailable</h1><p>Back soon</p>')).toBe('"Service Unavailable Back soon"');
+    expect(bodyHint('')).toBe('본문 없음');
   });
 
   it('로스터가 짧으면(무료 키) "일부만", 길면 성공 — 컷아웃 수를 센다', () => {
