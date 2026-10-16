@@ -59,3 +59,26 @@ export function needsLookup(entry, now = Date.now(), retryDays = 7) {
   const at = Date.parse(entry.at ?? '');
   return !Number.isFinite(at) || now - at > retryDays * 86_400_000;
 }
+
+/**
+ * ID 기록 두 개를 합친다 — **찾은 ID 는 절대 잃지 않는다.**
+ *
+ * 2026-10-16: 두 회차가 겹쳐 돌았는데, 뒤 회차가 ID 기록 파일이 생기기 전의 체크아웃에서
+ * 시작해 전부 다시 찾다가 위키데이터 한도에 걸렸고, 그 작은 기록(223건)으로 앞 회차의
+ * 기록(329건)을 덮어써 레알·뉴캐슬·리버풀·Future 의 ID 가 사라졌다.
+ * 그래서 시작할 때와 저장 직전에 main 에 올라가 있는 기록과 합친다.
+ *  · 한쪽만 있으면 그것
+ *  · 한쪽만 ID 가 있으면 ID 있는 쪽
+ *  · 둘 다 ID 가 있거나 둘 다 없으면 더 최근(at) 쪽
+ */
+export function mergeIdMaps(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [k, vb] of Object.entries(b ?? {})) {
+    const va = out[k];
+    if (!va) { out[k] = vb; continue; }
+    if (!va.ss && vb?.ss) { out[k] = vb; continue; }
+    if (va.ss && !vb?.ss) continue;
+    if (Date.parse(vb?.at ?? '') > Date.parse(va.at ?? '')) out[k] = vb;
+  }
+  return out;
+}

@@ -37,7 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
-import { footballerIds, needsLookup, pickSofascore } from './lib/sofascore.mjs';
+import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -77,7 +77,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-28';
+const CODE_VERSION = 'snap-29';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -893,13 +893,30 @@ function espnHeadshot(id) {
  * 지금 사진(photo · photoKind)은 그대로 둔다 — SofaScore 이미지가 안 뜰 때의 2순위다.
  */
 const WD_API = 'https://www.wikidata.org/w/api.php';
-const ssLimit = rateLimiter({ minIntervalMs: 250, breakAfter: 6, maxFailures: 30 });
-const ssStats = { known: 0, found: 0, missing: 0, failed: 0 };
+/* 위키데이터는 한꺼번에 몰아치면 막는다(2026-10-16 회차가 중간에 끊겼다) — 간격을 넉넉히,
+   그리고 한 회차에 새로 찾는 선수 수를 묶어 둔다. 밀린 선수는 다음 회차가 이어서 찾는다 */
+const ssLimit = rateLimiter({ minIntervalMs: 450, breakAfter: 6, maxFailures: 30 });
+const SS_MAX_LOOKUPS = 150;
+const ssStats = { known: 0, found: 0, missing: 0, failed: 0, deferred: 0 };
+let ssLookups = 0;
+
+/** main 에 올라가 있는 최신 ID 기록 — 겹친 회차가 오래된 체크아웃에서 시작해도 잃지 않게 */
+async function publishedSsMap() {
+  const repo = process.env.GITHUB_REPOSITORY;
+  if (!repo) return {};
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${repo}/main/web/public/data/sofascore-ids.json`, {
+      headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(10_000),
+    });
+    return res.ok ? ((await res.json())?.ids ?? {}) : {};
+  } catch { return {}; }
+}
 let ssMapP = null;
 function sofascoreMap() {
-  ssMapP ??= readFile(join(OUT, 'sofascore-ids.json'), 'utf8')
-    .then((t) => JSON.parse(t)?.ids ?? {})
-    .catch(() => ({}));
+  ssMapP ??= Promise.all([
+    readFile(join(OUT, 'sofascore-ids.json'), 'utf8').then((t) => JSON.parse(t)?.ids ?? {}).catch(() => ({})),
+    publishedSsMap(),
+  ]).then(([local, published]) => mergeIdMaps(local, published));
   return ssMapP;
 }
 const wdGet = (params) => ssLimit.run(async () => {
@@ -936,7 +953,9 @@ async function attachSofascore(list) {
   await pool(list, 3, async ({ id, name, age, target }) => {
     const key = String(id);
     let entry = map[key];
-    if (needsLookup(entry) && !ssLimit.broken) {
+    if (needsLookup(entry) && !ssLimit.broken && ssLookups >= SS_MAX_LOOKUPS) ssStats.deferred++;
+    else if (needsLookup(entry) && !ssLimit.broken) {
+      ssLookups++;
       const r = await lookupSofascore(name, age);
       if (r === undefined) ssStats.failed++;
       else {
@@ -2209,11 +2228,13 @@ async function main() {
 
   /* SofaScore ID 기록 — 다음 회차가 이어받아 선수당 한 번만 찾는다 */
   if (wants('slow') && ssMapP) {
-    const ids = await ssMapP;
+    /* 저장 직전에 한 번 더 — 이 회차가 도는 사이 다른 회차가 올린 기록도 합친다 */
+    const ids = mergeIdMaps(await ssMapP, await publishedSsMap());
     await save('sofascore-ids.json', { format: 1, ids, updatedAt: new Date().toISOString() });
     console.log(
       `    SofaScore ID: 기록 ${ssStats.known} · 새로 찾음 ${ssStats.found} · 없음 ${ssStats.missing}` +
         (ssStats.failed ? ` · 확인 못 함 ${ssStats.failed}` : '') +
+        (ssStats.deferred ? ` · 다음 회차로 ${ssStats.deferred}` : '') +
         (ssLimit.broken ? ' · ⚠ 위키데이터 한도 — 다음 회차에 이어서' : ''),
     );
   }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { footballerIds, needsLookup, pickSofascore, sofascoreImage } from './sofascore.mjs';
+import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, sofascoreImage } from './sofascore.mjs';
 
 const TODAY = new Date('2026-10-16T00:00:00Z');
 const ent = (ss, born) => ({
@@ -43,4 +43,26 @@ test('needsLookup: 찾은 건 다시 안 찾고, 못 찾은 건 7일 뒤 다시'
 
 test('sofascoreImage', () => {
   assert.equal(sofascoreImage('96626'), 'https://img.sofascore.com/api/v1/player/96626/image');
+});
+
+test('mergeIdMaps: 찾은 ID 는 잃지 않는다 — 겹친 회차가 작은 기록으로 덮어써도', () => {
+  const big = {
+    a: { ss: '1', at: '2026-10-16T12:20:00Z' },
+    b: { ss: '2', at: '2026-10-16T12:20:00Z' },
+    c: { ss: null, at: '2026-10-16T12:20:00Z' },
+  };
+  const small = {
+    a: { ss: null, at: '2026-10-16T12:24:00Z' },        // 뒤 회차가 한도에 걸려 못 찾음
+    c: { ss: '3', at: '2026-10-16T12:24:00Z' },         // 뒤 회차가 새로 찾음
+    d: { ss: '4', at: '2026-10-16T12:24:00Z' },
+  };
+  assert.deepEqual(mergeIdMaps(small, big), {
+    a: { ss: '1', at: '2026-10-16T12:20:00Z' },
+    b: { ss: '2', at: '2026-10-16T12:20:00Z' },
+    c: { ss: '3', at: '2026-10-16T12:24:00Z' },
+    d: { ss: '4', at: '2026-10-16T12:24:00Z' },
+  });
+  /* 둘 다 ID 가 있으면 더 최근 쪽 */
+  assert.equal(mergeIdMaps({ x: { ss: '1', at: '2026-01-01' } }, { x: { ss: '9', at: '2026-02-01' } }).x.ss, '9');
+  assert.deepEqual(mergeIdMaps(undefined, undefined), {});
 });
