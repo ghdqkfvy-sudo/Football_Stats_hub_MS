@@ -220,7 +220,8 @@ export function Calendar({ matches, year, month, onMove, selectedDay, onSelectDa
                       }}
                     >
                       <span className="bar__info" data-r={res} aria-hidden="true">
-                        {away && <i className="bar__at">@</i>}
+                        {/* 대진 표기는 홈·원정 상관없이 늘 vs (홈/원정은 다른 곳에서 H·A 로) */}
+                        <i className="bar__at">vs</i>
                         <Crest team={opp} size={14} glow={false} />
                         <span className="bar__opp">{opp.abbr}</span>
                         <b className="num">
