@@ -111,6 +111,7 @@ interface Props {
   national?: NationalLine;
   photo?: string;
   photoKind?: AthleteInfo['photoKind'];
+  sofascoreId?: string;
   /** 이미지가 없을 때 원 안에 넣을 글자 */
   fallbackLabel: string;
   clubId?: string;
@@ -139,7 +140,7 @@ interface Props {
 }
 
 export function StatCard({
-  id, name, posLabel, photo, photoKind, fallbackLabel,
+  id, name, posLabel, photo, photoKind, sofascoreId, fallbackLabel,
   clubId, club, age, league, leagueName, leagueLogo,
   comps, recent, tag, emptyNote, recentNote, open, onHover,
   pos, tint = 'club', national, compLabel = true, hot,
@@ -185,6 +186,7 @@ export function StatCard({
           id={id}
           src={photo}
           kind={photoKind}
+          sofa={sofascoreId}
           label={fallbackLabel}
           size={46}
           className="krc__hs"

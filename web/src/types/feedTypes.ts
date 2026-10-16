@@ -53,6 +53,8 @@ export interface AthleteInfo {
    * 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 — 화면이 그걸 구분해야 한다.
    */
   photoKind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
+  /** SofaScore 선수 ID — 있으면 사진 1순위(앱이 주소를 만든다). 안 뜨면 photo 로 */
+  sofascoreId?: string;
   /**
    * 팀 로스터가 주는 시즌 포지션 약어(대개 G/D/M/F).
    * 경기 요약이 자리 약어(CD-L 등)를 안 주는 팀·대회가 있어서, 그때
@@ -136,6 +138,8 @@ export interface KoreanPlayer {
   photo?: string;
   /** 사진 출처 — 경기 사진은 위쪽을 보여 줘야 얼굴이 걸린다 (AthleteInfo 참고) */
   photoKind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
+  /** SofaScore 선수 ID — 있으면 사진 1순위(앱이 주소를 만든다). 안 뜨면 photo 로 */
+  sofascoreId?: string;
   /** 소속 리그 앰블럼 — core 리그 객체의 logos(dark) 에서 받아 온다 */
   leagueLogo?: string;
   stats: KoreanStat[];

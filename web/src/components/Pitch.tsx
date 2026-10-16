@@ -149,6 +149,7 @@ function PlayerChip({
           id={p.id}
           src={p.photo}
           kind={p.photoKind}
+          sofa={p.sofascoreId}
           label={String(p.jersey)}
           size={44}
           className="chipbox__hs"

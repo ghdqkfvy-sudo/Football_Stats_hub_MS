@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { headshot } from '../config/koreans';
 import { canonicalPhotoUrl } from '../lib/photoUrl';
+import { sofascoreImage } from '../lib/photoProbe';
 
 /**
  * 선수 헤드샷.
@@ -17,7 +18,7 @@ import { canonicalPhotoUrl } from '../lib/photoUrl';
  * 떨어진다. 사진이 없는 선수가 섞여 있는 게 정상이다.
  */
 export function Headshot({
-  id, src, kind, jersey, label, size = 34, className = '',
+  id, src, kind, sofa, jersey, label, size = 34, className = '',
 }: {
   id: string;
   /** 스냅샷이 확인한 실제 사진 주소 — 없으면 관용 주소를 시도한다 */
@@ -27,6 +28,11 @@ export function Headshot({
    * 얼굴이 안 걸린다 — `data-kind` 로 넘겨 CSS 가 위쪽을 보여 준다.
    */
   kind?: 'cutout' | 'thumb' | 'espn' | 'wiki';
+  /**
+   * SofaScore 선수 ID — **사진 1순위**(2026-10-16). 이미지가 안 뜨면 src(받아 둔 컷아웃 등)로,
+   * 그것도 안 되면 ESPN 관용 주소 → 글자 배지로 내려간다.
+   */
+  sofa?: string;
   /** 등번호 배지 (없으면 배지를 그리지 않는다) */
   jersey?: number;
   /** 이미지 실패 시 원 안에 넣을 글자 — 없으면 등번호를 쓴다 */
@@ -39,14 +45,23 @@ export function Headshot({
    * 예전에는 한 번 실패하면 영영 글자 배지였다 — Future Resources 는 카드가
    * 피드보다 먼저 그려져서, 처음엔 사진 주소가 없어 관용 ESPN 주소를 시도하다
    * 404 가 났고, 곧이어 피드가 진짜 사진 주소를 줘도 다시 시도하지 않았다.
+   * 후보가 여럿이라(SofaScore → 받아 둔 사진 → ESPN) 실패한 주소들을 모아 둔다.
    */
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
   const fallback = label ?? (jersey !== undefined ? String(jersey) : '');
   const confirmed = canonicalPhotoUrl(src);
-  const url = confirmed || headshot(id);
-  const failed = !!url && failedUrl === url;
+  const sofaUrl = sofa ? sofascoreImage(sofa) : '';
+  /* 후보 순서 — [주소, data-kind, 스냅샷이 확인한 주소인가] */
+  const candidates: [string, string | undefined, boolean][] = [];
+  if (sofaUrl) candidates.push([sofaUrl, 'sofa', true]);
+  if (confirmed) candidates.push([confirmed, kind, true]);
+  const guess = headshot(id);
+  if (guess && guess !== confirmed) candidates.push([guess, undefined, false]);
+  const pick = candidates.find(([u]) => !failed.has(u));
+  /* 확인된 주소가 하나라도 실패했으면 스모크가 센다(추측 주소 404 는 정상) */
+  const failedConfirmed = candidates.find(([u, , c]) => c && failed.has(u))?.[0];
 
-  if (failed || !url) {
+  if (!pick) {
     return (
       <span
         className={`hs hs--fallback ${className}`}
@@ -54,7 +69,7 @@ export function Headshot({
          * 스냅샷이 확인한 주소를 못 불러온 경우만 — 화면 스모크(e2e/smoke.mjs)가 "사진 없음" 과 구분해 센다.
          * 관용 주소 추측이 404 난 건 원본에 사진이 없는 선수라 정상이다.
          */
-        data-failed={failed && confirmed ? url : undefined}
+        data-failed={failedConfirmed}
         style={{ width: size, height: size, fontSize: Math.max(10, size * (fallback.length > 2 ? 0.3 : 0.42)) }}
         aria-hidden="true"
       >
@@ -62,6 +77,7 @@ export function Headshot({
       </span>
     );
   }
+  const [url, k, sure] = pick;
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
       <img
@@ -69,10 +85,12 @@ export function Headshot({
         src={url}
         alt=""
         loading="lazy"
-        data-kind={kind ?? undefined}
+        data-kind={k}
         /* 추측 주소 — 404 가 정상일 수 있어 스모크가 세지 않는다 */
-        data-guess={confirmed ? undefined : ''}
-        onError={() => setFailedUrl(url)}
+        data-guess={sure ? undefined : ''}
+        /* SofaScore CDN 은 다른 사이트에서 부를 때 리퍼러를 보면 막을 수 있다 */
+        referrerPolicy={k === 'sofa' ? 'no-referrer' : undefined}
+        onError={() => setFailed((f) => new Set(f).add(url))}
       />
       {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
     </span>
