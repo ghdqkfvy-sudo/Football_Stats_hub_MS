@@ -583,7 +583,7 @@ export default function App() {
             />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
-          {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} />}
+          {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}
           {!summary && tab === 'koreans' && <KoreansTab />}
           {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
