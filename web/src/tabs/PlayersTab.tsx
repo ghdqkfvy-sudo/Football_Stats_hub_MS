@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Target } from '../config/targets';
 import type { Match } from '../lib/types';
 import type { SquadData } from '../lib/api';
@@ -7,17 +7,19 @@ import { bestEleven, buildSquad, orderForList, teamCohesion } from '../lib/squad
 import { Pitch } from '../components/Pitch';
 import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
+import { PlayerDetail } from '../components/PlayerDetail';
+import type { PlayerSeason } from '../lib/squad';
 
 export function PlayersTab({ target, matches }: { target: Target; matches: Match[] }) {
   /*
-   * 강조 대상은 두 갈래다.
-   *  · hoverId  — 마우스를 올린 동안만 (치우면 사라진다)
-   *  · pinnedId — 포메이션에서 클릭해 고정한 선수 (다시 누르면 해제)
-   * 마우스가 우선이라, 올려 둔 동안에는 그쪽이 보인다.
+   * 강조는 마우스를 올린 동안만(hoverId). 포메이션에서 선수를 누르면 목록에서
+   * 누른 것과 같은 선수 상세 창이 뜬다 — 예전에는 누르면 "고정 강조" 만 되고
+   * 상세는 목록에서 다시 눌러야 했다.
    */
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const activeId = hoverId ?? pinnedId;
+  const activeId = hoverId;
+  const [detail, setDetail] = useState<PlayerSeason | null>(null);
+  const closeDetail = useCallback(() => setDetail(null), []);
 
   /* 라인업·선수 프로필은 전부 네트워크에서 온다.
      경기별 로스터에 골·도움까지 들어 있어 이름 매칭이 필요 없다. */
@@ -37,7 +39,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
     };
   }, [target.espnTeamId, matches]);
 
-  const { players, formation, covered, formationTally, slotShape } = useMemo(
+  const { players, departed, formation, covered, formationTally, slotShape } = useMemo(
     () => buildSquad(matches, squad?.lineups ?? {}, squad?.athletes ?? {}, target.espnTeamId),
     [matches, squad, target.espnTeamId],
   );
@@ -52,7 +54,8 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
 
   const leaders = useMemo(
     () =>
-      players
+      /* 팀 공격 포인트는 팀의 시즌 기록 — 떠난 선수가 이 팀에서 올린 것도 넣는다 */
+      [...players, ...departed]
         .filter((p) => p.points > 0)
         .map((p) => ({
           name: p.name,
@@ -61,7 +64,7 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
           assists: p.assists,
           points: p.points,
         })),
-    [players, target.espnTeamId],
+    [players, departed, target.espnTeamId],
   );
 
   if (loadingSquad) {
@@ -108,17 +111,19 @@ export function PlayersTab({ target, matches }: { target: Target; matches: Match
             tally={formationTally}
             activeId={activeId}
             onHover={setHoverId}
-            selectedId={pinnedId}
-            onSelect={setPinnedId}
+            onSelect={(id) => {
+              const p = id ? players.find((x) => x.id === id) : undefined;
+              if (p) { setHoverId(null); setDetail(p); }
+            }}
           />
           <PlayerTable
             players={ordered}
             activeId={activeId}
             onHover={setHoverId}
-            /* 카드의 ✕ 는 고정 선택까지 푼다 — 호버만 지우면 activeId 가 고정 선수로
-               그대로 남아, 같은 선수를 다시 눌러도 카드가 열리지 않았다 */
-            onClose={() => { setHoverId(null); setPinnedId(null); }}
+            onClose={() => setHoverId(null)}
+            onOpen={setDetail}
           />
+          <PlayerDetail p={detail} onClose={closeDetail} />
         </div>
       </section>
 

@@ -76,7 +76,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-24';
+const CODE_VERSION = 'snap-25';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -1903,6 +1903,11 @@ async function main() {
          여기도 줄 세울 이유가 없다. */
       await pool(Object.keys(athletes), 6, async (id) => {
         const meta = photos.get(id);
+        /* 지금 팀 로스터에 있나 — 시즌 중에 떠난 선수(이적·임대)와 1군 로스터 밖의
+           유스를 앱이 명단·베스트 11 에서 뺀다(엔조 페르난데스: 8/24 한 경기 뒤 이적).
+           클럽만 본다 — 대표팀 "로스터" 는 이번 소집 명단이라 기준이 될 수 없다.
+           로스터가 비었거나 너무 짧으면(응답 실패) 판단하지 않는다. */
+        if (!t.national && photos.size >= 15) athletes[id].onRoster = photos.has(id);
         // 경기 요약이 자리 약어를 안 준 팀은 시즌 포지션이라도 남겨 둔다
         if (meta?.posAbbr) athletes[id].posAbbr = meta.posAbbr;
         if (meta?.age) athletes[id].age = meta.age;

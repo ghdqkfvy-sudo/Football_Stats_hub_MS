@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
 import { Swap } from './Swap';
-import { PlayerDetail } from './PlayerDetail';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -33,11 +32,13 @@ interface Props {
   players: PlayerSeason[];
   activeId: string | null;
   onHover: (id: string | null) => void;
-  /** 카드의 ✕ — 포메이션에서 고정한 선택까지 푼다 */
+  /** 카드의 ✕ */
   onClose?: () => void;
+  /** 선수 상세(시즌 전 경기) 열기 — 포메이션에서 눌러도 같은 창이 뜨도록 PlayersTab 이 가진다 */
+  onOpen: (p: PlayerSeason) => void;
 }
 
-export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
+export function PlayerTable({ players, activeId, onHover, onClose, onOpen }: Props) {
   const [filter, setFilter] = useState('ALL');
 
   /* 정렬을 걸지 않았을 때의 기본 순서는 "베스트 11 먼저, 그다음 기여도 순"
@@ -146,11 +147,9 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
     onHover(null);
   };
   /* 선수 상세(시즌 전 경기) — 행을 누르거나 Enter */
-  const [detail, setDetail] = useState<PlayerSeason | null>(null);
-  const closeDetail = useCallback(() => setDetail(null), []);
   const openDetail = (p: PlayerSeason) => {
     setCard(null);
-    setDetail(p);
+    onOpen(p);
   };
 
   const dismissCard = () => {
@@ -286,7 +285,6 @@ export function PlayerTable({ players, activeId, onHover, onClose }: Props) {
       * 포메이션 칩을 눌러도 카드가 안 보이던 원인. 목록을 끝까지 내려야만 보였다.
       */}
     {card && <PlayerCard p={card.p} top={card.top} left={card.left} onClose={dismissCard} />}
-    <PlayerDetail p={detail} onClose={closeDetail} />
     </>
   );
 }

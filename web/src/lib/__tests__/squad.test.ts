@@ -376,3 +376,22 @@ describe('교체 출전 — 투입·아웃 때의 경기 상황', () => {
     expect(isBenchRegular({ starts: 0, bench: undefined })).toBe(false);
   });
 });
+
+describe('떠난 선수 — 지금 팀 로스터에 없으면 목록·베스트 11 에서 뺀다', () => {
+  it('onRoster === false 는 players 에서 빠지고 departed 로만 온다 (판단 못 했으면 그대로)', () => {
+    const lus = { '1': lineup([
+      ['stay', 8, true, null, null, 1, 0, 'CM'],
+      ['gone', 6, true, null, 65, 0, 1, 'CM'],
+      ['unknown', 4, true, null, null, 0, 0, 'CD'],
+    ]) };
+    const ath = {
+      stay: { ...info('Stay'), onRoster: true },
+      gone: { ...info('Enzo Fernández'), onRoster: false },
+      unknown: info('Unknown'),            // 대표팀·응답 실패 — 판단 없음
+    };
+    const { players, departed } = buildSquad([match('1')], lus, ath, '363');
+    expect(players.map((p) => p.id).sort()).toEqual(['stay', 'unknown']);
+    expect(departed.map((p) => p.id)).toEqual(['gone']);
+    expect(departed[0].assists).toBe(1);   // 이 팀에서 올린 기록은 남는다
+  });
+});
