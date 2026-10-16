@@ -75,6 +75,10 @@ export interface RecentGame {
   subIn?: number;
   /** 교체 아웃 분 (끝까지 뛰었으면 undefined) */
   subOut?: number;
+  /** 그 경기에서 선 자리 (LAM·RDM …). 교체면 나간 선수의 자리를 물려받은 것, 모르면 undefined */
+  pos?: string;
+  /** 교체로 들어갔을 때 대신한 선수 이름 */
+  forName?: string;
   goals: number;
   assists: number;
   yellow: number;
@@ -195,7 +199,8 @@ export function buildSquad(
     const result: 'W' | 'D' | 'L' =
       (mine ?? 0) > (theirs ?? 0) ? 'W' : (mine ?? 0) < (theirs ?? 0) ? 'L' : 'D';
 
-    for (const [id, place, starter, inMin, outMin, eg, ea, abbr, ey, er] of lu.entries) {
+    const posIn = matchPositions(lu.entries, lu.formation);
+    for (const [id, place, starter, inMin, outMin, eg, ea, abbr, ey, er, forId] of lu.entries) {
       const info = athletes[id];
       if (!info) continue;                       // 이름을 모르는 선수는 지어내지 않는다
       const mins = minutesOf(starter, inMin, outMin);
@@ -271,6 +276,8 @@ export function buildSquad(
         started: starter,
         subIn: !starter && inMin != null ? inMin : undefined,
         subOut: outMin != null ? outMin : undefined,
+        pos: posIn.get(id),
+        forName: !starter && forId ? athletes[forId]?.name : undefined,
         goals: g,
         assists: a,
         yellow: ey ?? 0,
@@ -811,3 +818,56 @@ export function teamCohesion(slots: Slot[], covered: number): number {
   const share = xi.reduce((a, p) => a + Math.min(1, p.starts / covered), 0) / xi.length;
   return Math.round(share * 100);
 }
+
+
+/* ── 경기별 자리 표기 ─────────────────────────────────────────
+   ESPN 약어(AM-L·CD-R …)를 화면 표기(LAM·RCB …)로. 같은 약어라도 포메이션에
+   따라 뜻이 다르다 — 4-2-3-1 의 LM/RM 은 2선 아래 **더블 볼란치**(LDM/RDM)이고,
+   3-4-2-1 의 CF-L/CF-R 은 최전방이 아니라 **2선**(LAM/RAM)이다. */
+export function posLabel(abbr: string | undefined, formation = ''): string | undefined {
+  const a = String(abbr ?? '').toUpperCase();
+  if (!a || a === 'SUB') return undefined;
+  const parts = formation.split('-').map(Number).filter(Number.isFinite);
+  const doublePivot = parts.length === 4 && parts[1] === 2;      // 4-2-3-1 · 4-2-2-2 …
+  const cfIsSecondLine = parts.length >= 3 && parts[parts.length - 1] === 1 && parts[parts.length - 2] === 2;
+  const fixed: Record<string, string> = {
+    G: 'GK', LB: 'LB', RB: 'RB', 'CD-L': 'LCB', CD: 'CB', 'CD-R': 'RCB',
+    'CM-L': 'LCM', CM: 'CM', 'CM-R': 'RCM', DM: 'DM', 'DM-L': 'LDM', 'DM-R': 'RDM',
+    'AM-L': 'LAM', AM: 'CAM', 'AM-R': 'RAM', F: 'ST', LF: 'LW', RF: 'RW',
+    LWB: 'LWB', RWB: 'RWB',
+  };
+  if (a === 'LM' || a === 'RM') return doublePivot ? (a === 'LM' ? 'LDM' : 'RDM') : a;
+  if (a === 'CF-L' || a === 'CF-R') {
+    const left = a === 'CF-L';
+    return cfIsSecondLine ? (left ? 'LAM' : 'RAM') : (left ? 'LS' : 'RS');
+  }
+  return fixed[a] ?? a;
+}
+
+/**
+ * 그 경기에서 각자 선 자리. 선발은 자기 약어, 교체는 **대신한 선수의 자리**를
+ * 물려받는다(교체 기록 — 라인업 11번째 칸). 대신한 선수도 교체였으면 거슬러 올라간다.
+ * 교체 기록이 없는 교체 선수는 자리를 지어내지 않는다.
+ */
+export function matchPositions(entries: Lineup['entries'], formation = ''): Map<string, string> {
+  const byId = new Map(entries.map((e) => [e[0], e]));
+  const memo = new Map<string, string | undefined>();
+  const resolve = (id: string, seen: Set<string>): string | undefined => {
+    if (memo.has(id)) return memo.get(id);
+    if (seen.has(id)) return undefined;
+    seen.add(id);
+    const e = byId.get(id);
+    let pos: string | undefined;
+    if (e?.[2]) pos = posLabel(e[7], formation);
+    else if (e?.[10]) pos = resolve(e[10], seen);
+    memo.set(id, pos);
+    return pos;
+  };
+  const out = new Map<string, string>();
+  for (const id of byId.keys()) {
+    const p = resolve(id, new Set());
+    if (p) out.set(id, p);
+  }
+  return out;
+}
+

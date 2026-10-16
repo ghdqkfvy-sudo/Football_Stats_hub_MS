@@ -103,6 +103,26 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
   );
 }
 
+/**
+ * 그 경기에서 선 자리 — "LAM", 교체면 "RAM ←무뇨즈".
+ * 교체 선수의 자리는 경기 요약의 교체 기록(누구 대신)으로 정한다. 기록이 없으면
+ * 자리를 지어내지 않고 비워 둔다.
+ */
+export function PosTag({ g }: { g: RecentGame }) {
+  if (!g.pos) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
+  const forLast = g.forName?.split(' ').slice(-1)[0];
+  return (
+    <span
+      className="ptag"
+      data-sub={!g.started || undefined}
+      title={g.started ? `선발 · ${g.pos}` : `${g.subIn ?? ''}${g.subIn !== undefined ? '분 ' : ''}교체 · ${g.pos}${g.forName ? ` (${g.forName} 대신)` : ''}`}
+    >
+      <b>{g.pos}</b>
+      {forLast && <i>←{forLast}</i>}
+    </span>
+  );
+}
+
 /** 경기 한 줄 — 결과·대회·날짜·상대·스코어·출전 방식·골/도움/카드 */
 export function GameRow({ g }: { g: RecentGame }) {
   const palette = usePalette();
@@ -137,6 +157,7 @@ export function GameRow({ g }: { g: RecentGame }) {
       <span className="pcard__sc num">{g.scoreline}</span>
 
       <span className="pcard__ga num">
+        <PosTag g={g} />
         {/* 선발이면 "선발 90'", 교체면 "교체 60'(30)" —
             몇 분에 들어가 몇 분을 뛰었는지가 한눈에 보인다. */}
         {g.started

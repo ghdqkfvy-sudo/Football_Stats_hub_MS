@@ -519,7 +519,7 @@
 .pdet__list { list-style: none; margin: 0; padding: 0; }
 .pdet__g {
   display: grid; align-items: center; gap: 8px;
-  grid-template-columns: 66px 16px minmax(0, 1fr) 70px 110px 74px;
+  grid-template-columns: 66px 16px minmax(0, 1fr) 66px 112px 96px 66px;
   padding: 7px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-mid);
 }
 .pdet__when { color: var(--text-lo); font-size: 11px; white-space: nowrap; }
@@ -553,3 +553,19 @@
   .pdet--card .pdet__x { z-index: 2; top: 22px; right: 20px; width: 28px; height: 28px; font-size: 12px; background: rgba(255,255,255,.06); }
   .pdet--card .pdet__none { margin: 6px 0 2px; }
 }
+
+/* 경기별 자리 — "LAM", 교체면 "RAM ←무뇨즈" (PlayerCardParts PosTag).
+   교체 선수의 자리는 경기 요약의 교체 기록(누구 대신)에서 온다 */
+.ptag { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
+.ptag b {
+  font-size: 10px; font-weight: 800; letter-spacing: .04em; color: var(--text-hi);
+  padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, .05);
+}
+.ptag[data-sub] b { color: var(--text-mid); border-style: dashed; background: transparent; }
+.ptag i { font-style: normal; font-size: 10.5px; color: var(--text-lo); overflow: hidden; text-overflow: ellipsis; }
+.ptag[data-none] { color: var(--text-lo); font-size: 11px; padding-left: 6px; }
+/* 폰 카드 줄 — 출전 방식 글귀 앞에 붙는다 */
+.pcard__ga .ptag { margin-right: 6px; }
+.pcard__ga .ptag[data-none] { display: none; }
+

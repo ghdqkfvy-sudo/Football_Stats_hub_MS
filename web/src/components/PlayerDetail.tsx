@@ -7,7 +7,7 @@ import { useClosing } from '../lib/motion';
 import { Headshot } from './Headshot';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
-import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
+import { Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -138,6 +138,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
                 <i className="fchip" data-r={g.result}>{g.result}</i>
                 {g.scoreline}
               </span>
+              <PosTag g={g} />
               <span className="pdet__min" title={g.started ? '선발' : g.subIn !== undefined ? `${g.subIn}분 교체 투입` : '교체'}>
                 <i data-start={g.started || undefined}>
                   <u style={{ width: `${(g.minutes / maxMin) * 100}%` }} />

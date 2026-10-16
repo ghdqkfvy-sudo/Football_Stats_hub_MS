@@ -40,8 +40,11 @@ jobs:
         with:
           node-version: 22
 
+      # 손으로 돌린 회차(앱의 숨은 "전체 갱신" 버튼 = workflow_dispatch)는 팀 일정·뉴스
+      # (빠른 갱신 항목)까지 같이 뜬다 — 한 번 누르면 전부 최신이 되게. 빠른 쪽은 30초 남짓.
+      # 정기 회차는 빠른 잡(snapshot.yml)이 따로 20분마다 돌므로 리그 쪽만 뜬다.
       - name: ESPN 리그·스쿼드·코리안리거 수집
-        run: node scripts/snapshot.mjs web/public/data --only=slow
+        run: node scripts/snapshot.mjs web/public/data --only=${{ github.event_name == 'workflow_dispatch' && 'all' || 'slow' }}
 
       # 수집 직후에 한 번 본다 — 깨진 JSON 을 커밋하지 않게
       - name: 산출물 검사
@@ -77,7 +80,7 @@ jobs:
             exit 1
           fi
 
-          git commit -m "chore(data): 리그·스쿼드 $(date -u +'%Y-%m-%dT%H:%MZ')"
+          git commit -m "chore(data): 리그·스쿼드${{ github.event_name == 'workflow_dispatch' && ' + 팀 일정·뉴스' || '' }} $(date -u +'%Y-%m-%dT%H:%MZ')"
 
           # 다른 스냅샷 잡이 먼저 밀어 넣었으면 그 위에 다시 얹고 재시도한다.
           # 데이터 충돌은 항상 **지금 막 뜬 값**(리베이스에서 얹는 쪽 = theirs)이
