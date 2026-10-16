@@ -144,8 +144,8 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
           </div>
           {/* 3×3 — 세로 = 들어갈 때, 가로 = 나올 때. 경기 수가 늘어도 크기가 같다.
               대각선 = 유지, 왼쪽 아래 = 개선(초록), 오른쪽 위 = 악화(빨강) */}
-          <div className="bench__mx" role="table" aria-label="투입 때 상황별 나올 때 상황">
-            <span className="bench__cap" role="cell">투입 ↓ · 나올 때 →</span>
+          <div className="bench__mx" role="table" aria-label="투입 시 상황별 종료 시 상황">
+            <span className="bench__cap" role="cell" title="종료 시 = 다시 교체돼 나간 시점, 끝까지 뛰었으면 경기 종료">투입 시 ↓ · 종료 시 →</span>
             {ORDER.map((to) => (
               <span key={to} className="bench__h" data-s={to} role="columnheader">{STATE_KO[to]}</span>
             ))}
@@ -162,7 +162,7 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
                       role="cell"
                       data-d={d}
                       data-zero={n === 0 || undefined}
-                      title={`${STATE_KO[from]}에서 들어가 ${STATE_KO[to]}로 나옴 · ${n}회`}
+                      title={`${STATE_KO[from]}에서 투입 → 종료 시 ${STATE_KO[to]} · ${n}회`}
                     >
                       {n || '·'}
                     </span>
