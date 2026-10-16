@@ -143,7 +143,7 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
       {b.changes.length > 0 && (
         <>
           <div className="bench__head">
-            <span className="eyebrow" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후 스코어 흐름</span>
+            <span className="eyebrow" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후</span>
           </div>
           <div className="bench__sum">
             <span className="bench__pill" data-d="1" title="열세→동점·리드, 동점→리드"><i>▲ 개선</i><b className="num">{tally[1]}</b></span>
