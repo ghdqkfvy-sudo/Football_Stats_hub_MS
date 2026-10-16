@@ -34,12 +34,29 @@ export interface KeyCheck {
 export const maskKey = (key: string): string =>
   (PUBLIC_KEYS.includes(key) ? key : `${key.slice(0, 2)}…${key.slice(-2)}`);
 
+/**
+ * 오류 응답 본문 → 한 줄 요약. 같은 503 이라도 "Cloudflare 확인 페이지" 인지
+ * "점검 중" 인지 "키를 바꾸라" 인지는 본문에만 있다(2026-10-16: 두 키 모두 503).
+ */
+export function bodyHint(body: string): string {
+  const text = body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/just a moment|cf-ray|cloudflare|attention required|checking your browser/i.test(body)) {
+    return 'Cloudflare 확인 페이지(사람인지 검사) — 프로그램 요청이 막힘';
+  }
+  return text ? `"${text.slice(0, 120)}${text.length > 120 ? '…' : ''}"` : '본문 없음';
+}
+
 /** HTTP 상태 → 판정 · 설명 */
-export function verdictOfStatus(status: number): { verdict: KeyVerdict; detail: string } {
-  if (status === 429) return { verdict: 'limited', detail: 'HTTP 429 (요청 한도 — 잠시 뒤 다시)' };
-  if (status === 401 || status === 403) return { verdict: 'denied', detail: `HTTP ${status} (키 거부)` };
-  if (status === 404) return { verdict: 'denied', detail: 'HTTP 404 (키 없음 또는 주소 바뀜)' };
-  return { verdict: 'error', detail: `HTTP ${status}` };
+export function verdictOfStatus(status: number, body = ''): { verdict: KeyVerdict; detail: string } {
+  const hint = body ? ` · ${bodyHint(body)}` : '';
+  if (status === 503 || status === 502 || status === 504) {
+    return { verdict: 'error', detail: `HTTP ${status} (서비스가 응답 불가 — 키 문제가 아님)${hint}` };
+  }
+  if (status === 429) return { verdict: 'limited', detail: `HTTP 429 (요청 한도 — 잠시 뒤 다시)${hint}` };
+  if (status === 401 || status === 403) return { verdict: 'denied', detail: `HTTP ${status} (키 거부)${hint}` };
+  if (status === 404) return { verdict: 'denied', detail: `HTTP 404 (키 없음 또는 주소 바뀜)${hint}` };
+  return { verdict: 'error', detail: `HTTP ${status}${hint}` };
 }
 
 /** 로스터 응답 → 판정 · 설명 (선수 수와 컷아웃 수) */
@@ -56,11 +73,15 @@ export function verdictOfRoster(json: unknown): { verdict: KeyVerdict; detail: s
   };
 }
 
-async function getJson(url: string, signal: AbortSignal): Promise<{ status: number; json?: unknown }> {
+async function getJson(url: string, signal: AbortSignal): Promise<{ status: number; json?: unknown; body?: string }> {
   const res = await fetch(url, { signal, cache: 'no-store' });
-  if (!res.ok) return { status: res.status };
+  if (!res.ok) return { status: res.status, body: await res.text().catch(() => '') };
   return { status: res.status, json: await res.json().catch(() => undefined) };
 }
+
+/** 그 키로 부르는 주소 — 시트에서 "직접 열기" 로 원본 응답을 볼 수 있게 */
+export const probeUrl = (key: string) =>
+  `${TSDB_ROOT}/${encodeURIComponent(key)}/searchteams.php?t=${PROBE_TEAM}`;
 
 /** 키 하나를 시험한다 (네트워크) */
 export async function checkKey(key: string, timeoutMs = 8000): Promise<KeyCheck> {
@@ -69,12 +90,12 @@ export async function checkKey(key: string, timeoutMs = 8000): Promise<KeyCheck>
     ({ key, ...v, ms: Math.round(performance.now() - t0) });
   const signal = AbortSignal.timeout(timeoutMs);
   try {
-    const team = await getJson(`${TSDB_ROOT}/${encodeURIComponent(key)}/searchteams.php?t=${PROBE_TEAM}`, signal);
-    if (team.status !== 200) return done(verdictOfStatus(team.status));
+    const team = await getJson(probeUrl(key), signal);
+    if (team.status !== 200) return done(verdictOfStatus(team.status, team.body));
     const id = (team.json as { teams?: { idTeam?: string }[] })?.teams?.[0]?.idTeam;
     if (!id) return done({ verdict: 'denied', detail: '응답은 왔지만 팀 검색 결과가 없음(키가 막혔을 수 있음)' });
     const roster = await getJson(`${TSDB_ROOT}/${encodeURIComponent(key)}/lookup_all_players.php?id=${id}`, signal);
-    if (roster.status !== 200) return done(verdictOfStatus(roster.status));
+    if (roster.status !== 200) return done(verdictOfStatus(roster.status, roster.body));
     return done(verdictOfRoster(roster.json));
   } catch (e) {
     const name = e instanceof Error ? e.name : '';
