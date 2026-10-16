@@ -546,8 +546,10 @@ const COMPS: CompetitionMeta[] = [
   /* 코리안리거가 뛰는 리그들.
      ⚠️ 여기 없는 대회는 회색(#8FA0B8)으로 떨어진다 — 그래서 이강인(라리가)만
      빨간 게이지고 나머지는 전부 회색으로 보였다. 리그마다 색을 줘야 카드가
-     한 체계로 읽힌다. 앰블럼은 스냅샷이 API 에서 받아 오므로 여기 없어도 된다. */
-  { key: 'ger.1',            name: 'Bundesliga',        short: 'BUN', color: '#E4232C' },
+     한 체계로 읽힌다.
+     앰블럼 — 소속팀 탭(뮌헨·LAFC)이 생기면서 분데스리가·MLS·포칼·슈퍼컵도 이 표의
+     로고를 쓴다. 번호는 ESPN 일정 피드의 league.alternateId (2026-10-16). */
+  { key: 'ger.1',            name: 'Bundesliga',        short: 'BUN', color: '#E4232C', logo: LL(10) },
   { key: 'ita.1',            name: 'Serie A',           short: 'SA',  color: '#2E7BEF' },
   { key: 'fra.1',            name: 'Ligue 1',           short: 'L1',  color: '#DCE23A' },
   { key: 'por.1',            name: 'Primeira Liga',     short: 'PPL', color: '#2ED573' },
@@ -558,11 +560,11 @@ const COMPS: CompetitionMeta[] = [
   { key: 'tur.1',            name: 'Süper Lig',         short: 'TUR', color: '#F2544B' },
   { key: 'gre.1',            name: 'Super League',      short: 'GRE', color: '#4FA3E3' },
   { key: 'jpn.1',            name: 'J1 League',         short: 'J1',  color: '#E8546B' },
-  { key: 'usa.1',            name: 'MLS',               short: 'MLS', color: '#3FD7C0' },
-  { key: 'ger.dfb_pokal',    name: 'DFB-Pokal',         short: 'DFB', color: '#FFB443' },
-  { key: 'ger.super_cup',    name: 'DFL-Supercup',      short: 'SUP', color: '#C084FC' },
-  { key: 'concacaf.champions', name: 'CONCACAF Champions Cup', short: 'CCC', color: '#FF9F2E' },
-  { key: 'concacaf.leagues.cup', name: 'Leagues Cup',   short: 'LC',  color: '#E879A6' },
+  { key: 'usa.1',            name: 'MLS',               short: 'MLS', color: '#3FD7C0', logo: LL(19) },
+  { key: 'ger.dfb_pokal',    name: 'DFB-Pokal',         short: 'DFB', color: '#FFB443', logo: LL(2061) },
+  { key: 'ger.super_cup',    name: 'DFL-Supercup',      short: 'SUP', color: '#C084FC', logo: LL(2315) },
+  { key: 'concacaf.champions', name: 'CONCACAF Champions Cup', short: 'CCC', color: '#FF9F2E', logo: LL(2298) },
+  { key: 'concacaf.leagues.cup', name: 'Leagues Cup',   short: 'LC',  color: '#E879A6', logo: LL(2410) },
   { key: 'usa.open',         name: 'U.S. Open Cup',     short: 'USOC', color: '#8B7BFF' },
   { key: 'eng.2',            name: 'Championship',      short: 'CHA', color: '#C084FC' },
   { key: 'eng.trophy',       name: 'EFL Trophy',        short: 'EFL', color: '#C9A86A' },
