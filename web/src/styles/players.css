@@ -156,6 +156,19 @@
 .chipbox__stat em.p { font-weight: 600; color: rgba(255,255,255,.72); }
 .chipbox__stat em.g { color: #FFD75E; }
 .chipbox__stat em.a { color: #7FE3FF; }
+/* 칸이 좁을 때(모바일 4열 · 10경기 ⚽4 A3 처럼 숫자가 두 자리로 늘 때) 알약이 칸보다
+   넓어져 양끝이 잘렸다(2026-10-16). 칸 폭을 기준으로 단계적으로 조인다 —
+   간격·여백을 줄이고 "경기" 글자를 작게. 줄바꿈은 여전히 하지 않는다. */
+.chipbox { container-type: inline-size; }
+.chipbox__stat small { font-size: 1em; font-weight: inherit; }  /* 넓은 칸(데스크톱)에서는 그대로 */
+@container (max-width: 84px) {
+  .chipbox .chipbox__stat { gap: 3px; padding-inline: 4px; font-size: 9px; letter-spacing: -.02em; }
+  .chipbox .chipbox__stat small { font-size: 7.5px; }
+}
+@container (max-width: 68px) {
+  .chipbox .chipbox__stat { gap: 2px; padding-inline: 3px; font-size: 8.5px; letter-spacing: -.04em; }
+  .chipbox .chipbox__stat small { font-size: 7px; }
+}
 .chipbox {
   cursor: pointer; position: relative; border-radius: 12px; padding: 4px 2px 2px;
   transition: transform .14s, background .14s, box-shadow .14s;

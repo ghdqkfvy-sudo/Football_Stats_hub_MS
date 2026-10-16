@@ -166,7 +166,7 @@ function PlayerChip({
         칩에 남기는 건 "몇 경기 뛰었고, 얼마나 해결했나" 두 가지뿐이다.
       */}
       <span className="chipbox__stat num">
-        <em className="p">{p.apps}경기</em>
+        <em className="p">{p.apps}<small>경기</small></em>
         {p.goals > 0 && <em className="g">⚽{p.goals}</em>}
         {p.assists > 0 && <em className="a">A{p.assists}</em>}
       </span>
