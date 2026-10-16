@@ -137,13 +137,13 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
       {b.changes.length > 0 && (
         <>
           <div className="bench__sum">
-            <span className="bench__lbl">투입 후 경기 상황</span>
-            <span className="bench__pill" data-d="1">▲ 좋아짐 <b>{tally[1]}</b></span>
-            <span className="bench__pill" data-d="0">= 그대로 <b>{tally[0]}</b></span>
-            <span className="bench__pill" data-d="-1">▼ 나빠짐 <b>{tally[-1]}</b></span>
+            <span className="bench__lbl" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후 스코어 흐름</span>
+            <span className="bench__pill" data-d="1" title="열세→동점·리드, 동점→리드">▲ 개선 <b>{tally[1]}</b></span>
+            <span className="bench__pill" data-d="0" title="들어갈 때와 같은 상황으로 끝남">= 유지 <b>{tally[0]}</b></span>
+            <span className="bench__pill" data-d="-1" title="리드→동점·열세, 동점→열세">▼ 악화 <b>{tally[-1]}</b></span>
           </div>
           {/* 3×3 — 세로 = 들어갈 때, 가로 = 나올 때. 경기 수가 늘어도 크기가 같다.
-              대각선 = 그대로, 왼쪽 아래 = 좋아짐(초록), 오른쪽 위 = 나빠짐(빨강) */}
+              대각선 = 유지, 왼쪽 아래 = 개선(초록), 오른쪽 위 = 악화(빨강) */}
           <div className="bench__mx" role="table" aria-label="투입 때 상황별 나올 때 상황">
             <span className="bench__cap" role="cell">투입 ↓ · 나올 때 →</span>
             {ORDER.map((to) => (
