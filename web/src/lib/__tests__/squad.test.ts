@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestEleven, buildSquad, matchPositions, posLabel, roleOf, slotRows, teamCohesion } from '../squad';
+import { bestEleven, buildSquad, posLabel, roleOf, slotRows, teamCohesion } from '../squad';
 import type { Match } from '../types';
 import type { AthleteInfo, Lineup, LineupEntry } from '../../types/feedTypes';
 
@@ -319,32 +319,18 @@ describe('posLabel — ESPN 약어를 화면 표기로 (포메이션에 따라)'
   });
 });
 
-describe('matchPositions — 교체 선수는 대신한 선수의 자리를 물려받는다', () => {
-  it('교체 기록으로 같은 분 두 명 교체도 정확히, 교체의 교체는 거슬러 올라간다', () => {
-    const e: LineupEntry[] = [
-      ['isak', 9, true, null, 64, 0, 0, 'F'],
-      ['munoz', 7, true, null, 64, 0, 0, 'AM-R'],
-      ['barcola', 0, false, 64, null, 0, 0, 'SUB', 0, 0, 'munoz'],
-      ['chiesa', 0, false, 64, 80, 0, 0, 'SUB', 0, 0, 'isak'],
-      ['elliott', 0, false, 80, null, 0, 0, 'SUB', 0, 0, 'chiesa'],
-      ['unknown', 0, false, 70, null, 0, 0, 'SUB'],
-    ];
-    const m = matchPositions(e, '4-2-3-1');
-    expect(m.get('barcola')).toBe('RAM');
-    expect(m.get('chiesa')).toBe('ST');
-    expect(m.get('elliott')).toBe('ST');
-    expect(m.has('unknown')).toBe(false);   // 기록이 없으면 지어내지 않는다
-  });
-
-  it('buildSquad 의 경기별 기록에 자리와 "누구 대신" 이 실린다', () => {
+describe('경기별 기록 — 자리는 선발만, 교체는 "누구 대신" 만', () => {
+  it('교체 출전에는 자리를 붙이지 않는다 (윙어가 풀백과 바뀌어도 RB 가 아니다)', () => {
     const lus = { '1': lineup([
-      ['a', 11, true, null, 60, 0, 0, 'AM-L'],
-      ['b', 0, false, 60, null, 0, 0, 'SUB', 0, 0, 'a'],
+      ['a', 2, true, null, 70, 0, 0, 'RB'],
+      ['b', 0, false, 70, null, 0, 0, 'SUB', 0, 0, 'a'],
     ]) };
-    const { players } = buildSquad([match('1')], lus, { a: info('Cody Gakpo'), b: info('Víctor Muñoz') }, '363');
+    const { players } = buildSquad([match('1')], lus, { a: info('Trent Alexander-Arnold', 'D'), b: info('Vinícius Júnior', 'F') }, '363');
     const b = players.find((p) => p.id === 'b')!;
-    expect(b.recent[0].pos).toBe('LAM');
-    expect(b.recent[0].forName).toBe('Cody Gakpo');
-    expect(players.find((p) => p.id === 'a')!.recent[0].pos).toBe('LAM');
+    expect(b.recent[0].pos).toBeUndefined();
+    expect(b.recent[0].forName).toBe('Trent Alexander-Arnold');
+    expect(players.find((p) => p.id === 'a')!.recent[0].pos).toBe('RB');
+    // 베스트 11 자리 집계에도 교체 출전은 들어가지 않는다
+    expect(b.posAny).toEqual({});
   });
 });

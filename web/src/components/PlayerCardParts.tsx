@@ -104,21 +104,24 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
 }
 
 /**
- * 그 경기에서 선 자리 — "LAM", 교체면 "RAM ←무뇨즈".
- * 교체 선수의 자리는 경기 요약의 교체 기록(누구 대신)으로 정한다. 기록이 없으면
- * 자리를 지어내지 않고 비워 둔다.
+ * 그 경기에서 선 자리 — 선발이면 "LAM", 교체면 자리 없이 "←이름"(누구 대신).
+ * 교체 선수가 나간 선수의 자리를 그대로 맡는다는 보장이 없어 자리는 적지 않는다
+ * (비니시우스가 아놀드와 바뀌었다고 RB 가 되지는 않는다).
  */
 export function PosTag({ g }: { g: RecentGame }) {
-  if (!g.pos) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
   const forLast = g.forName?.split(' ').slice(-1)[0];
+  if (!g.started) {
+    if (!forLast) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
+    return (
+      <span className="ptag" data-sub="true" title={`${g.subIn !== undefined ? `${g.subIn}분 ` : ''}교체 · ${g.forName} 대신`}>
+        <i>←{forLast}</i>
+      </span>
+    );
+  }
+  if (!g.pos) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
   return (
-    <span
-      className="ptag"
-      data-sub={!g.started || undefined}
-      title={g.started ? `선발 · ${g.pos}` : `${g.subIn ?? ''}${g.subIn !== undefined ? '분 ' : ''}교체 · ${g.pos}${g.forName ? ` (${g.forName} 대신)` : ''}`}
-    >
+    <span className="ptag" title={`선발 · ${g.pos}`}>
       <b>{g.pos}</b>
-      {forLast && <i>←{forLast}</i>}
     </span>
   );
 }
