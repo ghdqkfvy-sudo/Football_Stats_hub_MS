@@ -1,4 +1,6 @@
-import type { PlayerSeason, RecentGame } from '../lib/squad';
+import { Fragment } from 'react';
+import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
+import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { kstShortDate } from '../lib/kst';
 import { Headshot } from './Headshot';
@@ -103,22 +105,97 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
   );
 }
 
+const STATE_KO: Record<GameState, string> = { L: '리드', D: '동점', T: '열세' };
+const ORDER: GameState[] = ['L', 'D', 'T'];
+
 /**
- * 그 경기에서 선 자리 — "LAM", 교체면 "RAM ←무뇨즈".
- * 교체 선수의 자리는 경기 요약의 교체 기록(누구 대신)으로 정한다. 기록이 없으면
- * 자리를 지어내지 않고 비워 둔다.
+ * 교체 자원 요약 — 주로 벤치에서 나오는 선수만(isBenchRegular).
+ * 골·도움이 없는 미드필더·수비수도 읽을 거리가 있게, 투입 시각과 함께
+ * "들어갔을 때의 경기 상황이 나올 때(또는 종료 때) 어떻게 바뀌었나" 를 보여 준다.
+ */
+export function BenchLine({ p }: { p: PlayerSeason }) {
+  const b = p.bench;
+  if (!b || !isBenchRegular(p)) return null;
+  const tally = { 1: 0, 0: 0, [-1]: 0 } as Record<-1 | 0 | 1, number>;
+  const grid = { L: { L: 0, D: 0, T: 0 }, D: { L: 0, D: 0, T: 0 }, T: { L: 0, D: 0, T: 0 } } as Record<GameState, Record<GameState, number>>;
+  for (const c of b.changes) {
+    tally[stateDelta(c.from, c.to)]++;
+    grid[c.from][c.to]++;
+  }
+  const subGoals = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.goals, 0);
+  const subAssists = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.assists, 0);
+  return (
+    <div className="bench">
+      <div className="bench__top">
+        <span className="bench__t">교체 출전</span>
+        <span className="bench__k num"><b>{b.subs}</b>회<i>팀 {b.team}경기 중</i></span>
+        <span className="bench__k num">평균 <b>{b.avgIn}&apos;</b> 투입</span>
+        <span className="bench__k num">교체로 <b>{b.minutes}</b>분</span>
+        {subGoals > 0 && <em className="pcard__gg">{subGoals}G</em>}
+        {subAssists > 0 && <em className="pcard__aa">{subAssists}A</em>}
+      </div>
+      {b.changes.length > 0 && (
+        <>
+          <div className="bench__sum">
+            <span className="bench__lbl" title="투입 순간의 스코어(리드·동점·열세)가 교체 아웃 또는 경기 종료 때 어떻게 바뀌었나">투입 후 스코어 흐름</span>
+            <span className="bench__pill" data-d="1" title="열세→동점·리드, 동점→리드">▲ 개선 <b>{tally[1]}</b></span>
+            <span className="bench__pill" data-d="0" title="들어갈 때와 같은 상황으로 끝남">= 유지 <b>{tally[0]}</b></span>
+            <span className="bench__pill" data-d="-1" title="리드→동점·열세, 동점→열세">▼ 악화 <b>{tally[-1]}</b></span>
+          </div>
+          {/* 3×3 — 세로 = 들어갈 때, 가로 = 나올 때. 경기 수가 늘어도 크기가 같다.
+              대각선 = 유지, 왼쪽 아래 = 개선(초록), 오른쪽 위 = 악화(빨강) */}
+          <div className="bench__mx" role="table" aria-label="투입 시 상황별 종료 시 상황">
+            <span className="bench__cap" role="cell" title="종료 시 = 다시 교체돼 나간 시점, 끝까지 뛰었으면 경기 종료">투입 시 ↓ · 종료 시 →</span>
+            {ORDER.map((to) => (
+              <span key={to} className="bench__h" data-s={to} role="columnheader">{STATE_KO[to]}</span>
+            ))}
+            {ORDER.map((from) => (
+              <Fragment key={from}>
+                <span className="bench__r" data-s={from} role="rowheader">{STATE_KO[from]}에서</span>
+                {ORDER.map((to) => {
+                  const n = grid[from][to];
+                  const d = stateDelta(from, to);
+                  return (
+                    <span
+                      key={to}
+                      className="bench__c num"
+                      role="cell"
+                      data-d={d}
+                      data-zero={n === 0 || undefined}
+                      title={`${STATE_KO[from]}에서 투입 → 종료 시 ${STATE_KO[to]} · ${n}회`}
+                    >
+                      {n || '·'}
+                    </span>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 그 경기에서 선 자리 — 선발이면 "LAM", 교체면 자리 없이 "←이름"(누구 대신).
+ * 교체 선수가 나간 선수의 자리를 그대로 맡는다는 보장이 없어 자리는 적지 않는다
+ * (비니시우스가 아놀드와 바뀌었다고 RB 가 되지는 않는다).
  */
 export function PosTag({ g }: { g: RecentGame }) {
-  if (!g.pos) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
   const forLast = g.forName?.split(' ').slice(-1)[0];
+  if (!g.started) {
+    if (!forLast) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
+    return (
+      <span className="ptag" data-sub="true" title={`${g.subIn !== undefined ? `${g.subIn}분 ` : ''}교체 · ${g.forName} 대신`}>
+        <i>←{forLast}</i>
+      </span>
+    );
+  }
+  if (!g.pos) return <span className="ptag" data-none="true" aria-hidden="true">—</span>;
   return (
-    <span
-      className="ptag"
-      data-sub={!g.started || undefined}
-      title={g.started ? `선발 · ${g.pos}` : `${g.subIn ?? ''}${g.subIn !== undefined ? '분 ' : ''}교체 · ${g.pos}${g.forName ? ` (${g.forName} 대신)` : ''}`}
-    >
+    <span className="ptag" title={`선발 · ${g.pos}`}>
       <b>{g.pos}</b>
-      {forLast && <i>←{forLast}</i>}
     </span>
   );
 }
