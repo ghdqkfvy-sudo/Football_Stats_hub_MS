@@ -64,6 +64,11 @@ export function clearLightBackground(
 }
 
 const cache = new Map<string, Promise<string | null>>();
+/** 처리가 끝난 결과 — 화면이 다시 그려질 때 기다리지 않고 바로 쓴다(탭을 옮겨도 깜빡이지 않게) */
+const done = new Map<string, string | null>();
+
+/** 이미 처리한 결과: data URL · null(못 함 → 원본) · undefined(아직) */
+export const cutoutReady = (url: string): string | null | undefined => done.get(url);
 
 /**
  * 이미지 주소 → 배경을 지운 이미지(data URL). 못 하면 null(원본을 쓴다).
@@ -100,5 +105,6 @@ export function cutoutOf(url: string): Promise<string | null> {
     img.src = url;
   });
   cache.set(url, p);
+  p.then((v) => { done.set(url, v); });
   return p;
 }

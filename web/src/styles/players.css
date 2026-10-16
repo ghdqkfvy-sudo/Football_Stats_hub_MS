@@ -20,10 +20,14 @@
  *    컷아웃으로 올려 준다. scripts/lib/photos.mjs 참고)
  */
 .hs img[data-kind='cutout'] { object-position: 50% 4%; }
-/* SofaScore — 얼굴 사진이라 가운데. 배경을 지운 판(data-clean)이 들어오면 살짝 페이드 */
+/* SofaScore — 얼굴 사진이라 가운데. 배경을 지운 판(data-clean)은 빈 원에서 부드럽게 나타난다 */
 .hs img[data-kind='sofa'] { object-position: 50% 20%; }
-.hs img[data-clean] { animation: hsClean .25s ease-out; }
-@keyframes hsClean { from { opacity: .6; } to { opacity: 1; } }
+.hs img[data-clean] { animation: hsClean .22s ease-out; }
+@keyframes hsClean { from { opacity: 0; } to { opacity: 1; } }
+/* 배경을 지우는 동안 — 흰 원판 대신 은은한 빈 원 */
+.hs--wait { background: rgba(255, 255, 255, .06); animation: hsWait 1.2s ease-in-out infinite; }
+@keyframes hsWait { 50% { background: rgba(255, 255, 255, .11); } }
+@media (prefers-reduced-motion: reduce) { .hs img[data-clean], .hs--wait { animation: none; } }
 .hs img[data-kind='wiki'],
 .hs img[data-kind='thumb'] { object-position: 50% 18%; }
 .hs__n {

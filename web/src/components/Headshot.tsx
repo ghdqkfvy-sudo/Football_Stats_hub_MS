@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { headshot } from '../config/koreans';
 import { canonicalPhotoUrl } from '../lib/photoUrl';
 import { sofascoreImage } from '../lib/photoProbe';
-import { cutoutOf } from '../lib/cutout';
+import { cutoutOf, cutoutReady } from '../lib/cutout';
 
 /**
  * 선수 헤드샷.
@@ -60,8 +60,9 @@ export function Headshot({
   if (guess && guess !== confirmed) candidates.push([guess, undefined, false]);
   const pick = candidates.find(([u]) => !failed.has(u));
 
-  /* SofaScore 사진은 흰 바탕이라 배경을 지운 판으로 바꿔 끼운다(lib/cutout.ts).
-     처리 전·처리 못 함(CORS)에는 원본 그대로 — 화면이 비지 않는다 */
+  /* SofaScore 사진은 흰 바탕이라 배경을 지운 판을 쓴다(lib/cutout.ts).
+     ⚠️ 원본을 먼저 띄우면 흰 원판이 잠깐 보였다가 바뀐다(2026-10-16 피드백) —
+     처리될 때까지는 빈 원(자리만)을 두고, 처리하지 못했을 때만 원본을 쓴다 */
   const sofaPick = pick?.[1] === 'sofa' ? pick[0] : '';
   const [clean, setClean] = useState<{ url: string; data: string | null } | null>(null);
   useEffect(() => {
@@ -90,7 +91,16 @@ export function Headshot({
     );
   }
   const [url, k, sure] = pick;
-  const shown = k === 'sofa' && clean?.url === url && clean.data ? clean.data : url;
+  /* undefined = 처리 중 · null = 못 함(원본) · 문자열 = 배경 지운 판 */
+  const ready = k === 'sofa' ? (clean?.url === url ? clean.data : cutoutReady(url)) : null;
+  if (k === 'sofa' && ready === undefined) {
+    return (
+      <span className={`hs hs--wait ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+        {jersey !== undefined && <i className="hs__n num">{jersey}</i>}
+      </span>
+    );
+  }
+  const shown = typeof ready === 'string' ? ready : url;
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
       <img
