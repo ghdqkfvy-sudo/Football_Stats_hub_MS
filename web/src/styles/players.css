@@ -597,22 +597,24 @@
 .bench__pill[data-d='1'] { --c: var(--win); }
 .bench__pill[data-d='-1'] { --c: var(--loss); }
 
-.bench__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.bench__g {
-  --c: var(--line-2);
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px 4px 9px; border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
-  background: rgba(255, 255, 255, .03); font-size: 11.5px;
+.bench__mx {
+  display: grid; grid-template-columns: 78px repeat(3, minmax(0, 1fr)); gap: 4px;
+  max-width: 440px; font-size: 11.5px;
 }
-.bench__g[data-d='1'] { --c: var(--win); }
-.bench__g[data-d='-1'] { --c: var(--loss); }
-.bench__opp { font-weight: 700; color: var(--text-mid); font-size: 10.5px; letter-spacing: .03em; margin-right: 2px; }
-.bench__st { font-weight: 700; color: var(--text-hi); }
-.bench__st[data-s='L'] { color: color-mix(in srgb, var(--win) 75%, #fff); }
-.bench__st[data-s='T'] { color: color-mix(in srgb, var(--loss) 75%, #fff); }
-.bench__st[data-s='D'] { color: var(--text-mid); }
-.bench__ar { color: var(--text-lo); font-size: 10px; }
-.bench__dm { font-size: 10px; font-weight: 800; color: var(--c); margin-left: 2px; }
-.bench__g[data-d='0'] .bench__dm { color: var(--text-lo); }
+.bench__cap { font-size: 9.5px; color: var(--text-lo); align-self: end; padding-bottom: 3px; white-space: nowrap; }
+.bench__h { text-align: center; font-size: 11px; font-weight: 800; padding-bottom: 2px; }
+.bench__r { align-self: center; font-weight: 800; font-size: 11.5px; }
+.bench__h[data-s='L'], .bench__r[data-s='L'] { color: color-mix(in srgb, var(--win) 75%, #fff); }
+.bench__h[data-s='D'], .bench__r[data-s='D'] { color: var(--text-mid); }
+.bench__h[data-s='T'], .bench__r[data-s='T'] { color: color-mix(in srgb, var(--loss) 75%, #fff); }
+.bench__c {
+  display: grid; place-items: center; min-height: 34px; border-radius: 8px;
+  font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text-hi);
+  background: rgba(157, 176, 206, .10);
+}
+.bench__c[data-d='1'] { background: color-mix(in srgb, var(--win) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--win) 45%, transparent); }
+.bench__c[data-d='-1'] { background: color-mix(in srgb, var(--loss) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 45%, transparent); }
+/* 0 인 칸은 색을 거의 빼서 숫자가 있는 칸이 먼저 보이게 */
+.bench__c[data-zero] { background: rgba(255, 255, 255, .025); box-shadow: none; color: var(--text-lo); font-size: 13px; }
 /* 폰 카드 — 두 상자 사이에 독립 상자로 */
 .pdet--card .bench { margin: 0; }

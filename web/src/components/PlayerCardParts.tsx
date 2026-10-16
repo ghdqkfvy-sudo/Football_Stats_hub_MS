@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
 import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
@@ -105,7 +106,7 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
 }
 
 const STATE_KO: Record<GameState, string> = { L: '리드', D: '동점', T: '열세' };
-const DELTA_MARK = { 1: '▲', 0: '=', [-1]: '▼' } as const;
+const ORDER: GameState[] = ['L', 'D', 'T'];
 
 /**
  * 교체 자원 요약 — 주로 벤치에서 나오는 선수만(isBenchRegular).
@@ -116,7 +117,11 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
   const b = p.bench;
   if (!b || !isBenchRegular(p)) return null;
   const tally = { 1: 0, 0: 0, [-1]: 0 } as Record<-1 | 0 | 1, number>;
-  for (const c of b.changes) tally[stateDelta(c.from, c.to)]++;
+  const grid = { L: { L: 0, D: 0, T: 0 }, D: { L: 0, D: 0, T: 0 }, T: { L: 0, D: 0, T: 0 } } as Record<GameState, Record<GameState, number>>;
+  for (const c of b.changes) {
+    tally[stateDelta(c.from, c.to)]++;
+    grid[c.from][c.to]++;
+  }
   const subGoals = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.goals, 0);
   const subAssists = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.assists, 0);
   return (
@@ -137,21 +142,35 @@ export function BenchLine({ p }: { p: PlayerSeason }) {
             <span className="bench__pill" data-d="0">= 그대로 <b>{tally[0]}</b></span>
             <span className="bench__pill" data-d="-1">▼ 나빠짐 <b>{tally[-1]}</b></span>
           </div>
-          <ol className="bench__list">
-            {b.changes.map((c) => {
-              const d = stateDelta(c.from, c.to);
-              return (
-                <li key={c.matchId} className="bench__g" data-d={d}
-                  title={`${kstShortDate(c.kickoffUtc)} vs ${c.opponent} — 투입 ${STATE_KO[c.from]} → ${STATE_KO[c.to]}`}>
-                  <span className="bench__opp">{c.opponent}</span>
-                  <span className="bench__st" data-s={c.from}>{STATE_KO[c.from]}</span>
-                  <span className="bench__ar" aria-hidden="true">→</span>
-                  <span className="bench__st" data-s={c.to}>{STATE_KO[c.to]}</span>
-                  <span className="bench__dm" aria-label={d > 0 ? '좋아짐' : d < 0 ? '나빠짐' : '그대로'}>{DELTA_MARK[d]}</span>
-                </li>
-              );
-            })}
-          </ol>
+          {/* 3×3 — 세로 = 들어갈 때, 가로 = 나올 때. 경기 수가 늘어도 크기가 같다.
+              대각선 = 그대로, 왼쪽 아래 = 좋아짐(초록), 오른쪽 위 = 나빠짐(빨강) */}
+          <div className="bench__mx" role="table" aria-label="투입 때 상황별 나올 때 상황">
+            <span className="bench__cap" role="cell">투입 ↓ · 나올 때 →</span>
+            {ORDER.map((to) => (
+              <span key={to} className="bench__h" data-s={to} role="columnheader">{STATE_KO[to]}</span>
+            ))}
+            {ORDER.map((from) => (
+              <Fragment key={from}>
+                <span className="bench__r" data-s={from} role="rowheader">{STATE_KO[from]}에서</span>
+                {ORDER.map((to) => {
+                  const n = grid[from][to];
+                  const d = stateDelta(from, to);
+                  return (
+                    <span
+                      key={to}
+                      className="bench__c num"
+                      role="cell"
+                      data-d={d}
+                      data-zero={n === 0 || undefined}
+                      title={`${STATE_KO[from]}에서 들어가 ${STATE_KO[to]}로 나옴 · ${n}회`}
+                    >
+                      {n || '·'}
+                    </span>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
         </>
       )}
     </div>
