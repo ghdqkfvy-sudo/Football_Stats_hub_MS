@@ -343,3 +343,29 @@ export function choosePhoto({ prev: rawPrev = null, tsdb, espn } = {}) {
   best = betterPhoto(best, espn ?? null);
   return { photo: best ?? null, dropped };
 }
+
+/* ── TheSportsDB 키 고르기 ─────────────────────────────
+ *
+ * 2026-10 수집 기록에서 **모든 회차가 첫 팀부터 SportsDB 실패로 끊겼다** —
+ * 컷아웃이 새로 하나도 붙지 않았고, 원래 여섯 팀의 컷아웃은 지난 회차 값을
+ * 이어받은 것뿐이었다. 무료 키가 `3` 인지 `123` 인지 자료마다 말이 달라서,
+ * 짐작으로 하나를 박지 않고 회차마다 **실제로 답하는 키**를 고른다.
+ * 저장소 Secret(TSDB_KEY, 유료 키)이 있으면 그것부터 본다.
+ *
+ * @param keys   시도할 키 (앞에서부터)
+ * @param probe  (key) => Promise<{ ok: boolean, status: string }> — 네트워크는 호출부가
+ * @returns { key: 고른 키 또는 null, tried: [{ key, status }] } — 실패 사유는 로그로
+ */
+export async function pickTsdbKey(keys, probe) {
+  const tried = [];
+  for (const key of [...new Set(keys.filter(Boolean))]) {
+    let r;
+    try { r = await probe(key); } catch (e) { r = { ok: false, status: String(e?.name ?? 'error') }; }
+    tried.push({ key, status: r.status });
+    if (r.ok) return { key, tried };
+  }
+  return { key: null, tried };
+}
+
+/** 키 값을 로그에 그대로 찍지 않는다(유료 키) — 공개 테스트 키만 보인다 */
+export const maskTsdbKey = (key) => (/^(3|123)$/.test(String(key)) ? String(key) : 'secret');

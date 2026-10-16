@@ -33,7 +33,7 @@ import {
 import {
   betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
   photoFromSportsdb, photoNeedOrder, pickSportsdbPlayer, plausibleBirthYear,
-  rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
+  maskTsdbKey, pickTsdbKey, rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
@@ -76,7 +76,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-26';
+const CODE_VERSION = 'snap-27';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -624,7 +624,10 @@ const normName = (s) => String(s ?? '')
  * 컷아웃이 없거나 404 인 선수가 많아 HEAD 로 확인하고, 실패하면 썸네일로
  * 내려간다. 이름 검색이라 동명이인이 섞일 수 있어 **축구 선수만** 받는다.
  */
-const TSDB = 'https://www.thesportsdb.com/api/v1/json/3';
+const TSDB_ROOT = 'https://www.thesportsdb.com/api/v1/json';
+/* 키는 회차마다 실제로 답하는 것을 고른다(lib/photos.mjs pickTsdbKey).
+   TSDB_KEY = 저장소 Secret(유료 키) — 없으면 공개 테스트 키 둘을 차례로 */
+const TSDB_KEYS = [process.env.TSDB_KEY, '123', '3'];
 const tsdbCache = new Map();
 
 /**
@@ -664,17 +667,50 @@ const dueNow = (id) => dueForReverify(id, RUN_BUCKET, REVERIFY_BUCKETS);
    카운트가 0 으로 돌아가 "느리지만 가끔 되는" 상태에서 끝없이 기다렸다(2026-10-15) */
 const tsdbLimit = rateLimiter({ minIntervalMs: 1100, breakAfter: 8, maxFailures: 20 });
 
-/** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
-function tsdbGet(path) {
-  return tsdbLimit.run(async () => {
-    const res = await fetch(`${TSDB}/${path}`, {
+/** 응답 상태별 횟수 — 회차 끝에 한 줄로 찍는다(왜 막혔는지 로그만 보고 알 수 있게) */
+const tsdbStatus = new Map();
+const countStatus = (st) => tsdbStatus.set(st, (tsdbStatus.get(st) ?? 0) + 1);
+
+const tsdbFetch = async (key, path) => {
+  try {
+    const res = await fetch(`${TSDB_ROOT}/${key}/${path}`, {
       headers: { accept: 'application/json', 'user-agent': 'k-stats-hub-snapshot/1.0' },
       signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
-    }).catch(() => null);
-    if (!res || !res.ok) return { ok: false, value: undefined };   // 429·시간 초과도 여기로
+    });
+    if (!res.ok) return { status: `HTTP ${res.status}`, value: undefined };
     const value = await res.json().catch(() => undefined);
-    /* 본문을 받다 끊기면(시간 초과) 못 물어본 것으로 — 실패로 센다 */
-    return value === undefined ? { ok: false, value: undefined } : { ok: true, value };
+    /* 본문을 받다 끊기거나 JSON 이 아니면(오류 페이지) 못 물어본 것으로 */
+    return value === undefined ? { status: 'bad-json', value } : { status: '200', value };
+  } catch (e) {
+    return { status: String(e?.name ?? 'error'), value: undefined };   // 시간 초과·연결 실패
+  }
+};
+
+/* 처음 부를 때 한 번만 키를 고른다 — 모든 키가 안 되면 이번 회차는 아예 부르지 않는다
+   (예전에는 안 되는 키로 여덟 번을 기다린 뒤에야 포기했다) */
+let tsdbKeyPick = null;
+function tsdbKey() {
+  tsdbKeyPick ??= pickTsdbKey(TSDB_KEYS, async (key) => {
+    const r = await tsdbFetch(key, 'searchteams.php?t=Arsenal');
+    const ok = r.status === '200' && Array.isArray(r.value?.teams) && r.value.teams.length > 0;
+    return { ok, status: ok ? '200' : r.status === '200' ? 'empty' : r.status };
+  }).then((r) => {
+    const log = r.tried.map((t) => `${maskTsdbKey(t.key)}: ${t.status}`).join(' · ');
+    if (r.key) console.log(`  SportsDB 키 ${maskTsdbKey(r.key)} 사용 (${log})`);
+    else note('SportsDB 사진', `답하는 키가 없음 — ${log}`);
+    return r.key;
+  });
+  return tsdbKeyPick;
+}
+
+/** 한도를 존중하며 TheSportsDB 를 한 번 부른다 (막히면 undefined) */
+async function tsdbGet(path) {
+  const key = await tsdbKey();
+  if (!key) return undefined;
+  return tsdbLimit.run(async () => {
+    const r = await tsdbFetch(key, path);
+    countStatus(r.status);
+    return r.status === '200' ? { ok: true, value: r.value } : { ok: false, value: undefined };   // 429·시간 초과도 실패
   });
 }
 
@@ -1986,6 +2022,9 @@ async function main() {
           ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})` +
           ` · 교체 기록 ${subKnown}/${subPlayed}` +
           (tsdbLimit.broken ? ' · ⚠ SportsDB 한도 — 다음 회차에 이어 채움' : ''),
+      );
+      console.log(
+        `      SportsDB 응답 누적: ${[...tsdbStatus].map(([st, n]) => `${st}×${n}`).join(' · ') || '없음'}`,
       );
     } else {
       console.error(`  ! ${t.slug}: 라인업 0경기 — 기존 파일 유지`);
