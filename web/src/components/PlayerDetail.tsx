@@ -93,8 +93,8 @@ function TableBody({ p }: { p: PlayerSeason }) {
       <div>
         <b className="pdet__name">{p.name}</b>
         <span className="pdet__meta">
-          <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
           <NatFlag nat={p.nat} />
+          <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
           {` #${p.jersey}`}{p.age ? ` · ${p.age}세` : ''}
         </span>
       </div>
