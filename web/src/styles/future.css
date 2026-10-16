@@ -90,10 +90,7 @@
 /* 약어 칩이 들어가면서 줄 높이가 흔들리지 않게 가운데 정렬로 바꾼다 */
 .gl__row { align-items: center; }
 
-/* 대회별 줄의 선발 수 */
-.pcard__ca i {
-  font-style: normal; margin-left: 6px; font-size: 10px; color: var(--text-lo);
-}
+/* 대회별 줄의 선발 수 — players.css 의 .pcard__ca i 로 옮겼다(경기 수와 같은 크기) */
 
 /* 순위표 진출권 범례 — 표 위에 색과 뜻을 같이 보여 준다 */
 .tbl__legend {
