@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { headshot } from '../config/koreans';
 import { canonicalPhotoUrl } from '../lib/photoUrl';
 import { sofascoreImage } from '../lib/photoProbe';
+import { cutoutOf } from '../lib/cutout';
 
 /**
  * 선수 헤드샷.
@@ -58,6 +59,17 @@ export function Headshot({
   const guess = headshot(id);
   if (guess && guess !== confirmed) candidates.push([guess, undefined, false]);
   const pick = candidates.find(([u]) => !failed.has(u));
+
+  /* SofaScore 사진은 흰 바탕이라 배경을 지운 판으로 바꿔 끼운다(lib/cutout.ts).
+     처리 전·처리 못 함(CORS)에는 원본 그대로 — 화면이 비지 않는다 */
+  const sofaPick = pick?.[1] === 'sofa' ? pick[0] : '';
+  const [clean, setClean] = useState<{ url: string; data: string | null } | null>(null);
+  useEffect(() => {
+    if (!sofaPick) return;
+    let alive = true;
+    cutoutOf(sofaPick).then((data) => { if (alive) setClean({ url: sofaPick, data }); });
+    return () => { alive = false; };
+  }, [sofaPick]);
   /* 확인된 주소가 하나라도 실패했으면 스모크가 센다(추측 주소 404 는 정상) */
   const failedConfirmed = candidates.find(([u, , c]) => c && failed.has(u))?.[0];
 
@@ -78,14 +90,16 @@ export function Headshot({
     );
   }
   const [url, k, sure] = pick;
+  const shown = k === 'sofa' && clean?.url === url && clean.data ? clean.data : url;
   return (
     <span className={`hs ${className}`} style={{ width: size, height: size }}>
       <img
         key={url}
-        src={url}
+        src={shown}
         alt=""
         loading="lazy"
         data-kind={k}
+        data-clean={shown !== url || undefined}
         /* 추측 주소 — 404 가 정상일 수 있어 스모크가 세지 않는다 */
         data-guess={sure ? undefined : ''}
         /* SofaScore CDN 은 다른 사이트에서 부를 때 리퍼러를 보면 막을 수 있다 */
