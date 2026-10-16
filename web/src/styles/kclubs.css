@@ -26,8 +26,19 @@
   .wcal__tl .kortag { font-size: 10px; padding: 1px 7px 1px 4px; }
 }
 
-/* 다음 경기 카드 머리줄 */
-.mdh__kor { font-size: 10.5px; padding: 2px 8px 2px 4px; }
+/* 폰 한 줄 카드 — 가장 좁은 폰(360px)에서는 이름표를 조금 줄여 상대 팀 이름이 잘리지 않게 */
+@media (max-width: 374px) {
+  .mdr__vs { gap: 4px; }
+  .mdr__vs .kortag { font-size: 9px; gap: 2px; padding: 1px 5px 1px 2px; }
+  .mdr__vs .kortag .korflag { width: 11px; height: 8px; }
+  /* 이름표가 있는 줄만 작은 "vs" 를 뺀다 — 홈·원정은 둘째 줄 HOME/AWAY 가 말해 준다 */
+  .mdr__vs:has(.kortag) > i { display: none; }
+}
+
+/* 다음 경기 카드 — 팀 이름 옆 이름표 (이름이 길면 이름 쪽이 말줄임) */
+.mdt__nm { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; max-width: 100%; }
+.mdt__nm .mdt__name { min-width: 0; }
+.mdt[data-big] .mdt__nm .kortag { font-size: 11px; padding: 2px 8px 2px 4px; }
 
 /* ── 베스트 11 · 선수 목록 ─────────────────────────── */
 .chipbox__flag {

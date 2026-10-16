@@ -435,6 +435,8 @@ export const ALL_TARGETS: Target[] = [...TARGETS, ...KOREAN_CLUBS];
 
 const KOREANS_BY_TEAM = new Map(KOREAN_CLUBS.map((c) => [c.espnTeamId, c.koreans.map((k) => k.nameKo)]));
 /** 이 경기에 나오는 코리안리거 소속팀의 선수 이름들 (양쪽 다 본다 — 맨유 vs 아틀레티코) */
+/** 이 팀(코리안리거 소속팀)의 코리안리거 이름 — 아니면 빈 배열 */
+export const koreansOf = (teamId: string): string[] => KOREANS_BY_TEAM.get(teamId) ?? [];
 export const koreansIn = (homeId: string, awayId: string): string[] =>
   [...(KOREANS_BY_TEAM.get(homeId) ?? []), ...(KOREANS_BY_TEAM.get(awayId) ?? [])];
 export const isKoreanClub = (id: string): boolean => KOREAN_CLUBS.some((c) => c.id === id);
