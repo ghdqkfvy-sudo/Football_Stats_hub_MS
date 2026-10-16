@@ -12,7 +12,7 @@ import type { PlayerSeason } from '../lib/squad';
 import { KorFlag } from '../components/KorFlag';
 
 export function PlayersTab({
-  target, matches, embedded = false, marks,
+  target, matches, embedded = false, marks, matchesLoading = false,
 }: {
   target: Target;
   matches: Match[];
@@ -20,6 +20,8 @@ export function PlayersTab({
   embedded?: boolean;
   /** 코리안리거(id → 한국어 이름) — 베스트 11·목록에 태극기로 표시 */
   marks?: ReadonlyMap<string, string>;
+  /** 일정(matches)을 아직 받는 중 — 그동안은 "기록 없음" 이 아니라 불러오는 중으로 그린다 */
+  matchesLoading?: boolean;
 }) {
   /*
    * 강조는 마우스를 올린 동안만(hoverId). 포메이션에서 선수를 누르면 목록에서
@@ -33,21 +35,26 @@ export function PlayersTab({
 
   /* 라인업·선수 프로필은 전부 네트워크에서 온다.
      경기별 로스터에 골·도움까지 들어 있어 이름 매칭이 필요 없다. */
-  const [squad, setSquad] = useState<SquadData | null>(null);
-  const [loadingSquad, setLoadingSquad] = useState(true);
+  /*
+   * 스쿼드는 **어느 팀 것인지** 와 함께 들고 있는다(App 의 일정과 같은 방식).
+   * ⚠️ 예전에는 팀을 바꾸면 첫 화면이 **이전 팀 스쿼드 + 새 팀 일정** 으로 한 번 그려져
+   * 선수가 0명으로 계산됐고, "라인업 기록이 아직 없습니다 … 정적 피드 …" 안내가
+   * 잠깐 떴다가 사라졌다(2026-10-16). 팀이 맞지 않으면 그냥 불러오는 중이다.
+   */
+  const [squadOf, setSquadOf] = useState<{ team: string; data: SquadData | null } | null>(null);
   useEffect(() => {
     let alive = true;
-    setSquad(null);
-    setLoadingSquad(true);
-    loadSquad(target.espnTeamId, matches).then((r) => {
-      if (!alive) return;
-      setSquad(r.data);
-      setLoadingSquad(false);
+    const team = target.espnTeamId;
+    loadSquad(team, matches).then((r) => {
+      if (alive) setSquadOf({ team, data: r.data });
     });
     return () => {
       alive = false;
     };
   }, [target.espnTeamId, matches]);
+  const squad = squadOf?.team === target.espnTeamId ? squadOf.data : null;
+  /* 일정이 아직 안 왔을 때(matchesLoading)도 불러오는 중 — 경기 0개로 계산하면 같은 안내가 뜬다 */
+  const loadingSquad = squadOf?.team !== target.espnTeamId || matchesLoading;
 
   const { players, departed, formation, covered, formationTally, slotShape } = useMemo(
     () => buildSquad(matches, squad?.lineups ?? {}, squad?.athletes ?? {}, target.espnTeamId),
@@ -99,11 +106,7 @@ export function PlayersTab({
       <Wrap>
         <div className="empty">
           <h3>{target.nameEn} 라인업 기록이 아직 없습니다</h3>
-          <p>
-            베스트 11 은 경기별 라인업(<code>formationPlace</code>)으로 만듭니다.
-            경기가 끝나는 대로 자동으로 쌓이며, 프록시(<code>VITE_API_BASE</code>)나
-            정적 피드(<code>/data/squad-*.json</code>) 중 하나는 연결되어 있어야 합니다.
-          </p>
+          <p>베스트 11 과 선수 기록은 경기별 라인업으로 만듭니다. 경기가 끝나고 다음 수집 때 자동으로 채워집니다.</p>
         </div>
       </Wrap>
     );
