@@ -618,3 +618,26 @@
 .bench__c[data-zero] { background: rgba(255, 255, 255, .025); box-shadow: none; color: var(--text-lo); font-size: 13px; }
 /* 폰 카드 — 두 상자 사이에 독립 상자로 */
 .pdet--card .bench { margin: 0; }
+
+/* 넓은 화면 — 요약(왼쪽)과 3×3 표(오른쪽)를 나란히. 표만 왼쪽에 붙어 있으면
+   상세 창 오른쪽 절반이 통째로 비고 블록이 쓸데없이 길어졌다.
+   폰(.pdet--card)은 세로로 쌓은 그대로 둔다. */
+@media (min-width: 641px) {
+  .pdet:not(.pdet--card) .bench {
+    grid-template-columns: minmax(0, 1fr) 268px;
+    column-gap: 18px; row-gap: 10px; align-items: start;
+    padding: 12px 14px;
+  }
+  .pdet:not(.pdet--card) .bench__top,
+  .pdet:not(.pdet--card) .bench__sum { grid-column: 1; }
+  .pdet:not(.pdet--card) .bench__mx {
+    grid-column: 2; grid-row: 1 / span 2;
+    grid-template-columns: 58px repeat(3, minmax(0, 1fr)); gap: 3px;
+  }
+  .pdet:not(.pdet--card) .bench__c { min-height: 25px; font-size: 15px; border-radius: 6px; }
+  .pdet:not(.pdet--card) .bench__c[data-zero] { font-size: 11px; }
+  .pdet:not(.pdet--card) .bench__r { font-size: 11px; }
+  .pdet:not(.pdet--card) .bench__h { font-size: 10.5px; }
+  .pdet:not(.pdet--card) .bench__cap { font-size: 9px; }
+  .pdet:not(.pdet--card) .bench__k b { font-size: 17px; }
+}
