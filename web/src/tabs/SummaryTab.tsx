@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
+import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { dayKey, monthKey, todayKey } from '../lib/kst';
 import {
-  cycleIndex, matchesByDay, monthResults, nextUpBoard, shiftWeek, weekStartKey,
+  cycleIndex, matchesByDay, monthResults, nextUpBoardShared, shiftWeek, weekStartKey,
   type TeamFeed,
 } from '../lib/summary';
 import { MatchdayCard, MatchdayRow, revealHero } from '../components/MatchdayHero';
@@ -51,18 +51,37 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
         if (--left === 0) setLoading(false);
       });
     }
+    /* 코리안리거 소속팀 — 첫 화면(로딩)을 기다리게 하지 않는다 */
+    for (const t of KOREAN_CLUBS) {
+      loadSchedule(t.espnTeamId).then((r) => {
+        if (alive) setFeeds((f) => ({ ...f, [t.id]: r.data }));
+      });
+    }
     return () => { alive = false; };
   }, []);
 
+  /** 팀 탭이 있는 일곱 팀 — 이달의 결과·팀 비교는 여기만 */
   const teamFeeds = useMemo<TeamFeed[]>(
     () => TARGETS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [] })),
     [feeds],
+  );
+  /**
+   * + 코리안리거 소속팀 — 주간 일정에는 세 클럽 경기가 다 나오고, 다음 경기에서는
+   * 대한민국 카드 한 장을 국가대표와 나눠 쓴다(가장 빠른 경기).
+   * 일곱 팀을 앞에 둔다 — 맨유 vs 아틀레티코처럼 겹치는 경기는 맨유 칸으로 남는다.
+   */
+  const allFeeds = useMemo<TeamFeed[]>(
+    () => [...teamFeeds, ...KOREAN_CLUBS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [] }))],
+    [teamFeeds, feeds],
   );
 
   const targetOf = (id: string) => getTarget(id as TargetId);
 
   /* ── 매치데이 히어로 ──────────────────────────────── */
-  const board = useMemo(() => nextUpBoard(teamFeeds), [teamFeeds]);
+  const board = useMemo(
+    () => nextUpBoardShared(teamFeeds, allFeeds.filter((f) => f.id === 'korea' || KOREAN_CLUBS.some((c) => c.id === f.id)), 'korea'),
+    [teamFeeds, allFeeds],
+  );
 
   /*
    * 사용자가 고른 **경기 하나**. 예전에는 팀 id 만 들고 있었는데, 히어로는
@@ -78,17 +97,19 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   const mobile = useIsMobile();
   const pickedUp = useMemo(() => {
     if (!picked) return null;
-    const m = teamFeeds.find((f) => f.id === picked.teamId)?.matches
+    const m = allFeeds.find((f) => f.id === picked.teamId)?.matches
       .find((x) => x.id === picked.matchId);
     return m ? { teamId: picked.teamId, match: m } : null;
-  }, [picked, teamFeeds]);
+  }, [picked, allFeeds]);
 
   const hero = pickedUp ?? board[0] ?? null;
-  /* 히어로로 올라간 팀은 아래 카드에서 뺀다 — 같은 팀이 두 번 나오면 헷갈린다 */
-  const rest = board.filter((b) => b.teamId !== hero?.teamId);
+  /* 히어로로 올라간 팀은 아래 카드에서 뺀다 — 같은 팀이 두 번 나오면 헷갈린다.
+     대한민국 자리(국가대표 + 소속팀)는 한 덩어리로 본다 */
+  const slotOf = (id: string) => (id === 'korea' || KOREAN_CLUBS.some((c) => c.id === id) ? 'korea' : id);
+  const rest = board.filter((b) => slotOf(b.teamId) !== slotOf(hero?.teamId ?? ''));
 
   /* ── 주간 캘린더 ──────────────────────────────────── */
-  const byDay = useMemo(() => matchesByDay(teamFeeds), [teamFeeds]);
+  const byDay = useMemo(() => matchesByDay(allFeeds), [allFeeds]);
   const [week, setWeek] = useState(() => weekStartKey(todayKey()));
   const [selDay, setSelDay] = useState<string | null>(null);
   const [selIdx, setSelIdx] = useState(0);

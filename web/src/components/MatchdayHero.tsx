@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '../lib/types';
-import { SUMMARY_OPP, comp, summaryColor, type Target } from '../config/targets';
+import { SUMMARY_OPP, comp, koreansIn, summaryColor, type Target } from '../config/targets';
 import { countdown, dayKey, kstFullDate, kstParts, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
+import { KorFlag } from './KorFlag';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { useFifaRank } from '../lib/fifa';
@@ -162,6 +163,10 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
               LIVE 일 때는 LIVE 배지가 이미 깜빡이므로 내보내지 않는다. */}
           {hero && !live && !done && <span className="mdh__pulse" aria-hidden="true" />}
         </span>
+        {/* 코리안리거 소속팀 경기면 누가 뛰는지 (대한민국 자리에 클럽 경기가 올라올 때) */}
+        {koreansIn(match.home.id, match.away.id).map((n) => (
+          <span key={n} className="kortag mdh__kor"><KorFlag />{n}</span>
+        ))}
         <span className="mdh__comp">
           <CompCrest k={match.competition} size={hero ? 16 : 13} />
           {c.name}
@@ -308,6 +313,9 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         <span className="mdr__meta">
           <CompCrest k={match.competition} size={12} />
           <span className="mdr__comp">{c.name}</span>
+          {koreansIn(match.home.id, match.away.id).map((n) => (
+            <span key={n} className="kortag"><KorFlag />{n}</span>
+          ))}
           <span className="mdr__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</span>
         </span>
       </span>

@@ -76,7 +76,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-25';
+const CODE_VERSION = 'snap-26';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -93,8 +93,16 @@ const TEAMS = [
   { id: '361', slug: 'newcastle', name: 'Newcastle United', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
   { id: '364', slug: 'liverpool', name: 'Liverpool', league: 'eng.1', koQuery: '리버풀 FC' },
   { id: '451', slug: 'korea', name: 'South Korea', national: true, league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
+  /* 코리안리거 소속팀 — 팀 탭은 없고 대한민국 › 소속팀 · Summary 에 쓴다(앱의 KOREAN_CLUBS).
+     일정·스쿼드는 다른 팀과 똑같이 받고, 뉴스는 받지 않는다(볼 화면이 없다). */
+  { id: '132', slug: 'bayern', name: 'Bayern Munich', league: 'ger.1', noNews: true },
+  { id: '1068', slug: 'atletico', name: 'Atlético Madrid', league: 'esp.1', noNews: true },
+  { id: '18966', slug: 'lafc', name: 'LAFC', league: 'usa.1', noNews: true },
 ];
 const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
+/* 순위표만 필요한 리그(소속팀 화면) — 경기별 선수 기록·대회 전체 파일(league-*.json)은
+   만들지 않고 table-*.json 만 쓴다. 분데스리가 18팀 · MLS 30팀 일정이 전부다. */
+const TABLE_LEAGUES = ['ger.1', 'usa.1'];
 
 /** 코리안리거 명단 — 앱의 src/config/koreans.ts 와 같은 목록을 쓴다 */
 const KOREANS = [
@@ -1669,7 +1677,8 @@ async function main() {
     await sleep(400);
   }
 
-  if (wants('slow')) for (const lg of LEAGUES) {
+  if (wants('slow')) for (const lg of [...LEAGUES, ...TABLE_LEAGUES]) {
+    const full = LEAGUES.includes(lg);
     // soccer 순위는 반드시 /apis/v2/ 경로 (site/v2 는 빈 객체를 반환한다)
     const standings = await get(`${SITE}/apis/v2/sports/soccer/${lg}/standings`);
     if (!standings) note(`${lg} 순위표`, 'ESPN standings 응답 없음');
@@ -1677,7 +1686,7 @@ async function main() {
        standings 를 이미 품고 있다. 그래도 계속 쓴다: 10분마다 도는 봇이
        (아직 옛 코드로) 이 파일을 다시 만드는 동안 지우면 리베이스가 매번
        충돌한다. 제거는 새 코드가 배포된 뒤 별도 커밋에서 한다. */
-    if (standings) await save(`standings-${lg}.json`, standings);
+    if (standings && full) await save(`standings-${lg}.json`, standings);
     await sleep(400);
 
     /* 순위표만으로는 부족하다.
@@ -1719,7 +1728,17 @@ async function main() {
     }
     events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
-    if (events.length) {
+    if (events.length && !full) {
+      await save(`table-${lg}.json`, {
+        league: lg,
+        events: events.map(slimEvent).filter(Boolean),
+        standings,
+        teams: ids.length,
+        fetchedAt: new Date().toISOString(),
+      });
+      const done = events.filter((e) => e?.competitions?.[0]?.status?.type?.completed).length;
+      console.log(`    ${lg}: ${ids.length}팀 · ${events.length}경기 (종료 ${done}) — 순위표만`);
+    } else if (events.length) {
       const prevMap = await prevGoalsMap(`league-${lg}.json`);
       await enrichGoals(events, lg, prevMap);
       /* 리그 파일은 순위표·대회별 공격포인트에 쓰인다 — 선수별 골·도움
@@ -1755,7 +1774,7 @@ async function main() {
   /* ── 뉴스 (fast) ──────────────────────────────────────
      ESPN 영문 피드와 한국어 구글 뉴스를 합쳐 하나의 articles 배열로 만든다.
      앱은 두 소스를 구분해서 보여 주므로 source 를 붙여 둔다. */
-  if (wants('fast')) for (const t of TEAMS) {
+  if (wants('fast')) for (const t of TEAMS.filter((x) => !x.noNews)) {
     const en = await get(
       `${SITE}/apis/site/v2/sports/soccer/${t.league}/news?team=${t.id}&limit=20`,
     );

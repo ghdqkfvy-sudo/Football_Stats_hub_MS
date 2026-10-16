@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
+import { KorFlag } from './KorFlag';
 import { Swap } from './Swap';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
 
@@ -36,9 +37,11 @@ interface Props {
   onClose?: () => void;
   /** 선수 상세(시즌 전 경기) 열기 — 포메이션에서 눌러도 같은 창이 뜨도록 PlayersTab 이 가진다 */
   onOpen: (p: PlayerSeason) => void;
+  /** 코리안리거(id → 한국어 이름) — 줄을 강조하고 태극기 + 한국어 이름 (소속팀 화면) */
+  marks?: ReadonlyMap<string, string>;
 }
 
-export function PlayerTable({ players, activeId, onHover, onClose, onOpen }: Props) {
+export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks }: Props) {
   const [filter, setFilter] = useState('ALL');
 
   /* 정렬을 걸지 않았을 때의 기본 순서는 "베스트 11 먼저, 그다음 기여도 순"
@@ -224,6 +227,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen }: Pro
           <div
             className="pt__row"
             key={p.id}
+            data-kor={marks?.has(p.id) || undefined}
             ref={(el) => {
               if (el) rowRefs.current.set(p.id, el);
               else rowRefs.current.delete(p.id);
@@ -250,8 +254,14 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen }: Pro
               {/* 폰에서는 "João Pe…" 처럼 거의 모두 잘렸다 — 포메이션 그림과 같은
                   성(마지막 단어)만. 전체 이름은 눌러서 여는 상세에 있다. */}
               <b title={p.name}>
-                <span className="m-full">{p.name}</span>
-                <span className="m-short">{p.name.split(' ').slice(-1)[0]}</span>
+                {marks?.has(p.id) ? (
+                  <span className="pt__kor"><KorFlag />{marks.get(p.id)}</span>
+                ) : (
+                  <>
+                    <span className="m-full">{p.name}</span>
+                    <span className="m-short">{p.name.split(' ').slice(-1)[0]}</span>
+                  </>
+                )}
               </b>
               <em data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
             </span>

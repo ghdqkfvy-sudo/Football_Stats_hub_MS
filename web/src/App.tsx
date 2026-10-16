@@ -6,7 +6,7 @@ import './styles/mobile.css';
 import './styles/motion.css';
 /* 스크롤 막대(MiniBar)의 데스크톱 모양 — mobile.css 의 폰 모양 위에 얹는다 */
 import './styles/topbar.css';
-import { OUR_TEAM_IDS, TARGETS, getTarget, subtitleParts, type TargetId } from './config/targets';
+import { OUR_TEAM_IDS, TARGETS, getTarget, isKoreanClub, subtitleParts, themeVarsOf, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
 import { invalidateFeeds } from './lib/feed';
@@ -15,6 +15,7 @@ import { ScheduleTab } from './tabs/ScheduleTab';
 import { StandingsTab } from './tabs/StandingsTab';
 import { PlayersTab } from './tabs/PlayersTab';
 import { KoreansTab } from './tabs/KoreansTab';
+import { KoreanClubsTab } from './tabs/KoreanClubsTab';
 import { NewsTab } from './tabs/NewsTab';
 import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
@@ -32,7 +33,7 @@ import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
 import bgSummary from './assets/bg-summary.webp';
 
-type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans';
+type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans' | 'clubs';
 
 /* short: 폰에서 탭 5개가 한 줄에 다 들어가도록 쓰는 짧은 이름(styles/mobile.css).
    넓은 화면에서는 label 만 보인다. */
@@ -47,6 +48,8 @@ const CLUB_TABS: { id: TabId; label: string; short?: string }[] = [
 const NATIONAL_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'koreans', label: '코리안리거' },
   { id: 'schedule', label: '경기 일정' },
+  /* 코리안리거 소속팀(뮌헨·아틀레티코·LAFC) — 클럽 탭의 선수 스탯을 그대로 */
+  { id: 'clubs', label: '소속팀' },
   { id: 'news', label: '뉴스' },
 ];
 
@@ -142,8 +145,21 @@ export default function App() {
   const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
   const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
 
+  /** 소속팀 탭에서 고른 클럽 — Summary 에서 그 클럽 경기를 누르면 그 클럽으로 열린다 */
+  const [clubPick, setClubPick] = useState<TargetId | null>(null);
+
   /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
   const openTeam = useCallback((id: TargetId, focus?: { matchId: string }) => {
+    /* 코리안리거 소속팀은 팀 탭이 없다 — 대한민국 › 소속팀 의 그 클럽으로 */
+    if (isKoreanClub(id)) {
+      setClubPick(id);
+      setTab('clubs');
+      setMotion('rise');
+      setTargetId('korea');
+      setView('team');
+      toTop();
+      return;
+    }
     if (focus) {
       setFocusMatch({ team: id, id: focus.matchId });
       setTab('schedule');
@@ -338,18 +354,7 @@ export default function App() {
     [summary, target.espnTeamId],
   );
 
-  const themeVars = useMemo(
-    () =>
-      ({
-        ['--brand']: target.theme.brand,
-        ['--accent']: target.theme.accent,
-        ['--secondary']: target.theme.secondary,
-        ['--on-accent']: target.theme.onAccent,
-        ['--opp']: target.theme.opponent ?? '#FFFFFF',
-        ['--glow']: target.theme.glow,
-      }) as React.CSSProperties,
-    [target],
-  );
+  const themeVars = useMemo(() => themeVarsOf(target), [target]);
 
   return (
     <PaletteProvider target={target}>
@@ -580,6 +585,7 @@ export default function App() {
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
           {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} />}
           {!summary && tab === 'koreans' && <KoreansTab />}
+          {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
           {!summary && tab === 'future' && <FutureTab target={target} />}
           </div>

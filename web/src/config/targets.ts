@@ -21,7 +21,9 @@ import crestKor from '../assets/crest-kor.png';
 
 export type TargetId =
   | 'real-madrid' | 'chelsea' | 'man-united' | 'tottenham' | 'newcastle' | 'liverpool'
-  | 'korea';
+  | 'korea'
+  /* 코리안리거 소속팀 — 팀 탭은 없고 대한민국 탭의 "소속팀" 안에서만 보인다 */
+  | 'bayern' | 'atletico' | 'lafc';
 export type TargetKind = 'club' | 'national';
 
 export interface TargetTheme {
@@ -333,6 +335,122 @@ export const TARGETS: Target[] = [
 ];
 
 /**
+ * 코리안리거 소속팀 — 팀 탭(스위처)에는 없다. 대한민국 탭의 "소속팀" 에서
+ * 클럽 탭의 선수 스탯(베스트 11·선수 목록·상세)을 그대로 보여 주고,
+ * Summary 주간 일정·다음 경기의 대한민국 자리에 경기를 올린다.
+ * 데이터 파일 이름은 slug(id) 그대로 — schedule-bayern.json · squad-bayern.json.
+ * (scripts/snapshot.mjs 의 TEAMS 에 같은 id·slug 가 있어야 한다)
+ */
+export interface KoreanClub extends Target {
+  /** 이 클럽에서 뛰는 코리안리거 (athleteId · 한국어 이름) */
+  koreans: { id: string; nameKo: string }[];
+}
+
+export const KOREAN_CLUBS: KoreanClub[] = [
+  {
+    id: 'bayern',
+    kind: 'club',
+    espnTeamId: '132',
+    name: 'Bayern Munich',
+    nameEn: 'Bayern Munich',
+    abbr: 'BAY',
+    crest: CREST('132'),
+    bgKind: 'photo',
+    theme: {
+      brand: '#DC052D',
+      accent: '#FF4D63',
+      secondary: '#3D8BFF',   // 바이에른의 두 번째 색 — 엠블럼의 파랑
+      onAccent: '#2A0006',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(220,5,45,.26), transparent 60%)',
+    },
+    league: 'ger.1',
+    competitions: ['ger.1', 'uefa.champions', 'ger.dfb_pokal'],
+    palette: {
+      'ger.1': '#E4232C',
+      'uefa.champions': '#4C8DFF',
+      'ger.dfb_pokal': '#FFB443',
+      'ger.super_cup': '#C084FC',
+      'club.friendly': '#6B7789',
+    },
+    koreans: [{ id: '157688', nameKo: '김민재' }],
+  },
+  {
+    id: 'atletico',
+    kind: 'club',
+    espnTeamId: '1068',
+    name: 'Atlético Madrid',
+    nameEn: 'Atlético Madrid',
+    abbr: 'ATM',
+    crest: CREST('1068'),
+    bgKind: 'photo',
+    theme: {
+      brand: '#CB3524',
+      accent: '#FF5F4D',
+      secondary: '#5B7BFF',   // 아틀레티코의 남색을 밝힌 값
+      onAccent: '#2A0600',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(203,53,36,.26), transparent 60%)',
+    },
+    league: 'esp.1',
+    competitions: ['esp.1', 'uefa.champions', 'esp.copa_del_rey'],
+    palette: {
+      'esp.1': '#F5333F',
+      'uefa.champions': '#4C8DFF',
+      'esp.copa_del_rey': '#F2C14E',
+      'esp.super_cup': '#C084FC',
+      'club.friendly': '#6B7789',
+    },
+    koreans: [{ id: '274197', nameKo: '이강인' }],
+  },
+  {
+    id: 'lafc',
+    kind: 'club',
+    espnTeamId: '18966',
+    name: 'LAFC',
+    nameEn: 'LAFC',
+    abbr: 'LAFC',
+    crest: CREST('18966'),
+    bgKind: 'photo',
+    theme: {
+      brand: '#C39E6D',
+      accent: '#E3BF8B',
+      secondary: '#8FB4E6',
+      onAccent: '#1A1300',
+      glow: 'radial-gradient(90rem 40rem at 50% -18rem, rgba(195,158,109,.24), transparent 60%)',
+    },
+    league: 'usa.1',
+    competitions: ['usa.1', 'concacaf.champions', 'concacaf.leagues.cup', 'usa.open'],
+    palette: {
+      'usa.1': '#3FD7C0',
+      'concacaf.champions': '#FF9F2E',
+      'concacaf.leagues.cup': '#E879A6',
+      'usa.open': '#8B7BFF',
+      'club.friendly': '#6B7789',
+    },
+    koreans: [{ id: '149945', nameKo: '손흥민' }],
+  },
+];
+
+/** 팀 탭 + 코리안리거 소속팀 — 데이터 파일·팀 찾기에 쓴다 */
+export const ALL_TARGETS: Target[] = [...TARGETS, ...KOREAN_CLUBS];
+
+const KOREANS_BY_TEAM = new Map(KOREAN_CLUBS.map((c) => [c.espnTeamId, c.koreans.map((k) => k.nameKo)]));
+/** 이 경기에 나오는 코리안리거 소속팀의 선수 이름들 (양쪽 다 본다 — 맨유 vs 아틀레티코) */
+export const koreansIn = (homeId: string, awayId: string): string[] =>
+  [...(KOREANS_BY_TEAM.get(homeId) ?? []), ...(KOREANS_BY_TEAM.get(awayId) ?? [])];
+export const isKoreanClub = (id: string): boolean => KOREAN_CLUBS.some((c) => c.id === id);
+
+/** 팀 테마 → 화면 CSS 변수 (앱 루트와 소속팀 패널이 같이 쓴다) */
+export const themeVarsOf = (t: Target): React.CSSProperties =>
+  ({
+    ['--brand']: t.theme.brand,
+    ['--accent']: t.theme.accent,
+    ['--secondary']: t.theme.secondary,
+    ['--on-accent']: t.theme.onAccent,
+    ['--opp']: t.theme.opponent ?? '#FFFFFF',
+    ['--glow']: t.theme.glow,
+  }) as React.CSSProperties;
+
+/**
  * 우리가 추적하는 팀의 ESPN id.
  * 엠블럼 윤곽 강조(`.crest`)를 **이 팀들에만** 준다 — 스무 줄짜리 순위표
  * 전체에 빛을 두르면 강조가 아니라 배경이 된다.
@@ -383,7 +501,7 @@ export const markOf = (t: Target) => markColor(t.theme.accent, t.theme.secondary
 export const summaryColor = (t: Target) => t.theme.summary ?? t.theme.accent;
 export const SUMMARY_OPP = '#FFFFFF';
 
-export const getTarget = (id: TargetId) => TARGETS.find((t) => t.id === id)!;
+export const getTarget = (id: TargetId) => ALL_TARGETS.find((t) => t.id === id)!;
 
 /* ──────────────────────────────────────────────────────────────
    대회 메타 — 캘린더/배지의 색 구분
@@ -439,6 +557,11 @@ const COMPS: CompetitionMeta[] = [
   { key: 'gre.1',            name: 'Super League',      short: 'GRE', color: '#4FA3E3' },
   { key: 'jpn.1',            name: 'J1 League',         short: 'J1',  color: '#E8546B' },
   { key: 'usa.1',            name: 'MLS',               short: 'MLS', color: '#3FD7C0' },
+  { key: 'ger.dfb_pokal',    name: 'DFB-Pokal',         short: 'DFB', color: '#FFB443' },
+  { key: 'ger.super_cup',    name: 'DFL-Supercup',      short: 'SUP', color: '#C084FC' },
+  { key: 'concacaf.champions', name: 'CONCACAF Champions Cup', short: 'CCC', color: '#FF9F2E' },
+  { key: 'concacaf.leagues.cup', name: 'Leagues Cup',   short: 'LC',  color: '#E879A6' },
+  { key: 'usa.open',         name: 'U.S. Open Cup',     short: 'USOC', color: '#8B7BFF' },
   { key: 'eng.2',            name: 'Championship',      short: 'CHA', color: '#C084FC' },
   { key: 'eng.trophy',       name: 'EFL Trophy',        short: 'EFL', color: '#C9A86A' },
   { key: 'eng.3',            name: 'League One',        short: 'L1E', color: '#9CA8BC' },
@@ -488,5 +611,5 @@ export const mobileName = (key: CompetitionKey): string => MOBILE_NAME[key] ?? c
 
 /** espnTeamId → 스냅샷 파일 슬러그. 데이터 파일 이름이 타깃 정의에서 나온다. */
 export const SLUG_BY_TEAM_ID: Record<string, string> = Object.fromEntries(
-  TARGETS.map((t) => [t.espnTeamId, t.id]),
+  ALL_TARGETS.map((t) => [t.espnTeamId, t.id]),
 );

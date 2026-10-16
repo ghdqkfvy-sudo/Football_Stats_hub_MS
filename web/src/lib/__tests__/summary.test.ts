@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cycleIndex, matchesByDay, monthResults, nextUpBoard, nextUpOf,
+  cycleIndex, matchesByDay, monthResults, nextUpBoard, nextUpBoardShared, nextUpOf,
   shiftWeek, weekKeys, weekLabel, weekStartKey,
 } from '../summary';
 import type { Match, MatchStatus } from '../types';
@@ -61,6 +61,32 @@ describe('nextUpBoard', () => {
       { id: 'b', matches: [m('2', '2026-09-30T12:00Z')] },
     ], now);
     expect(board.map((x) => x.teamId)).toEqual(['b']);
+  });
+});
+
+describe('nextUpBoardShared — 대한민국 자리를 소속팀과 나눠 쓴다', () => {
+  const now = Date.parse('2026-09-23T12:00:00Z');
+  const feeds = [
+    { id: 'chelsea', matches: [m('c', '2026-09-28T14:00Z')] },
+    { id: 'korea', matches: [m('k', '2026-10-06T11:00Z')] },
+  ];
+
+  it('국가대표보다 소속팀 경기가 빠르면 그 경기가 대한민국 자리에 오른다', () => {
+    const group = [feeds[1], { id: 'bayern', matches: [m('b', '2026-09-25T18:30Z')] }];
+    const board = nextUpBoardShared(feeds, group, 'korea', now);
+    expect(board.map((x) => x.teamId)).toEqual(['bayern', 'chelsea']);
+  });
+
+  it('자리는 하나 — 국가대표가 빠르면 소속팀 카드는 따로 생기지 않는다', () => {
+    const group = [feeds[1], { id: 'lafc', matches: [m('l', '2026-10-20T02:00Z')] }];
+    const board = nextUpBoardShared(feeds, group, 'korea', now);
+    expect(board.map((x) => x.teamId)).toEqual(['chelsea', 'korea']);
+  });
+
+  it('국가대표 일정이 비어도 소속팀 경기로 자리를 채운다', () => {
+    const group = [{ id: 'korea', matches: [] }, { id: 'atletico', matches: [m('a', '2026-09-27T14:00Z')] }];
+    const board = nextUpBoardShared(feeds, group, 'korea', now);
+    expect(board.map((x) => x.teamId)).toEqual(['atletico', 'chelsea']);
   });
 });
 
