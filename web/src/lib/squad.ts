@@ -54,6 +54,24 @@ export interface PlayerSeason {
   /** 경기별 출전 시간이 실제 교체 기록에서 온 것인지 (어림값이 아닌지) */
   realMinutes: boolean;
   score: number;
+  /** 교체 출전 요약 — 교체로 1분이라도 뛴 적이 있을 때만 */
+  bench?: BenchSummary;
+}
+
+/** 경기 상황 — 우리 팀 기준 리드(L) · 동점(D) · 열세(T) */
+export type GameState = 'L' | 'D' | 'T';
+
+export interface BenchSummary {
+  /** 교체로 뛴 경기 수 */
+  subs: number;
+  /** 라인업이 확보된 팀 경기 수 (교체 비율의 분모) */
+  team: number;
+  /** 평균 투입 분 */
+  avgIn: number;
+  /** 교체로 뛴 시간 합계 */
+  minutes: number;
+  /** 투입 → 교체 아웃(또는 종료) 사이 상황 변화. 득점 분을 모르는 경기는 빠진다 */
+  changes: { matchId: string; kickoffUtc: string; opponent: string; from: GameState; to: GameState }[];
 }
 
 export interface RecentGame {
@@ -79,6 +97,9 @@ export interface RecentGame {
   pos?: string;
   /** 교체로 들어갔을 때 대신한 선수 이름 */
   forName?: string;
+  /** 교체 투입 순간 / 교체 아웃(또는 종료) 때의 상황 — 득점 분을 아는 경기만 */
+  stateIn?: GameState;
+  stateOut?: GameState;
   goals: number;
   assists: number;
   yellow: number;
@@ -275,6 +296,9 @@ export function buildSquad(
         started: starter,
         subIn: !starter && inMin != null ? inMin : undefined,
         subOut: outMin != null ? outMin : undefined,
+        ...(!starter && inMin != null && m.goalsLoaded
+          ? { stateIn: stateAt(m, teamId, inMin), stateOut: stateAt(m, teamId, outMin ?? Infinity) }
+          : {}),
         /* 자리는 **선발일 때만** — 교체 선수가 나간 선수의 자리를 그대로 맡는다는
            보장이 없다(윙어가 풀백과 바뀌면 보통 전체가 자리를 옮긴다) */
         pos: starter ? posLabel(abbr, lu.formation) : undefined,
@@ -330,6 +354,8 @@ export function buildSquad(
     if (!p.realMinutes && real !== undefined && real > 0) p.minutes = real;
     // 선발·출전시간을 기본으로 하고 공격포인트를 얹는다
     p.score = p.starts * 3 + p.apps + p.minutes / 90 + p.goals * 2.5 + p.assists * 1.5;
+    /* 교체 출전 요약 — 표시용. 베스트 11·포메이션 계산은 이 값을 쓰지 않는다 */
+    p.bench = benchSummary(p, covered);
     return p;
   });
 
@@ -844,3 +870,57 @@ export function posLabel(abbr: string | undefined, formation = ''): string | und
   }
   return fixed[a] ?? a;
 }
+
+
+/* ── 교체 출전 ─────────────────────────────────────────────── */
+
+/**
+ * 그 분까지의 스코어로 본 우리 팀 상황. 같은 분의 골은 **이미 난 것**으로 본다 —
+ * 교체는 보통 골 뒤 경기가 멈춘 사이에 이뤄진다. 득점 기록의 teamId 는 자책골도
+ * 득점 인정 팀이다(2026-10 데이터 148/148 경기 스코어와 일치).
+ */
+export function stateAt(m: Pick<Match, 'goals'>, teamId: string, minute: number): GameState {
+  let us = 0;
+  let them = 0;
+  for (const g of m.goals) {
+    if (g.minute > minute) continue;
+    if (g.teamId === teamId) us++;
+    else them++;
+  }
+  return us > them ? 'L' : us < them ? 'T' : 'D';
+}
+
+const RANK: Record<GameState, number> = { T: 0, D: 1, L: 2 };
+/** 상황이 좋아졌나(+1) · 그대로(0) · 나빠졌나(-1) */
+export const stateDelta = (from: GameState, to: GameState): -1 | 0 | 1 =>
+  RANK[to] > RANK[from] ? 1 : RANK[to] < RANK[from] ? -1 : 0;
+
+export function benchSummary(p: PlayerSeason, team: number): BenchSummary | undefined {
+  const subs = p.recent.filter((g) => !g.started && g.subIn !== undefined);
+  if (!subs.length) return undefined;
+  return {
+    subs: subs.length,
+    team,
+    avgIn: Math.round(subs.reduce((a, g) => a + (g.subIn ?? 0), 0) / subs.length),
+    minutes: subs.reduce((a, g) => a + g.minutes, 0),
+    changes: subs
+      .filter((g) => g.stateIn && g.stateOut)
+      .map((g) => ({
+        matchId: g.matchId, kickoffUtc: g.kickoffUtc, opponent: g.opponent,
+        from: g.stateIn as GameState, to: g.stateOut as GameState,
+      })),
+  };
+}
+
+/**
+ * 교체 요약을 보여 줄 "교체 자원" 인가 — 셋 다 맞아야 한다.
+ *  1) 교체 3회 이상 (한두 번의 우연한 교체는 뺀다)
+ *  2) 교체 ≥ 선발 (주로 선발로 뛰는 선수의 교체 기록은 의미가 작다)
+ *  3) 교체가 팀 경기의 20% 이상 (팀이 치른 경기에서 자주 벤치에서 나온 선수)
+ */
+export function isBenchRegular(p: Pick<PlayerSeason, 'starts' | 'bench'>): boolean {
+  const b = p.bench;
+  if (!b || b.team <= 0) return false;
+  return b.subs >= 3 && b.subs >= p.starts && b.subs / b.team >= 0.2;
+}
+

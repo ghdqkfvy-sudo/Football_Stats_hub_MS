@@ -1,4 +1,5 @@
-import type { PlayerSeason, RecentGame } from '../lib/squad';
+import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
+import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
 import { kstShortDate } from '../lib/kst';
 import { Headshot } from './Headshot';
@@ -100,6 +101,60 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
       </div>
     )}
     </>
+  );
+}
+
+const STATE_KO: Record<GameState, string> = { L: '리드', D: '동점', T: '열세' };
+const DELTA_MARK = { 1: '▲', 0: '=', [-1]: '▼' } as const;
+
+/**
+ * 교체 자원 요약 — 주로 벤치에서 나오는 선수만(isBenchRegular).
+ * 골·도움이 없는 미드필더·수비수도 읽을 거리가 있게, 투입 시각과 함께
+ * "들어갔을 때의 경기 상황이 나올 때(또는 종료 때) 어떻게 바뀌었나" 를 보여 준다.
+ */
+export function BenchLine({ p }: { p: PlayerSeason }) {
+  const b = p.bench;
+  if (!b || !isBenchRegular(p)) return null;
+  const tally = { 1: 0, 0: 0, [-1]: 0 } as Record<-1 | 0 | 1, number>;
+  for (const c of b.changes) tally[stateDelta(c.from, c.to)]++;
+  const subGoals = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.goals, 0);
+  const subAssists = p.recent.filter((g) => !g.started).reduce((a, g) => a + g.assists, 0);
+  return (
+    <div className="bench">
+      <div className="bench__top">
+        <span className="bench__t">교체 출전</span>
+        <span className="bench__k num"><b>{b.subs}</b>회<i>팀 {b.team}경기 중</i></span>
+        <span className="bench__k num">평균 <b>{b.avgIn}&apos;</b> 투입</span>
+        <span className="bench__k num">교체로 <b>{b.minutes}</b>분</span>
+        {subGoals > 0 && <em className="pcard__gg">{subGoals}G</em>}
+        {subAssists > 0 && <em className="pcard__aa">{subAssists}A</em>}
+      </div>
+      {b.changes.length > 0 && (
+        <>
+          <div className="bench__sum">
+            <span className="bench__lbl">투입 후 경기 상황</span>
+            <span className="bench__pill" data-d="1">▲ 좋아짐 <b>{tally[1]}</b></span>
+            <span className="bench__pill" data-d="0">= 그대로 <b>{tally[0]}</b></span>
+            <span className="bench__pill" data-d="-1">▼ 나빠짐 <b>{tally[-1]}</b></span>
+          </div>
+          <ol className="bench__list">
+            {b.changes.map((c) => {
+              const d = stateDelta(c.from, c.to);
+              return (
+                <li key={c.matchId} className="bench__g" data-d={d}
+                  title={`${kstShortDate(c.kickoffUtc)} vs ${c.opponent} — 투입 ${STATE_KO[c.from]} → ${STATE_KO[c.to]}`}>
+                  <span className="bench__opp">{c.opponent}</span>
+                  <span className="bench__st" data-s={c.from}>{STATE_KO[c.from]}</span>
+                  <span className="bench__ar" aria-hidden="true">→</span>
+                  <span className="bench__st" data-s={c.to}>{STATE_KO[c.to]}</span>
+                  <span className="bench__dm" aria-label={d > 0 ? '좋아짐' : d < 0 ? '나빠짐' : '그대로'}>{DELTA_MARK[d]}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+    </div>
   );
 }
 

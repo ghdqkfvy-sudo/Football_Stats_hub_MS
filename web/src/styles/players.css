@@ -568,3 +568,51 @@
 .pcard__ga .ptag { margin-right: 6px; }
 .pcard__ga .ptag[data-none] { display: none; }
 
+
+/* ── 교체 자원 요약 (PlayerCardParts BenchLine) ─────────────────────────
+   주로 벤치에서 나오는 선수만. 윗줄 = 횟수·투입 시각·시간,
+   아랫줄 = 투입 때 상황(리드·동점·열세)이 나올 때 어떻게 바뀌었나 */
+.bench {
+  margin: 12px 0 14px; padding: 11px 13px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, color-mix(in srgb, var(--ink-900) 80%, transparent));
+  display: grid; gap: 9px;
+}
+.bench__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.bench__t { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--accent); }
+.bench__k { font-size: 12.5px; color: var(--text-mid); }
+.bench__k b { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text-hi); margin: 0 1px; }
+.bench__k i { font-style: normal; font-size: 11px; color: var(--text-lo); margin-left: 5px; }
+
+.bench__sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bench__lbl { font-size: 11px; color: var(--text-lo); margin-right: 4px; }
+.bench__pill {
+  --c: var(--text-mid);
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+}
+.bench__pill b { font-family: var(--font-display); font-size: 15px; color: var(--text-hi); }
+.bench__pill[data-d='1'] { --c: var(--win); }
+.bench__pill[data-d='-1'] { --c: var(--loss); }
+
+.bench__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.bench__g {
+  --c: var(--line-2);
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px 4px 9px; border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
+  background: rgba(255, 255, 255, .03); font-size: 11.5px;
+}
+.bench__g[data-d='1'] { --c: var(--win); }
+.bench__g[data-d='-1'] { --c: var(--loss); }
+.bench__opp { font-weight: 700; color: var(--text-mid); font-size: 10.5px; letter-spacing: .03em; margin-right: 2px; }
+.bench__st { font-weight: 700; color: var(--text-hi); }
+.bench__st[data-s='L'] { color: color-mix(in srgb, var(--win) 75%, #fff); }
+.bench__st[data-s='T'] { color: color-mix(in srgb, var(--loss) 75%, #fff); }
+.bench__st[data-s='D'] { color: var(--text-mid); }
+.bench__ar { color: var(--text-lo); font-size: 10px; }
+.bench__dm { font-size: 10px; font-weight: 800; color: var(--c); margin-left: 2px; }
+.bench__g[data-d='0'] .bench__dm { color: var(--text-lo); }
+/* 폰 카드 — 두 상자 사이에 독립 상자로 */
+.pdet--card .bench { margin: 0; }

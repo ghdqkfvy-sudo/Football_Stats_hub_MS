@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestEleven, buildSquad, posLabel, roleOf, slotRows, teamCohesion } from '../squad';
+import { bestEleven, buildSquad, isBenchRegular, posLabel, roleOf, slotRows, stateAt, stateDelta, teamCohesion } from '../squad';
 import type { Match } from '../types';
 import type { AthleteInfo, Lineup, LineupEntry } from '../../types/feedTypes';
 
@@ -332,5 +332,47 @@ describe('경기별 기록 — 자리는 선발만, 교체는 "누구 대신" �
     expect(players.find((p) => p.id === 'a')!.recent[0].pos).toBe('RB');
     // 베스트 11 자리 집계에도 교체 출전은 들어가지 않는다
     expect(b.posAny).toEqual({});
+  });
+});
+
+describe('교체 출전 — 투입·아웃 때의 경기 상황', () => {
+  const goal = (minute: number, teamId: string) =>
+    ({ minute, clock: `${minute}'`, teamId, scorer: 'x', ownGoal: false, penalty: false });
+
+  it('stateAt: 같은 분의 골은 이미 난 것으로 본다', () => {
+    const m = { goals: [goal(10, '363'), goal(64, '999')] };
+    expect(stateAt(m, '363', 9)).toBe('D');
+    expect(stateAt(m, '363', 30)).toBe('L');
+    expect(stateAt(m, '363', 64)).toBe('D');
+  });
+
+  it('stateDelta: 열세→동점 은 좋아짐, 리드→동점 은 나빠짐', () => {
+    expect(stateDelta('T', 'D')).toBe(1);
+    expect(stateDelta('L', 'D')).toBe(-1);
+    expect(stateDelta('L', 'L')).toBe(0);
+  });
+
+  it('교체 선수의 경기별 상황 변화와 요약이 실린다 (아웃되면 그 분까지)', () => {
+    const lus = { '1': lineup([
+      ['s', 9, true, null, 60, 0, 0, 'F'],
+      ['b', 0, false, 60, 80, 0, 0, 'SUB', 0, 0, 's'],
+    ]) };
+    const m1 = match('1', { goals: [goal(30, '999'), goal(70, '363'), goal(85, '363')], goalsLoaded: true, homeScore: 2, awayScore: 1 });
+    const { players, covered } = buildSquad([m1], lus, { s: info('S'), b: info('B') }, '363');
+    const b = players.find((p) => p.id === 'b')!;
+    expect(b.recent[0].stateIn).toBe('T');
+    expect(b.recent[0].stateOut).toBe('D');      // 85분 골은 아웃(80분) 뒤라 빼고 본다
+    expect(b.bench).toMatchObject({ subs: 1, team: covered, avgIn: 60, minutes: 20 });
+    expect(b.bench!.changes[0]).toMatchObject({ from: 'T', to: 'D' });
+  });
+
+  it('isBenchRegular: 교체 3회 이상 · 교체 ≥ 선발 · 팀 경기의 20% 이상', () => {
+    const bench = (subs: number, team: number) => ({ subs, team, avgIn: 70, minutes: 60, changes: [] });
+    expect(isBenchRegular({ starts: 2, bench: bench(5, 10) })).toBe(true);
+    expect(isBenchRegular({ starts: 6, bench: bench(4, 10) })).toBe(false);   // 주로 선발
+    expect(isBenchRegular({ starts: 0, bench: bench(2, 10) })).toBe(false);   // 3회 미만
+    expect(isBenchRegular({ starts: 0, bench: bench(3, 20) })).toBe(false);   // 15%
+    expect(isBenchRegular({ starts: 0, bench: bench(4, 20) })).toBe(true);    // 20%
+    expect(isBenchRegular({ starts: 0, bench: undefined })).toBe(false);
   });
 });

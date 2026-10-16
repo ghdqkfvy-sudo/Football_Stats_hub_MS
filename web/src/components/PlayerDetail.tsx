@@ -7,7 +7,7 @@ import { useClosing } from '../lib/motion';
 import { Headshot } from './Headshot';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
-import { Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
+import { BenchLine, Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -66,6 +66,7 @@ function CardBody({ p }: { p: PlayerSeason }) {
       <div className="pcard__main">
         <PlayerSummary p={p} />
       </div>
+      <BenchLine p={p} />
       <div className="pcard__side">
         <div className="pcard__sideh">
           <b>시즌 {p.recent.length}경기</b>
@@ -105,6 +106,8 @@ function TableBody({ p }: { p: PlayerSeason }) {
         <div key={k}><b>{v}</b><span>{k}</span></div>
       ))}
     </div>
+
+    <BenchLine p={p} />
 
     {games.length === 0 ? (
       <p className="pdet__none">경기별 라인업 기록이 아직 없습니다.</p>
