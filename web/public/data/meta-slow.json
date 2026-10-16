@@ -1,1 +1,1 @@
-{"generatedAt":"2026-10-16T11:46:07.156Z","only":"slow","codeVersion":"snap-27","tsdb":{"key":"123","tried":[{"key":"123","status":"200"}],"statuses":{"HTTP 404":8},"at":"2026-10-16T11:46:07.156Z"}}
+{"generatedAt":"2026-10-16T12:04:03.220Z","only":"slow","codeVersion":"snap-27","tsdb":{"key":null,"tried":[{"key":"123","status":"TimeoutError"},{"key":"3","status":"TimeoutError"}],"statuses":{},"gone":[],"at":"2026-10-16T12:04:03.220Z"}}
