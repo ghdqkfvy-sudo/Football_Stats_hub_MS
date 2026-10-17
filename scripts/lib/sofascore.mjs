@@ -23,6 +23,20 @@ export const P_BIRTH = 'P569';
 
 export const sofascoreImage = (id) => `https://img.sofascore.com/api/v1/player/${id}/image`;
 
+/**
+ * ESPN 이름으로는 위키데이터에서 못 찾는 선수의 다른 이름 (2026-10-17 점검).
+ * 사비우(토트넘)는 맨시티 시절 이름 "Savinho" 로 올라 있고, "Sávio" 로 찾으면
+ * 1974년생 사비우만 나온다. 키는 normName 과 같은 모양(소문자 · 발음기호 없음).
+ */
+export const NAME_ALIASES = {
+  savio: ['Savinho'],
+};
+
+/** 위키데이터에서 찾아 볼 이름들 — ESPN 이름 다음에 다른 이름 */
+export function searchNames(name, norm) {
+  return [name, ...(NAME_ALIASES[norm(name)] ?? [])];
+}
+
 /** 이름 검색 결과에서 축구 선수 항목 id 들 (순서 유지) */
 export function footballerIds(hits) {
   return (Array.isArray(hits) ? hits : [])

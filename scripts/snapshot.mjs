@@ -37,7 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
-import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
+import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
@@ -1057,13 +1057,18 @@ const wdGet = (params) => ssLimit.run(async () => {
 /** 그 선수의 SofaScore ID — 확인 못 하면 undefined(기록을 바꾸지 않는다) · 없으면 null */
 async function lookupSofascore(name, age) {
   if (!normName(name)) return null;
-  const s = await wdGet({ action: 'wbsearchentities', type: 'item', language: 'en', limit: '7', search: name });
-  if (s === undefined) return undefined;
-  const ids = footballerIds(s?.search);
-  if (!ids.length) return null;
-  const e = await wdGet({ action: 'wbgetentities', ids: ids.join('|'), props: 'claims' });
-  if (e === undefined) return undefined;
-  return pickSofascore(ids, e?.entities, age) ?? null;
+  /* 결과는 넉넉히 받는다 — 흔한 이름은 동명이인이 앞을 채운다(빅토르 무뇨즈 2003년생은 9번째였다) */
+  for (const q of searchNames(name, normName)) {
+    const s = await wdGet({ action: 'wbsearchentities', type: 'item', language: 'en', limit: '20', search: q });
+    if (s === undefined) return undefined;
+    const ids = footballerIds(s?.search);
+    if (!ids.length) continue;
+    const e = await wdGet({ action: 'wbgetentities', ids: ids.join('|'), props: 'claims' });
+    if (e === undefined) return undefined;
+    const hit = pickSofascore(ids, e?.entities, age);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 /**
