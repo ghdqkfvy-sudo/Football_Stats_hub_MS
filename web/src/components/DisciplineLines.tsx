@@ -26,7 +26,7 @@ export function DisciplineLines({ d }: { d?: Discipline }) {
             <span className="pdis__what">
               {comp(s.competition).name}
               {(s.missed?.length ?? 0) > 1
-                ? ` · ${s.missed!.length}경기 (${s.missed!.map((m) => when(m.kickoffUtc)).join(', ')})`
+                ? ` · ${s.missed!.length}경기 (~ ${when(s.missed![s.missed!.length - 1].kickoffUtc)})`
                 : s.match ? ` · ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
             </span>
             <small>
