@@ -38,7 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
-import { injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom } from './lib/injuries.mjs';
+import { groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -594,16 +594,28 @@ async function fotmobInjured(fm) {
     const j = await fotmobJson(`teams?id=${fm}&ccode3=KOR`);
     if (squadSize(j) < 15) throw new Error(`스쿼드 ${squadSize(j)}명 — 응답 모양이 바뀐 듯`);
     injuryStats.ok++;
+    /* 징계 — 앞으로 4경기의 결장자를 다 본다. 같은 선수가 몇 경기째까지 suspension 으로 올라
+       있는지가 곧 "언제까지" 다(징계 경기 수는 어디서도 숫자로 주지 않는다). */
     let suspended = null;
-    const next = nextMatchId(j);
-    if (next) {
-      try {
-        const md = await fotmobJson(`matchDetails?matchId=${next}`);
-        const info = matchInfo(md);
-        suspended = suspendedFrom(md, fm).map((x) => ({ ...x, utc: info.utc, league: info.league }));
-      } catch (e) {
-        note(`FotMob 다음 경기(${next})`, `${String(e).split('\n')[0]} — 징계는 이번 회차 모름`);
+    const ids = upcomingMatchIds(j);
+    if (!ids.length) { const n = nextMatchId(j); if (n) ids.push(n); }
+    if (ids.length) {
+      const perMatch = [];
+      let ok = 0;
+      for (const id of ids) {
+        try {
+          const md = await fotmobJson(`matchDetails?matchId=${id}`);
+          const info = matchInfo(md);
+          perMatch.push({ utc: info.utc, league: info.league, suspended: suspendedFrom(md, fm) });
+          ok++;
+        } catch (e) {
+          note(`FotMob 경기(${id})`, `${String(e).split('\n')[0]} — 이 경기 징계는 이번 회차 모름`);
+        }
+        await sleep(150);
       }
+      /* checkedUntil — 확인한 마지막 경기 시각. 그 뒤 경기는 정지인지 모른다(복귀일 판단에 쓴다) */
+      const checkedUntil = perMatch.map((m) => m.utc).filter(Boolean).sort().pop() ?? null;
+      if (ok) suspended = groupSuspensions(perMatch).map((x) => ({ ...x, checkedUntil }));
     }
     return Object.assign(injuredMembers(j), { suspended });
   } catch (e) {
@@ -2251,7 +2263,8 @@ async function main() {
           /* 다음 경기 징계 — FotMob 확정. 대회 구분은 앱이 일정과 맞춰 한다(경기 시각) */
           if (injured.suspended) {
             for (const [id, x] of matchInjured(injured.suspended, athletes)) {
-              athletes[id].sus = { ret: x.ret, utc: x.utc, league: x.league, raw: x.raw, source: 'fotmob' };
+              /* games = 징계로 못 뛰는 경기들(시각 · 대회). utc 는 첫 경기 — 예전 모양과 호환 */
+              athletes[id].sus = { utc: x.games[0]?.utc ?? null, league: x.games[0]?.league ?? null, games: x.games, checkedUntil: x.checkedUntil, ret: x.ret, raw: x.raw, source: 'fotmob' };
               injuryStats.suspended++;
             }
           }

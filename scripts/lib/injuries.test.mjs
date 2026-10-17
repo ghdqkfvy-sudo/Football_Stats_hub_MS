@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { injuredMembers, injuryList, isLongTerm, matchInfo, matchInjured, nextMatchId, normName, returnKo, squadSize, suspendedFrom } from './injuries.mjs';
+import { groupSuspensions, upcomingMatchIds, injuredMembers, injuryList, isLongTerm, matchInfo, matchInjured, nextMatchId, normName, returnKo, squadSize, suspendedFrom } from './injuries.mjs';
 
 test('normName: 악센트·대소문자·기호', () => {
   assert.equal(normName('Álex Baena'), 'alex baena');
@@ -104,4 +104,23 @@ test('suspendedFrom: 우리 팀 쪽 징계만 (상대 팀 · 부상은 뺀다)',
   assert.equal(got[0].ret, 'Late October 2026');
   assert.deepEqual(suspendedFrom(details, 1234), []);
   assert.deepEqual(matchInfo(details), { utc: '2026-10-19T19:00:00Z', league: 'Premier League' });
+});
+
+test('upcomingMatchIds: 끝나지 않은 경기 가까운 순', () => {
+  const now = Date.parse('2026-10-17T00:00:00Z');
+  const json = { fixtures: { allFixtures: { fixtures: [
+    { id: 1, status: { utcTime: '2026-10-10T15:00:00Z', finished: true } },
+    { id: 3, status: { utcTime: '2026-10-25T15:00:00Z', finished: false } },
+    { id: 2, status: { utcTime: '2026-10-19T15:00:00Z', finished: false } },
+  ] }, nextMatch: { id: 2, status: { utcTime: '2026-10-19T15:00:00Z' } } } };
+  assert.deepEqual(upcomingMatchIds(json, now), ['2', '3']);
+});
+
+test('groupSuspensions: 몇 경기째까지 정지인지 선수별로', () => {
+  const got = groupSuspensions([
+    { utc: 'A', league: 'PL', suspended: [{ name: 'Cristian Romero' }] },
+    { utc: 'B', league: 'PL', suspended: [{ name: 'Cristian Romero' }] },
+    { utc: 'C', league: 'UCL', suspended: [{ name: 'Other' }] },
+  ]);
+  assert.deepEqual(got.map((x) => [x.name, x.games.map((g) => g.utc)]), [['Cristian Romero', ['A', 'B']], ['Other', ['C']]]);
 });

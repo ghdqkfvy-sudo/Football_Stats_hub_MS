@@ -43,6 +43,10 @@ export interface Suspension {
   ret?: string | null;
   /** 그 경기 상대 이름 */
   opp?: string;
+  /** 징계로 못 뛰는 경기 전부(가까운 순) — FotMob 이 여러 경기에 올려 두었을 때 */
+  missed?: Match[];
+  /** 다시 뛸 수 있는 첫 경기(같은 대회) — 확인 범위 안에서 정해졌을 때만 */
+  back?: Match;
 }
 
 export interface CardRisk { competition: string; yellows: number; limit: number }
@@ -55,7 +59,11 @@ export interface Discipline {
 }
 
 /** FotMob 징계(수집기) — 경기 시각으로 우리 일정과 맞춘다 */
-export interface FotmobSus { ret?: string | null; utc?: string | null; league?: string | null; source?: string }
+export interface FotmobSus {
+  ret?: string | null; utc?: string | null; league?: string | null; source?: string;
+  games?: { utc: string | null; league?: string | null }[];
+  checkedUntil?: string | null;
+}
 
 const byKick = (a: { kickoffUtc: string }, b: { kickoffUtc: string }) => a.kickoffUtc.localeCompare(b.kickoffUtc);
 const finished = (m: Match) => m.status === 'finished';
@@ -76,11 +84,24 @@ export function discipline(
 
   let sus: Suspension | undefined;
 
-  /* 1) FotMob 확정 — 그 경기가 우리 일정의 어느 경기인지 시각으로 찾는다(±12시간) */
-  if (fotmob?.utc) {
-    const at = Date.parse(fotmob.utc);
-    const m = upcoming.find((x) => Math.abs(Date.parse(x.kickoffUtc) - at) < 12 * 3600_000);
-    if (m) sus = { competition: m.competition, reason: 'fotmob', confirmed: true, match: m, ret: fotmob.ret ?? null };
+  /* 1) FotMob 확정 — 그 경기들이 우리 일정의 어느 경기인지 시각으로 찾는다(±12시간) */
+  const near = (iso: string | null | undefined) => {
+    if (!iso) return undefined;
+    const at = Date.parse(iso);
+    return upcoming.find((x) => Math.abs(Date.parse(x.kickoffUtc) - at) < 12 * 3600_000);
+  };
+  const fmGames = (fotmob?.games?.length ? fotmob.games.map((g) => g.utc) : [fotmob?.utc])
+    .map(near).filter((m): m is Match => !!m)
+    .sort(byKick);
+  if (fmGames.length) {
+    const first = fmGames[0];
+    const missed = fmGames.filter((m) => m.competition === first.competition);
+    const last = missed[missed.length - 1];
+    /* 복귀 경기 — 마지막 정지 경기 뒤 같은 대회 첫 경기. 그 경기가 FotMob 확인 범위 안일 때만 "정해졌다" */
+    const after = upcoming.find((m) => m.competition === first.competition && m.kickoffUtc > last.kickoffUtc);
+    const limit = fotmob?.checkedUntil ? Date.parse(fotmob.checkedUntil) + 12 * 3600_000 : -Infinity;
+    const back = after && Date.parse(after.kickoffUtc) <= limit ? after : undefined;
+    sus = { competition: first.competition, reason: 'fotmob', confirmed: true, match: first, missed, back, ret: fotmob?.ret ?? null };
   }
 
   /* 2) 우리 계산 — 대회마다, 그 선수의 마지막 경기 뒤로 팀이 그 대회를 아직 안 치렀을 때만 */

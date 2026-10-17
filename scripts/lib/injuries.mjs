@@ -182,3 +182,46 @@ export function matchInfo(details) {
     league: g.leagueName ?? g.parentLeagueName ?? null,
   };
 }
+
+/**
+ * FotMob 팀 응답 → 앞으로의 경기 id (가까운 순, 최대 n).
+ * 징계가 몇 경기인지는 아무도 숫자로 주지 않는다 — 대신 다음 경기들의 결장자 목록에
+ * 그 선수가 몇 번째 경기까지 "suspension" 으로 올라 있는지로 "언제까지" 를 안다.
+ * 응답 어디에 있든 { id, status: { utcTime, finished } } 모양의 경기를 모은다.
+ */
+export function upcomingMatchIds(json, now = Date.now(), n = 4) {
+  const out = new Map();
+  const seen = new Set();
+  const walk = (o, d) => {
+    if (!o || typeof o !== 'object' || d > 7 || seen.has(o)) return;
+    seen.add(o);
+    const t = o?.status?.utcTime ?? o?.status?.startDateStr ?? null;
+    if (o.id != null && t && !o.status?.finished && !o.status?.cancelled && Date.parse(t) > now - 3 * 3600_000) {
+      out.set(String(o.id), Date.parse(t));
+    }
+    for (const v of Object.values(o)) walk(v, d + 1);
+  };
+  walk(json, 0);
+  return [...out].filter(([, t]) => Number.isFinite(t)).sort((a, b) => a[1] - b[1]).slice(0, n).map(([id]) => id);
+}
+
+/**
+ * 여러 경기의 징계 결장자 → 선수별로 묶는다.
+ * @param perMatch [{ utc, league, suspended: [{ name, ret, raw }] }] (경기 순)
+ * @returns [{ name, ret, raw, games: [{ utc, league }] }]
+ * 첫 경기(다음 경기)에 없는 선수도 담는다 — 다음 경기는 뛰고 그다음 대회 경기부터 정지일 수 있다(챔스).
+ */
+export function groupSuspensions(perMatch) {
+  const by = new Map();
+  for (const m of perMatch ?? []) {
+    for (const x of m?.suspended ?? []) {
+      const k = normName(x.name);
+      if (!k) continue;
+      const cur = by.get(k) ?? { name: x.name, ret: x.ret ?? null, raw: x.raw ?? null, games: [] };
+      cur.games.push({ utc: m.utc ?? null, league: m.league ?? null });
+      if (!cur.ret && x.ret) cur.ret = x.ret;
+      by.set(k, cur);
+    }
+  }
+  return [...by.values()];
+}
