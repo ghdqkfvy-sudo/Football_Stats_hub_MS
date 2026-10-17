@@ -307,7 +307,7 @@
   display: grid; place-items: center;
   box-shadow: 0 0 0 1px rgba(229, 38, 46, .35), 0 1px 5px rgba(0, 0, 0, .45);
 }
-.pt__hs .pt__no--inj { min-width: 14px; width: 14px; padding: 0; border-radius: 4px; right: -9px; bottom: -4px; }
+.pt__hs .pt__no--inj { min-width: 14px; width: 14px; height: 14px; padding: 0; border-radius: 4px; right: -9px; bottom: -4px; }
 .chipbox__ring .chipbox__no--inj { min-width: 17px; width: 17px; padding: 0; border-radius: 5px; }
 .chipbox__no--inj svg { width: 11px; height: 11px; }
 
@@ -392,11 +392,13 @@
 /* 출전 불투명 — 주황 톤 */
 .pinj[data-doubt] { background: rgba(245, 165, 36, .12); box-shadow: inset 0 0 0 1px rgba(245, 165, 36, .38); }
 .pinj[data-doubt] b { color: #F5B544; }
+/* 등번호 — 두 자리여도 **정원**(예전엔 가로로 늘어 타원이었다) · 숫자는 가운데 */
 .pt__no {
-  position: absolute; right: -12px; bottom: -5px;
-  min-width: 14px; height: 13px; padding: 0 3px; border-radius: 7px;
-  display: grid; place-items: center;
-  font-family: var(--font-display); font-size: 9px; font-weight: 700; font-style: normal;
+  position: absolute; right: -11px; bottom: -5px;
+  width: 17px; height: 17px; padding: 0; border-radius: 50%; box-sizing: border-box;
+  display: grid; place-items: center; line-height: 1;
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; font-style: normal; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
   background: var(--accent); color: var(--on-accent); border: 1.5px solid var(--ink-900);
 }
 /* 국적 — 카드에서 포지션 왼쪽. 줄을 flex 로 세워 국기·포지션·글자 세로 가운데를 맞춘다 */
