@@ -55,6 +55,19 @@ export function CardGlyph({ color, size = 10 }: { color: 'red' | 'yellow'; size?
 }
 
 /**
+ * 카드 그 자체 — 배지 바탕 없이 실제 카드 비율(세로로 긴 직사각형)로 붙인다(2026-10-17 A안).
+ * 포지션 색 바탕 안에 넣으면 등번호 배지처럼 보여 "징계" 느낌이 안 났다.
+ * 흰 테두리 + 그림자(CSS)로 잔디 · 어두운 배경 위에서도 또렷하게.
+ */
+export function CardShape({ color, w = 11 }: { color: 'red' | 'yellow'; w?: number }) {
+  return (
+    <svg width={w} height={Math.round(w * 1.4)} viewBox="0 0 10 14" aria-hidden="true" className="cardshape">
+      <rect x=".6" y=".6" width="8.8" height="12.8" rx="1.4" fill={color === 'red' ? '#E5262E' : '#F5C518'} stroke="#fff" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+/**
  * 등번호 배지 자리 — 우선순위: 다음 경기 출전 정지(레드카드) → 부상(십자가) → 출전 불투명(물음표)
  * → 다음 경기 대회에서 경고 1장 남음(옐로카드) → 등번호.
  */
@@ -65,9 +78,16 @@ export function NumberBadge({ p, cls, title }: {
 }) {
   const kind = p.disc?.badge === 'red' ? 'red' : p.inj ? (p.inj.doubtful ? 'doubt' : 'inj') : p.disc?.badge === 'yellow' ? 'yellow' : null;
   if (!kind) return p.jersey !== undefined ? <span className={`${cls} num`}>{p.jersey}</span> : null;
+  if (kind === 'red' || kind === 'yellow') {
+    return (
+      <span className={`${cls} ${cls}--card`} data-kind={kind} title={title?.(kind)}>
+        <CardShape color={kind} />
+      </span>
+    );
+  }
   return (
     <span className={`${cls} ${cls}--inj`} data-kind={kind} data-doubt={kind === 'doubt' || undefined} title={title?.(kind)}>
-      {kind === 'red' || kind === 'yellow' ? <CardGlyph color={kind} /> : <InjuryGlyph inj={p.inj!} />}
+      <InjuryGlyph inj={p.inj!} />
     </span>
   );
 }
