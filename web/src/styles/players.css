@@ -307,7 +307,7 @@
   display: grid; place-items: center;
   box-shadow: 0 0 0 1px rgba(229, 38, 46, .35), 0 1px 5px rgba(0, 0, 0, .45);
 }
-.pt__hs .pt__no--inj { min-width: 14px; width: 14px; padding: 0; border-radius: 4px; }
+.pt__hs .pt__no--inj { min-width: 14px; width: 14px; padding: 0; border-radius: 4px; right: -9px; bottom: -4px; }
 .chipbox__ring .chipbox__no--inj { min-width: 17px; width: 17px; padding: 0; border-radius: 5px; }
 .chipbox__no--inj svg { width: 11px; height: 11px; }
 

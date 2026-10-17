@@ -152,13 +152,43 @@ async function fotmob(t) {
     if (r.json) break;
   }
   if (!r.json) return { status: r.status, tried };
+  /* 징계 점검(2026-10-17) — 다음 경기 matchDetails 의 결장자(unavailable)에 징계가 있는지 */
+  const findKey = (o, key, depth = 0) => {
+    if (!o || typeof o !== 'object' || depth > 6) return undefined;
+    if (o[key] !== undefined) return o[key];
+    for (const v of Object.values(o)) { const f = findKey(v, key, depth + 1); if (f !== undefined) return f; }
+    return undefined;
+  };
+  const collect = (o, key, out = [], depth = 0) => {
+    if (!o || typeof o !== 'object' || depth > 8) return out;
+    for (const [k, v] of Object.entries(o)) {
+      if (k === key && Array.isArray(v)) out.push(...v);
+      else collect(v, key, out, depth + 1);
+    }
+    return out;
+  };
+  const next = findKey(r.json, 'nextMatch');
+  let suspension = { nextMatch: next?.id ?? null };
+  if (next?.id) {
+    const md = await hit(`https://www.fotmob.com/api/data/matchDetails?matchId=${next.id}`);
+    const un = md.json ? collect(md.json, 'unavailable') : [];
+    suspension = {
+      nextMatch: next.id, status: md.status, unavailable: un.length,
+      types: un.reduce((o, x) => { const k = x?.unavailability?.type ?? x?.type ?? '?'; o[k] = (o[k] ?? 0) + 1; return o; }, {}),
+      sample: clip(un.slice(0, 4).map((x) => ({ name: x?.name, u: x?.unavailability ?? x?.reason })), 500),
+      keys: md.json ? Object.keys(md.json) : clip(md.body, 100),
+    };
+  }
   const groups = r.json?.squad?.squad ?? r.json?.squad ?? [];
   const members = [];
   for (const g of Array.isArray(groups) ? groups : []) members.push(...(g?.members ?? []));
   const injured = members.filter((m) => m?.injury || m?.injured);
+  /* 스쿼드 선수가 가진 칸 이름 — 징계·카드 칸이 따로 있는지 보려고 */
+  const fields = [...new Set(members.flatMap((m) => Object.keys(m ?? {})))].sort();
   return {
     status: r.status, squad: members.length, injured: injured.length,
     sample: clip(injured.slice(0, 3).map((m) => ({ name: m.name, injury: m.injury })), 400),
+    fields, suspension,
   };
 }
 
