@@ -1,0 +1,24 @@
+name: 점검 — 사진 ID (위키데이터)
+
+# SofaScore ID 를 못 찾은 선수를 다른 이름으로 찾아 본다(2026-10-17). 로그만 남긴다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-photo-ids.mjs'
+      - '.github/workflows/photo-id-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/probe-photo-ids.mjs
