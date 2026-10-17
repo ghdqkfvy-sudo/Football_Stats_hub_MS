@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { InjuryCross, injuryTitle } from './InjuryMark';
+import { InjuryCross } from './InjuryMark';
+import { injuryTitle } from '../lib/injury';
 import { KorFlag } from './KorFlag';
 import { Swap } from './Swap';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';

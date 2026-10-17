@@ -9,9 +9,6 @@ export function InjuryCross({ size = 9 }: { size?: number }) {
   );
 }
 
-/** 마우스를 올렸을 때 보이는 한 줄 — "부상 · 11월 중순 복귀 예상" */
-export const injuryTitle = (inj: Injury) => `부상 · ${inj.ko}`;
-
 /**
  * 상세·호버 카드의 부상 줄 — [＋] 부상 · 11월 중순 복귀 예상.
  * 출전 불투명(doubtful)은 주황 톤으로 구분한다.

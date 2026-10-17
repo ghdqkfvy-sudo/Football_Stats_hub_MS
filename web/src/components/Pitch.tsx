@@ -1,6 +1,7 @@
 import { lineKind, lineLabels, LINE_COLOR, type PlayerSeason, type Slot } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { InjuryCross, injuryTitle } from './InjuryMark';
+import { InjuryCross } from './InjuryMark';
+import { injuryTitle } from '../lib/injury';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
 import { KorFlag } from './KorFlag';
