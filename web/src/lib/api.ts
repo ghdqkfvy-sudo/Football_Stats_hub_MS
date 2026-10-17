@@ -18,7 +18,7 @@ import { matchesFromSchedule, goalsFromPlays, standingsFrom } from './normalize'
 import { roleOf } from './squad';
 import { load, proxy, feed, HAS_PROXY, type Loaded, type Source } from './feed';
 import type {
-  AthleteInfo, Article, KoreanPlayer, Lineup, LineupEntry,
+  AthleteInfo, Article, InjuryEntry, KoreanPlayer, Lineup, LineupEntry,
 } from '../types/feedTypes';
 
 export { HAS_PROXY };
@@ -251,6 +251,8 @@ export function lineupFrom(
 export interface SquadData {
   lineups: Record<string, Lineup>;
   athletes: Record<string, AthleteInfo>;
+  /** 부상자 명단 (FotMob) — 정적 피드에만 있다 */
+  injuries?: InjuryEntry[];
 }
 
 /**
@@ -309,6 +311,7 @@ export async function loadSquad(
     pick: (json) => ({
       lineups: (json?.lineups ?? {}) as Record<string, Lineup>,
       athletes: (json?.athletes ?? {}) as Record<string, AthleteInfo>,
+      injuries: Array.isArray(json?.injuries) ? (json.injuries as InjuryEntry[]) : undefined,
     }),
     empty,
     fallback,

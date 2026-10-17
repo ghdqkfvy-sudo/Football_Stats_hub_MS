@@ -38,7 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
-import { injuredMembers, matchInjured, returnKo, squadSize } from './lib/injuries.mjs';
+import { injuredMembers, injuryList, injuryRecord, matchInjured, squadSize } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -595,12 +595,15 @@ async function fotmobInjured(fm) {
     return null;
   }
 }
-/** 지난 회차 squad 파일의 부상 표시 (FotMob 이 실패한 회차용) */
+/** 지난 회차 squad 파일의 부상 표시 · 부상자 명단 (FotMob 이 실패한 회차용) */
 async function prevInjuries(slug) {
   try {
     const j = JSON.parse(await readFile(join(OUT, `squad-${slug}.json`), 'utf8'));
-    return new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.inj).map(([id, a]) => [id, a.inj]));
-  } catch { return new Map(); }
+    return {
+      byId: new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.inj).map(([id, a]) => [id, a.inj])),
+      list: Array.isArray(j?.injuries) ? j.injuries : null,
+    };
+  } catch { return { byId: new Map(), list: null }; }
 }
 
 /*
@@ -2217,25 +2220,28 @@ async function main() {
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
       });
       await attachSofascore(Object.entries(athletes).map(([id, a]) => ({ id, name: a.name, age: a.age, target: a })));
-      /* 부상 — FotMob 이 답하면 이번 값, 못 하면 지난 회차 값 */
+      /* 부상 — FotMob 이 답하면 이번 값, 못 하면 지난 회차 값.
+         injuries = 부상자 명단(우리 목록에 없는 장기 부상자까지 전부) */
+      let injuries = null;
       if (t.fm) {
         const injured = await fotmobInjured(t.fm);
         if (injured) {
           const hits = matchInjured(injured, athletes);
-          for (const [id, m] of hits) {
-            const r = returnKo(m.injury?.expectedReturn);
-            athletes[id].inj = { ret: m.injury?.expectedReturn ?? null, ko: r.ko, doubtful: r.doubtful, kind: m.injury?.id ?? null };
-          }
+          for (const [id, m] of hits) athletes[id].inj = injuryRecord(m);
+          injuries = injuryList(injured, hits);
           injuryStats.matched += hits.size;
           const got = new Set([...hits.values()]);
           for (const m of injured) if (!got.has(m)) injuryStats.unmatched.push(`${t.slug}:${m.name}`);
           console.log(`    부상(FotMob): ${injured.length}명 중 ${hits.size}명 맞춤`);
         } else {
-          for (const [id, inj] of await prevInjuries(t.slug)) if (athletes[id]) athletes[id].inj = inj;
+          const prev = await prevInjuries(t.slug);
+          for (const [id, inj] of prev.byId) if (athletes[id]) athletes[id].inj = inj;
+          injuries = prev.list;
         }
       }
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
+        ...(injuries ? { injuries } : {}),
         codeVersion: CODE_VERSION,
         fetchedAt: new Date().toISOString(),
       });

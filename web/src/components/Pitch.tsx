@@ -1,6 +1,6 @@
 import { lineKind, lineLabels, LINE_COLOR, type PlayerSeason, type Slot } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { InjuryCross } from './InjuryMark';
+import { InjuryGlyph } from './InjuryMark';
 import { injuryTitle } from '../lib/injury';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
@@ -158,7 +158,7 @@ function PlayerChip({
         />
         {/* 부상이면 등번호 대신 흰 바탕 빨간 십자가 */}
         {p.inj ? (
-          <span className="chipbox__no chipbox__no--inj" title={injuryTitle(p.inj)}><InjuryCross /></span>
+          <span className="chipbox__no chipbox__no--inj" data-doubt={p.inj.doubtful || undefined} title={injuryTitle(p.inj)}><InjuryGlyph inj={p.inj} /></span>
         ) : p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
         {ko && <KorFlag className="chipbox__flag" />}
       </span>

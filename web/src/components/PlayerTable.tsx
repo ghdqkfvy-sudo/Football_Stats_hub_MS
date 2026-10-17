@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { InjuryCross } from './InjuryMark';
+import { InjuryGlyph } from './InjuryMark';
 import { injuryTitle } from '../lib/injury';
 import { KorFlag } from './KorFlag';
 import { Swap } from './Swap';
@@ -257,7 +257,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
               <span className="pt__hs">
                 <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={p.jersey !== undefined ? String(p.jersey) : undefined} size={30} />
                 {p.inj ? (
-                  <i className="pt__no pt__no--inj" title={injuryTitle(p.inj)}><InjuryCross /></i>
+                  <i className="pt__no pt__no--inj" data-doubt={p.inj.doubtful || undefined} title={injuryTitle(p.inj)}><InjuryGlyph inj={p.inj} /></i>
                 ) : p.jersey !== undefined && <i className="pt__no num">{p.jersey}</i>}
               </span>
               {/* 폰에서는 "João Pe…" 처럼 거의 모두 잘렸다 — 포메이션 그림과 같은

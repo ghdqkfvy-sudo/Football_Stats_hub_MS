@@ -323,6 +323,43 @@
 .pinj b { font-weight: 800; color: #FF6B70; }
 .pinj span { font-weight: 600; }
 .pinj span::before { content: '·'; margin-right: 8px; color: var(--text-lo); }
+/* 장기 부상 태그 */
+.pinj__long {
+  font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .02em;
+  padding: 2px 6px; border-radius: 5px; color: #fff; background: #C81E25;
+}
+.pinj .pinj__long { margin-left: auto; }
+/* 출전 불투명 배지 — 흰 바탕은 같고 그림만 주황 물음표, 테두리도 주황 */
+.injb[data-doubt], .pt__no--inj[data-doubt], .chipbox__no--inj[data-doubt] {
+  box-shadow: 0 0 0 1.5px #F5A524, 0 1px 5px rgba(0, 0, 0, .45);
+}
+
+/* ── 부상자 명단 ── */
+.injl__list { list-style: none; margin: 0; padding: 4px 0; border: 1px solid var(--line); border-radius: 14px;
+  background: color-mix(in srgb, var(--ink-900) 82%, transparent); }
+.injl__row {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 9px 14px; border-top: 1px solid var(--line);
+}
+.injl__row:first-child { border-top: 0; }
+.injl__row[data-open] { cursor: pointer; }
+.injl__row[data-open]:hover { background: rgba(255, 255, 255, .03); }
+.injl__hs { position: relative; display: inline-grid; width: 34px; }
+.injl__hs .injb {
+  position: absolute; right: -5px; bottom: -3px; width: 15px; height: 15px; border-radius: 4px;
+}
+.injl__who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.injl__who b { font-size: 13px; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.injl__who > span { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-lo); }
+.injl__ret { display: flex; align-items: center; gap: 6px; justify-self: end; text-align: right; }
+.injl__ret b { font-size: 12px; font-weight: 700; color: var(--text-mid); white-space: nowrap; }
+.injl__row[data-doubt] .injl__ret b { color: #F5B544; }
+.injl__row[data-long] .injl__ret b { color: #FF8A8E; }
+@media (max-width: 640px) {
+  .injl__row { padding: 9px 12px; gap: 9px; }
+  .injl__ret b { font-size: 11.5px; }
+}
+
 /* 출전 불투명 — 주황 톤 */
 .pinj[data-doubt] { background: rgba(245, 165, 36, .12); box-shadow: inset 0 0 0 1px rgba(245, 165, 36, .38); }
 .pinj[data-doubt] b { color: #F5B544; }
