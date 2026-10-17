@@ -44,16 +44,6 @@ export function InjuryLine({ inj }: { inj?: Injury }) {
   );
 }
 
-/** 카드 모양 — 흰 바탕 배지 안의 레드(출전 정지) · 옐로(경고 1장 남음) */
-export function CardGlyph({ color, size = 10 }: { color: 'red' | 'yellow'; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden="true">
-      <rect x="1.9" y="0.6" width="6.2" height="8.8" rx="1.1" fill={color === 'red' ? '#E5262E' : '#F5C518'}
-        stroke="#fff" strokeWidth=".9" />
-    </svg>
-  );
-}
-
 /**
  * 카드 그 자체 — 배지 바탕 없이 실제 카드 비율(세로로 긴 직사각형)로 붙인다(2026-10-17 A안).
  * 포지션 색 바탕 안에 넣으면 등번호 배지처럼 보여 "징계" 느낌이 안 났다.

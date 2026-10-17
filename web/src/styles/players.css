@@ -361,6 +361,8 @@
 .pinj + .pdis, .pdis + .pdis { margin-top: -6px; }
 .pcard__top + .pdis, .pdet__top + .pdis { margin-top: 10px; }
 .pdis .injb { flex: none; width: 18px; height: 18px; border-radius: 5px; margin-top: 1px; }
+/* 징계 줄 아이콘 — 포메이션 · 목록과 같은 카드 그 자체(바탕 없음) */
+.pdis__card { flex: none; width: 18px; display: grid; place-items: center; margin-top: 1px; }
 .pdis > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
 .pdis b { font-weight: 800; color: #FF6B70; }
 .pdis__what { font-weight: 700; white-space: nowrap; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
