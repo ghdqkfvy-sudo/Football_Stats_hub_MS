@@ -125,6 +125,13 @@ export function injuryList(injured, hits, now = new Date()) {
       fm: m?.id != null ? String(m.id) : null,
       jersey: Number.isFinite(Number(m?.shirtNumber)) && m?.shirtNumber !== null ? Number(m.shirtNumber) : null,
       pos: m?.pos ?? null,
+      /* 우리 목록에 없는 선수도 상세 카드를 열 수 있게 — 나이 · 국적(FotMob ccode 는 ESPN 국기 약어와 같은 3글자) */
+      age: Number.isFinite(Number(m?.age)) && m?.age !== null ? Number(m.age) : null,
+      nat: m?.ccode ? {
+        name: m?.cname ?? undefined,
+        code: String(m.ccode).toUpperCase(),
+        flag: `https://a.espncdn.com/i/teamlogos/countries/500/${String(m.ccode).toLowerCase()}.png`,
+      } : null,
       ...injuryRecord(m, now),
     }))
     .filter((x) => x.name)

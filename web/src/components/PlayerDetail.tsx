@@ -76,7 +76,7 @@ function CardBody({ p }: { p: PlayerSeason }) {
           <span>최신순</span>
         </div>
         {p.recent.length === 0
-          ? <p className="pdet__none">경기별 라인업 기록이 아직 없습니다.</p>
+          ? <p className="pdet__none">{p.inj && p.apps === 0 ? '부상으로 이번 시즌 출전 기록이 없습니다.' : '경기별 라인업 기록이 아직 없습니다.'}</p>
           : p.recent.map((g) => <GameRow key={g.matchId} g={g} />)}
       </div>
     </div>
@@ -118,7 +118,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
     <BenchLine p={p} />
 
     {games.length === 0 ? (
-      <p className="pdet__none">경기별 라인업 기록이 아직 없습니다.</p>
+      <p className="pdet__none">{p.inj && p.apps === 0 ? '부상으로 이번 시즌 출전 기록이 없습니다.' : '경기별 라인업 기록이 아직 없습니다.'}</p>
     ) : (
       <>
         <div className="pdet__h">
