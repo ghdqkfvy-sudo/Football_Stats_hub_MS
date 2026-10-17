@@ -22,7 +22,12 @@ const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' }
  *    없으므로(탭하면 이 시트만 뜬다) 넓은 화면의 카드에서 보던 그대로 보여 준다.
  *    경기 목록만 최근 3경기 → 시즌 전 경기.
  */
-export function PlayerDetail({ p, onClose }: { p: PlayerSeason | null; onClose: () => void }) {
+export function PlayerDetail({ p, onClose, onCompare }: {
+  p: PlayerSeason | null;
+  onClose: () => void;
+  /** "이 선수와 비교" — 길게 누르기를 모르는 사람 · 마우스용 입구 */
+  onCompare?: (p: PlayerSeason) => void;
+}) {
   const panel = useRef<HTMLDivElement>(null);
   const mobile = useIsMobile();
   /* 닫을 때 시트는 내려가고, 가운데 창은 흐려지며 닫힌다(motion.css data-closing) */
@@ -55,6 +60,9 @@ export function PlayerDetail({ p, onClose }: { p: PlayerSeason | null; onClose: 
         >
           <div className="sheet__grab" />
           <button className="pdet__x" aria-label="닫기" onClick={close}>✕</button>
+          {onCompare && (
+            <button className="pdet__cmp" onClick={() => onCompare(p)} title="다른 선수와 시즌 기록 비교">⇄ 비교</button>
+          )}
           {mobile ? <CardBody p={p} /> : <TableBody p={p} />}
         </div>
       )}

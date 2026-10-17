@@ -12,6 +12,8 @@ import { LeaderBoard } from '../components/LeaderBoard';
 import { PlayerDetail } from '../components/PlayerDetail';
 import { InjuryList } from '../components/InjuryList';
 import { SuspensionList } from '../components/SuspensionList';
+import { CompareBar, PlayerCompare } from '../components/PlayerCompare';
+import { rivalsOf } from '../lib/playerCompare';
 import type { PlayerSeason } from '../lib/squad';
 import { KorFlag } from '../components/KorFlag';
 
@@ -36,6 +38,11 @@ export function PlayersTab({
   const activeId = hoverId;
   const [detail, setDetail] = useState<PlayerSeason | null>(null);
   const closeDetail = useCallback(() => setDetail(null), []);
+  /* 선수 비교 — 1번 고정(cmpA) 동안 다음에 누른 선수가 2번. 포메이션 · 목록 · 명단 어디서 골라도 된다 */
+  const [cmpA, setCmpA] = useState<PlayerSeason | null>(null);
+  const [cmpPair, setCmpPair] = useState<[PlayerSeason, PlayerSeason] | null>(null);
+  const closeCompare = useCallback(() => setCmpPair(null), []);
+  const cancelCompare = useCallback(() => setCmpA(null), []);
 
   /* 라인업·선수 프로필은 전부 네트워크에서 온다.
      경기별 로스터에 골·도움까지 들어 있어 이름 매칭이 필요 없다. */
@@ -92,6 +99,18 @@ export function PlayersTab({
       .map(seasonFromInjury);
     return [...orderForList(players, xi.slots), ...absent];
   }, [players, xi, squad]);
+
+  /** 선수를 눌렀을 때 — 비교 고르는 중이면 2번으로, 아니면 상세 */
+  const pick = (p: PlayerSeason) => {
+    setHoverId(null);
+    if (cmpA) {
+      if (p.id === cmpA.id) return;
+      setCmpPair([cmpA, p]);
+      setCmpA(null);
+    } else setDetail(p);
+  };
+  const startCompare = (p: PlayerSeason) => { setHoverId(null); setDetail(null); setCmpPair(null); setCmpA(p); };
+  const rivals = useMemo(() => (cmpA ? rivalsOf(cmpA, ordered) : []), [cmpA, ordered]);
 
   const leaders = useMemo(
     () =>
@@ -164,25 +183,31 @@ export function PlayersTab({
             onHover={setHoverId}
             onSelect={(id) => {
               const p = id ? players.find((x) => x.id === id) : undefined;
-              if (p) { setHoverId(null); setDetail(p); }
+              if (p) pick(p);
             }}
+            onLongPress={(id) => { const p = players.find((x) => x.id === id); if (p) startCompare(p); }}
+            pinnedId={cmpA?.id ?? null}
           />
           <PlayerTable
             players={ordered}
             activeId={activeId}
             onHover={setHoverId}
             onClose={() => setHoverId(null)}
-            onOpen={setDetail}
+            onOpen={pick}
             marks={marks}
+            onLongPress={startCompare}
+            pinnedId={cmpA?.id ?? null}
           />
-          <PlayerDetail p={detail} onClose={closeDetail} />
+          <PlayerDetail p={detail} onClose={closeDetail} onCompare={startCompare} />
+          <PlayerCompare pair={cmpPair} onClose={closeCompare} onChange={startCompare} />
+          <CompareBar a={cmpA} rivals={rivals} onPick={pick} onCancel={cancelCompare} />
         </div>
       </section>
 
-      <SuspensionList players={players} onOpen={(p) => { setHoverId(null); setDetail(p); }} />
+      <SuspensionList players={players} onOpen={pick} />
 
       {!!squad?.injuries?.length && (
-        <InjuryList list={squad.injuries} players={players} onOpen={(p) => { setHoverId(null); setDetail(p); }} />
+        <InjuryList list={squad.injuries} players={players} onOpen={pick} />
       )}
 
       <section>
