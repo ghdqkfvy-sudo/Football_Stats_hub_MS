@@ -65,14 +65,68 @@ export function returnKo(text) {
   return { ko: t, doubtful: false };
 }
 
-/** FotMob 팀 응답 → 부상 표시가 있는 스쿼드 선수들 */
+const GROUP_POS = { keepers: 'G', goalkeepers: 'G', defenders: 'D', midfielders: 'M', attackers: 'F', forwards: 'F' };
+
+/** FotMob 팀 응답 → 부상 표시가 있는 스쿼드 선수들 (pos = 그룹 제목에서 G/D/M/F) */
 export function injuredMembers(json) {
   const groups = json?.squad?.squad ?? json?.squad ?? [];
   const out = [];
   for (const g of Array.isArray(groups) ? groups : []) {
-    for (const m of g?.members ?? []) if (m?.injury) out.push(m);
+    const pos = GROUP_POS[String(g?.title ?? '').toLowerCase()];
+    if (!pos) continue;                         // 감독(coach) 등은 뺀다
+    for (const m of g?.members ?? []) if (m?.injury) out.push({ ...m, pos });
   }
   return out;
+}
+
+const PART_DAY = { early: 5, mid: 15, late: 25 };
+/** 장기 부상 기준 — 복귀 예상이 이만큼 넘게 남았으면 (2026-10-17 요청: 4주) */
+export const LONG_DAYS = 28;
+
+/**
+ * 장기 부상인가 — 복귀 예상까지 4주 넘게 남았거나 "몇 달" · "시즌 아웃".
+ * "Early/Mid/Late 월" 은 그달 5 · 15 · 25일로 본다. 연도가 없으면 다가오는 그달.
+ * 출전 불투명 · 며칠 · 몇 주 · 모름은 장기가 아니다(모르는 것을 장기로 단정하지 않는다).
+ */
+export function isLongTerm(text, now = new Date()) {
+  const t = String(text ?? '').trim();
+  if (/few months|season/i.test(t)) return true;
+  const m = t.match(/^(early|mid|late)\s+([a-z]+)(?:\s+(\d{4}))?$/i);
+  if (!m) return false;
+  const mon = MONTH[m[2].toLowerCase()];
+  if (!mon) return false;
+  let year = m[3] ? Number(m[3]) : now.getUTCFullYear();
+  let at = Date.UTC(year, mon - 1, PART_DAY[m[1].toLowerCase()]);
+  if (!m[3] && at < now.getTime() - 15 * 86_400_000) at = Date.UTC(++year, mon - 1, PART_DAY[m[1].toLowerCase()]);
+  return at - now.getTime() > LONG_DAYS * 86_400_000;
+}
+
+/** 수집기가 저장하는 부상 한 건 */
+export function injuryRecord(m, now = new Date()) {
+  const ret = m?.injury?.expectedReturn ?? null;
+  const r = returnKo(ret);
+  return { ret, ko: r.ko, doubtful: r.doubtful, long: !r.doubtful && isLongTerm(ret, now), kind: m?.injury?.id ?? null };
+}
+
+/**
+ * 부상자 명단 — 팀의 FotMob 부상 선수 전부(경기에 한 번도 안 나와 우리 목록에 없는 장기 부상자 포함).
+ * 우리 선수와 맞춘 경우 espn id 를 붙여 앱이 상세 카드를 열 수 있게 한다.
+ * 정렬: 출전 불투명 → 복귀가 빠른 순(장기는 뒤).
+ */
+export function injuryList(injured, hits, now = new Date()) {
+  const espnOf = new Map([...(hits ?? new Map())].map(([id, m]) => [m, id]));
+  const rank = (x) => (x.doubtful ? 0 : x.long ? 2 : 1);
+  return (injured ?? [])
+    .map((m) => ({
+      name: String(m?.name ?? ''),
+      espnId: espnOf.get(m) ?? null,
+      fm: m?.id != null ? String(m.id) : null,
+      jersey: Number.isFinite(Number(m?.shirtNumber)) && m?.shirtNumber !== null ? Number(m.shirtNumber) : null,
+      pos: m?.pos ?? null,
+      ...injuryRecord(m, now),
+    }))
+    .filter((x) => x.name)
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 /** 스쿼드 응답이 정상인가 — 선수가 너무 적으면(응답 모양이 바뀜) 판단하지 않는다 */

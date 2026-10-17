@@ -79,6 +79,8 @@ export interface Injury {
   ko: string;
   /** 다쳤지만 뛸 수도 있다 */
   doubtful?: boolean;
+  /** 장기 부상 — 복귀 예상까지 4주 넘게 남음 · 몇 달 · 시즌 아웃 */
+  long?: boolean;
   /** FotMob 부상 종류 번호 (이름 표는 아직 없다) */
   kind?: string | null;
 }
@@ -174,4 +176,15 @@ export interface KoreanNational {
   goals: number;
   assists: number;
   recent: KoreanGame[];
+}
+
+/** 부상자 명단 한 줄 — 팀의 FotMob 부상 선수 전부(경기에 안 나온 장기 부상자 포함) */
+export interface InjuryEntry extends Injury {
+  name: string;
+  /** 우리(ESPN) 선수와 맞춘 경우 — 상세 카드를 열 수 있다 */
+  espnId?: string | null;
+  /** FotMob 선수 id — 사진 대비책 */
+  fm?: string | null;
+  jersey?: number | null;
+  pos?: 'G' | 'D' | 'M' | 'F' | null;
 }

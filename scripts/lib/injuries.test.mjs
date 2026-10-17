@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { injuredMembers, matchInjured, normName, returnKo, squadSize } from './injuries.mjs';
+import { injuredMembers, injuryList, isLongTerm, matchInjured, normName, returnKo, squadSize } from './injuries.mjs';
 
 test('normName: 악센트·대소문자·기호', () => {
   assert.equal(normName('Álex Baena'), 'alex baena');
@@ -47,8 +47,37 @@ test('injuredMembers · squadSize', () => {
   const json = { squad: { squad: [
     { title: 'keepers', members: [{ name: 'A' }, { name: 'B', injury: { id: '21', expectedReturn: 'Doubtful' } }] },
     { title: 'defenders', members: [{ name: 'C', injury: { expectedReturn: 'A few days' } }] },
+    { title: 'coach', members: [{ name: 'Z', injury: { expectedReturn: 'A few days' } }] },
   ] } };
-  assert.deepEqual(injuredMembers(json).map((m) => m.name), ['B', 'C']);
-  assert.equal(squadSize(json), 3);
+  assert.deepEqual(injuredMembers(json).map((m) => [m.name, m.pos]), [['B', 'G'], ['C', 'D']]);
+  assert.equal(squadSize(json), 4);
   assert.equal(squadSize(null), 0);
+});
+
+test('isLongTerm: 복귀까지 4주 넘으면 장기', () => {
+  const now = new Date('2026-10-17T00:00:00Z');
+  assert.equal(isLongTerm('Early February 2027', now), true);
+  assert.equal(isLongTerm('Mid November 2026', now), true);      // 11/15 — 29일, 4주 초과
+  assert.equal(isLongTerm('Early November 2026', now), false);   // 11/5 — 19일
+  assert.equal(isLongTerm('Late November 2026', now), true);     // 11/25 — 39일
+  assert.equal(isLongTerm('Late October 2026', now), false);
+  assert.equal(isLongTerm('A few weeks', now), false);
+  assert.equal(isLongTerm('A few months', now), true);
+  assert.equal(isLongTerm('Out for the season', now), true);
+  assert.equal(isLongTerm('Doubtful', now), false);
+  assert.equal(isLongTerm('Early January', now), true);           // 연도 없음 → 다가오는 1월
+});
+
+test('injuryList: 불투명 → 단기 → 장기, 우리 선수면 espnId', () => {
+  const now = new Date('2026-10-17T00:00:00Z');
+  const a = { name: 'Long Guy', id: 1, shirtNumber: 7, pos: 'F', injury: { expectedReturn: 'Early February 2027' } };
+  const b = { name: 'Short Guy', id: 2, pos: 'M', injury: { expectedReturn: 'A few days' } };
+  const c = { name: 'Maybe Guy', id: 3, pos: 'D', injury: { expectedReturn: 'Doubtful' } };
+  const list = injuryList([a, b, c], new Map([['99', b]]), now);
+  assert.deepEqual(list.map((x) => x.name), ['Maybe Guy', 'Short Guy', 'Long Guy']);
+  assert.equal(list[1].espnId, '99');
+  assert.equal(list[2].long, true);
+  assert.equal(list[2].jersey, 7);
+  assert.equal(list[0].doubtful, true);
+  assert.equal(list[0].long, false);
 });
