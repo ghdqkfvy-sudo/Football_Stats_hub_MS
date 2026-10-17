@@ -5,6 +5,7 @@ import { usePalette } from '../lib/palette';
 import { kstShortDate } from '../lib/kst';
 import { Headshot } from './Headshot';
 import { NatFlag } from './NatFlag';
+import { InjuryLine } from './InjuryMark';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 
@@ -53,6 +54,7 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
         </span>
       </div>
     </div>
+    <InjuryLine inj={p.inj} />
 
     {/* 숫자 네 칸은 있는 그대로 — 강조 상자는 공격 포인트 하나만 쓴다 */}
     <div className="pcard__stats">
