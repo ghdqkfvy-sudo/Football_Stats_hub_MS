@@ -254,7 +254,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
             <span className="pt__who">
               {/* 등번호는 사진 **밖** 오른쪽 아래(사진과 이름 사이 틈)에 — 30px 사진 안에 얹으면
                   얼굴(턱)을 가렸다. 따로 칸을 두면 폰에서 이름 칸이 더 좁아진다. */}
-              <span className="pt__hs">
+              <span className="pt__hs" data-pos={p.pos}>
                 <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={p.jersey !== undefined ? String(p.jersey) : undefined} size={30} />
                 <NumberBadge p={p} cls="pt__no" title={(k) => badgeTitle(p, k)} />
               </span>

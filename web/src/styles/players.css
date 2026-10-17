@@ -337,8 +337,14 @@
 }
 
 /* 카드 배지(레드·옐로) — 흰 바탕은 부상과 같고 테두리만 카드 색 */
-.pt__no--inj[data-kind='red'], .chipbox__no--inj[data-kind='red'] { box-shadow: 0 0 0 1.5px #E5262E, 0 1px 5px rgba(0, 0, 0, .45); }
-.pt__no--inj[data-kind='yellow'], .chipbox__no--inj[data-kind='yellow'] { box-shadow: 0 0 0 1.5px #F5C518, 0 1px 5px rgba(0, 0, 0, .45); }
+/* 레드·옐로카드 배지 바탕은 흰색이 아니라 **등번호 배지와 같은 포지션 색**(포메이션은 --pc, 목록은 --pos).
+   카드 그림에 흰 테두리를 둘러 빨강(FW) 바탕 위에서도 카드가 보인다. */
+.chipbox__ring .chipbox__no--inj[data-kind='red'], .chipbox__ring .chipbox__no--inj[data-kind='yellow'] {
+  background: var(--pc) !important; box-shadow: 0 1px 5px rgba(0, 0, 0, .5);
+}
+.pt__hs .pt__no--inj[data-kind='red'], .pt__hs .pt__no--inj[data-kind='yellow'] {
+  background: var(--pos, var(--accent)) !important; box-shadow: none; border: 1.5px solid var(--ink-900);
+}
 .chipbox__no--inj[data-kind='red'] svg, .chipbox__no--inj[data-kind='yellow'] svg { width: 12px; height: 12px; }
 
 /* 카드의 징계 줄 */
@@ -394,6 +400,11 @@
 /* 출전 불투명 — 주황 톤 */
 .pinj[data-doubt] { background: rgba(245, 165, 36, .12); box-shadow: inset 0 0 0 1px rgba(245, 165, 36, .38); }
 .pinj[data-doubt] b { color: #F5B544; }
+/* 등번호 — 포지션 색(포지션 배지와 같은 FW 빨강 · MF 청록 · DF 파랑 · GK 금색) */
+.pt__hs[data-pos='F'] { --pos: #FF4D5E; }
+.pt__hs[data-pos='M'] { --pos: #3FD7C0; }
+.pt__hs[data-pos='D'] { --pos: #4C8DFF; }
+.pt__hs[data-pos='G'] { --pos: #F5A524; }
 /* 등번호 — 두 자리여도 **정원**(예전엔 가로로 늘어 타원이었다) · 숫자는 가운데 */
 .pt__no {
   position: absolute; right: -11px; bottom: -5px;
@@ -401,7 +412,7 @@
   display: grid; place-items: center; line-height: 1;
   font-family: var(--font-display); font-size: 8.5px; font-weight: 700; font-style: normal; letter-spacing: -.03em;
   font-variant-numeric: tabular-nums;
-  background: var(--accent); color: var(--on-accent); border: 1.5px solid var(--ink-900);
+  background: var(--pos, var(--accent)); color: #06210F; border: 1.5px solid var(--ink-900);
 }
 /* 국적 — 카드에서 포지션 왼쪽. 줄을 flex 로 세워 국기·포지션·글자 세로 가운데를 맞춘다 */
 .natf {
