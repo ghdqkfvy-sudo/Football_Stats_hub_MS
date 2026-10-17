@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestEleven, buildSquad, isBenchRegular, posLabel, roleOf, slotRows, stateAt, stateDelta, teamCohesion } from '../squad';
+import { bestEleven, buildSquad, isBenchRegular, lineKind, lineLabels, posLabel, roleOf, slotRows, stateAt, stateDelta, teamCohesion } from '../squad';
 import type { Match } from '../types';
 import type { AthleteInfo, Lineup, LineupEntry } from '../../types/feedTypes';
 
@@ -393,5 +393,20 @@ describe('떠난 선수 — 지금 팀 로스터에 없으면 목록·베스트 
     expect(players.map((p) => p.id).sort()).toEqual(['stay', 'unknown']);
     expect(departed.map((p) => p.id)).toEqual(['gone']);
     expect(departed[0].assists).toBe(1);   // 이 팀에서 올린 기록은 남는다
+  });
+});
+
+describe('lineKind — 줄 성격', () => {
+  const kinds = (shape: number[]) => [1, ...shape].map((n, i, a) => lineKind(i, a.length, n));
+  it('필드 줄이 셋이면 가운데는 중원이다 (4-4-2 · 3-5-2 · 4-3-3)', () => {
+    expect(kinds([4, 4, 2])).toEqual(['GK', 'DEF', 'MID', 'FW']);
+    expect(kinds([3, 5, 2])).toEqual(['GK', 'DEF', 'MID', 'FW']);
+    expect(lineLabels('MID', 4)).toEqual(['LM', 'LCM', 'RCM', 'RM']);
+    expect(lineLabels(lineKind(2, 4, 3), 3)).toEqual(['LCM', 'CM', 'RCM']);
+  });
+  it('2선은 필드 줄이 넷 이상이고 셋 이하일 때만', () => {
+    expect(kinds([4, 2, 3, 1])).toEqual(['GK', 'DEF', 'MID', 'AM', 'FW']);
+    expect(kinds([3, 4, 2, 1])).toEqual(['GK', 'DEF', 'MID', 'AM', 'FW']);
+    expect(kinds([4, 1, 4, 1])).toEqual(['GK', 'DEF', 'MID', 'MID', 'FW']);
   });
 });
