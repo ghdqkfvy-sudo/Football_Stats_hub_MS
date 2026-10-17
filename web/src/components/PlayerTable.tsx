@@ -5,6 +5,7 @@ import { NumberBadge } from './InjuryMark';
 import { badgeTitle } from '../lib/injury';
 import { KorFlag } from './KorFlag';
 import { Swap } from './Swap';
+import { useLongPress } from '../lib/useLongPress';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -41,9 +42,14 @@ interface Props {
   onOpen: (p: PlayerSeason) => void;
   /** 코리안리거(id → 한국어 이름) — 줄을 강조하고 태극기 + 한국어 이름 (소속팀 화면) */
   marks?: ReadonlyMap<string, string>;
+  /** 길게 누르기 — 선수 비교 1번 고정 */
+  onLongPress?: (p: PlayerSeason) => void;
+  /** 비교 1번으로 고정된 선수 */
+  pinnedId?: string | null;
 }
 
-export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks }: Props) {
+export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks, onLongPress, pinnedId }: Props) {
+  const lp = useLongPress();
   const [filter, setFilter] = useState('ALL');
 
   /* 정렬을 걸지 않았을 때의 기본 순서는 "베스트 11 먼저, 그다음 기여도 순"
@@ -235,6 +241,8 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
               else rowRefs.current.delete(p.id);
             }}
             data-active={p.id === activeId}
+            data-pinned={p.id === pinnedId || undefined}
+            {...(onLongPress ? lp.bind(() => { setCard(null); onLongPress(p); }) : {})}
             /* 호버 카드는 마우스가 있는 기기에서만. 폰은 탭 한 번에 진입·초점·클릭
                신호가 한꺼번에 와서 카드와 상세 시트가 같이 떴다 — 폰은 시트만. */
             {...(HAS_HOVER ? {
@@ -248,7 +256,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
               if (e.key === 'Escape') closeCard();
               else if (e.key === 'Enter') openDetail(p);
             }}
-            onClick={() => openDetail(p)}
+            onClick={() => { if (!lp.swallow()) openDetail(p); }}
             title="눌러서 시즌 전 경기 기록 보기"
           >
             <span className="pt__who">

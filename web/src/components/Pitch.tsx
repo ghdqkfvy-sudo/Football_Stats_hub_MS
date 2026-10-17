@@ -5,6 +5,7 @@ import { badgeTitle } from '../lib/injury';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
 import { KorFlag } from './KorFlag';
+import { useLongPress } from '../lib/useLongPress';
 
 interface Props {
   slots: Slot[];
@@ -22,11 +23,15 @@ interface Props {
   onSelect?: (id: string | null) => void;
   /** 코리안리거(id → 한국어 이름) — 칩에 태극기를 달고 한국어 이름으로 (소속팀 화면) */
   marks?: ReadonlyMap<string, string>;
+  /** 길게 누르기 — 선수 비교 1번 고정 */
+  onLongPress?: (id: string) => void;
+  /** 비교 1번으로 고정된 선수 */
+  pinnedId?: string | null;
 }
 
 /** 세로 축구장 — 아래가 골키퍼, 위가 공격 */
 export function Pitch({
-  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect, tally, marks,
+  slots, formation, verified, covered, chem, activeId, onHover, selectedId, onSelect, tally, marks, onLongPress, pinnedId,
 }: Props) {
   const picked = tally?.find((x) => x.shape === formation)?.n;
   const total = tally?.reduce((a, x) => a + x.n, 0) ?? 0;
@@ -85,6 +90,8 @@ export function Pitch({
                   selected={!!s.player && s.player.id === selectedId}
                   onHover={onHover}
                   onSelect={onSelect}
+                  onLongPress={onLongPress}
+                  pinned={!!s.player && s.player.id === pinnedId}
                   ko={s.player ? marks?.get(s.player.id) : undefined}
                 />
               ))}
@@ -99,7 +106,7 @@ export function Pitch({
 }
 
 function PlayerChip({
-  p, tag, color, active, selected, onHover, onSelect, ko,
+  p, tag, color, active, selected, onHover, onSelect, onLongPress, pinned, ko,
 }: {
   p: PlayerSeason | null;
   tag: string;
@@ -108,9 +115,12 @@ function PlayerChip({
   selected: boolean;
   onHover: (id: string | null) => void;
   onSelect?: (id: string | null) => void;
+  onLongPress?: (id: string) => void;
+  pinned?: boolean;
   /** 코리안리거면 한국어 이름 */
   ko?: string;
 }) {
+  const lp = useLongPress();
   if (!p) return <div className="chipbox" aria-hidden="true" />;
 
   const last = ko ?? p.name.split(' ').slice(-1)[0];
@@ -119,6 +129,7 @@ function PlayerChip({
       className={`chipbox${ko ? ' chipbox--kor' : ''}`}
       data-active={active}
       data-selected={selected}
+      data-pinned={pinned || undefined}
       style={{ ['--pc' as string]: color }}
       /* ⚠️ 터치에서는 호버를 달지 않는다 — 탭 한 번에 가짜 mouseenter 와 click 이
          같이 온다. 터치는 탭 = 선수 상세 열기 하나뿐이다. */
@@ -131,7 +142,8 @@ function PlayerChip({
         }
         : {})}
       // 누르면 선수 목록에서 누른 것과 같은 선수 상세 창이 뜬다(PlayersTab)
-      onClick={() => onSelect?.(p.id)}
+      {...(onLongPress ? lp.bind(() => onLongPress(p.id)) : {})}
+      onClick={() => { if (!lp.swallow()) onSelect?.(p.id); }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
