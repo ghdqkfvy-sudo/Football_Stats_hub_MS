@@ -6,6 +6,7 @@ import { useIsMobile } from '../lib/useMedia';
 import { useClosing } from '../lib/motion';
 import { Headshot } from './Headshot';
 import { NatFlag } from './NatFlag';
+import { InjuryLine } from './InjuryMark';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
 import { BenchLine, Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
@@ -99,6 +100,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
         </span>
       </div>
     </div>
+    <InjuryLine inj={p.inj} />
 
     {/* 호버 카드와 같은 규칙 — 골·도움은 값이 있으면 숫자만 팀 컬러,
         강조 **상자**는 공격 포인트 하나만(여섯 칸이 다 빛나면 어디를 볼지 모른다) */}

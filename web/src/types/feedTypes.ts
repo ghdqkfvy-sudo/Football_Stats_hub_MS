@@ -65,9 +65,23 @@ export interface AthleteInfo {
   age?: number;
   /** 팀 로스터가 주는 국적 — 이름 · 3글자 약어 · 국기 주소 (2026-10 부터 수집) */
   nat?: Nationality;
+  /** 부상 — FotMob 스쿼드의 injury (2026-10 부터 수집). 없으면 정상 */
+  inj?: Injury;
 }
 
 export interface Nationality { name?: string; code?: string; flag?: string }
+
+/** 부상 — 수집기가 복귀 예상 문구를 한국어로 옮겨 둔다(scripts/lib/injuries.mjs) */
+export interface Injury {
+  /** 원문 — "Mid November 2026" · "Doubtful" */
+  ret?: string | null;
+  /** 한국어 — "11월 중순 복귀 예상" · "출전 불투명" */
+  ko: string;
+  /** 다쳤지만 뛸 수도 있다 */
+  doubtful?: boolean;
+  /** FotMob 부상 종류 번호 (이름 표는 아직 없다) */
+  kind?: string | null;
+}
 
 export interface Lineup {
   teamId: string;

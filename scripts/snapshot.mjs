@@ -38,6 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
+import { injuredMembers, matchInjured, returnKo, squadSize } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -87,18 +88,18 @@ const CORE = 'https://sports.core.api.espn.com';
 /* 앱의 web/src/config/targets.ts 와 같은 목록이어야 한다 —
    슬러그가 데이터 파일 이름이 된다(schedule-{slug}.json). */
 const TEAMS = [
-  { id: '86', slug: 'real-madrid', name: 'Real Madrid', league: 'esp.1', koQuery: '레알 마드리드' },
-  { id: '363', slug: 'chelsea', name: 'Chelsea', league: 'eng.1', koQuery: '첼시 FC' },
-  { id: '360', slug: 'man-united', name: 'Manchester United', league: 'eng.1', koQuery: '맨체스터 유나이티드' },
-  { id: '367', slug: 'tottenham', name: 'Tottenham Hotspur', league: 'eng.1', koQuery: '토트넘 홋스퍼' },
-  { id: '361', slug: 'newcastle', name: 'Newcastle United', league: 'eng.1', koQuery: '뉴캐슬 유나이티드' },
-  { id: '364', slug: 'liverpool', name: 'Liverpool', league: 'eng.1', koQuery: '리버풀 FC' },
+  { id: '86', slug: 'real-madrid', name: 'Real Madrid', league: 'esp.1', koQuery: '레알 마드리드', fm: 8633 },
+  { id: '363', slug: 'chelsea', name: 'Chelsea', league: 'eng.1', koQuery: '첼시 FC', fm: 8455 },
+  { id: '360', slug: 'man-united', name: 'Manchester United', league: 'eng.1', koQuery: '맨체스터 유나이티드', fm: 10260 },
+  { id: '367', slug: 'tottenham', name: 'Tottenham Hotspur', league: 'eng.1', koQuery: '토트넘 홋스퍼', fm: 8586 },
+  { id: '361', slug: 'newcastle', name: 'Newcastle United', league: 'eng.1', koQuery: '뉴캐슬 유나이티드', fm: 10261 },
+  { id: '364', slug: 'liverpool', name: 'Liverpool', league: 'eng.1', koQuery: '리버풀 FC', fm: 8650 },
   { id: '451', slug: 'korea', name: 'South Korea', national: true, league: 'fifa.worldq.afc', koQuery: '축구 국가대표팀 손흥민 이강인' },
   /* 코리안리거 소속팀 — 팀 탭은 없고 대한민국 › 소속팀 · Summary 에 쓴다(앱의 KOREAN_CLUBS).
      일정·스쿼드는 다른 팀과 똑같이 받고, 뉴스는 받지 않는다(볼 화면이 없다). */
-  { id: '132', slug: 'bayern', name: 'Bayern Munich', league: 'ger.1', noNews: true },
-  { id: '1068', slug: 'atletico', name: 'Atlético Madrid', league: 'esp.1', noNews: true },
-  { id: '18966', slug: 'lafc', name: 'LAFC', league: 'usa.1', noNews: true },
+  { id: '132', slug: 'bayern', name: 'Bayern Munich', league: 'ger.1', noNews: true, fm: 9823 },
+  { id: '1068', slug: 'atletico', name: 'Atlético Madrid', league: 'esp.1', noNews: true, fm: 9906 },
+  { id: '18966', slug: 'lafc', name: 'LAFC', league: 'usa.1', noNews: true, fm: 867280 },
 ];
 const LEAGUES = ['esp.1', 'eng.1', 'uefa.champions'];
 /* 순위표만 필요한 리그(소속팀 화면) — 경기별 선수 기록·대회 전체 파일(league-*.json)은
@@ -569,6 +570,38 @@ async function coreLineupInfo(leagueSlug, eventId, teamId) {
    결론 내렸었다. 실제로는 갈린다(실측: 353951 있음 / 296410·149945 404).
    그래서 팀 단위로 한 번 받아 두고 선수별 실제 주소를 박아 준다. */
 const rosterPhotoCache = new Map();
+
+/*
+ * 부상 — FotMob 팀 API(비공식)의 스쿼드 injury. 2026-10-17 소스 비교에서 키·횟수 제한 없이
+ * 9팀 모두 답한 유일한 곳이다(scripts/probe-injuries.mjs). 주소가 바뀐 적이 있어(/api/teams →
+ * /api/data/teams) 응답이 이상하면 null — 그 회차는 지난 회차 값을 그대로 둔다.
+ */
+const injuryStats = { ok: 0, failed: 0, matched: 0, unmatched: [] };
+async function fotmobInjured(fm) {
+  if (!fm) return null;
+  try {
+    const res = await fetch(`https://www.fotmob.com/api/data/teams?id=${fm}&ccode3=KOR`, {
+      headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    if (squadSize(j) < 15) throw new Error(`스쿼드 ${squadSize(j)}명 — 응답 모양이 바뀐 듯`);
+    injuryStats.ok++;
+    return injuredMembers(j);
+  } catch (e) {
+    injuryStats.failed++;
+    note(`FotMob 부상(${fm})`, `${String(e).split('\n')[0]} — 지난 회차 값을 유지`);
+    return null;
+  }
+}
+/** 지난 회차 squad 파일의 부상 표시 (FotMob 이 실패한 회차용) */
+async function prevInjuries(slug) {
+  try {
+    const j = JSON.parse(await readFile(join(OUT, `squad-${slug}.json`), 'utf8'));
+    return new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.inj).map(([id, a]) => [id, a.inj]));
+  } catch { return new Map(); }
+}
 
 /*
  * 부상 정보 점검(2026-10-17) — ESPN 이 축구에서도 부상을 주는지 모른다.
@@ -2184,6 +2217,23 @@ async function main() {
         if (mins) { athletes[id].minutesSeason = mins; gotMinutes++; }
       });
       await attachSofascore(Object.entries(athletes).map(([id, a]) => ({ id, name: a.name, age: a.age, target: a })));
+      /* 부상 — FotMob 이 답하면 이번 값, 못 하면 지난 회차 값 */
+      if (t.fm) {
+        const injured = await fotmobInjured(t.fm);
+        if (injured) {
+          const hits = matchInjured(injured, athletes);
+          for (const [id, m] of hits) {
+            const r = returnKo(m.injury?.expectedReturn);
+            athletes[id].inj = { ret: m.injury?.expectedReturn ?? null, ko: r.ko, doubtful: r.doubtful, kind: m.injury?.id ?? null };
+          }
+          injuryStats.matched += hits.size;
+          const got = new Set([...hits.values()]);
+          for (const m of injured) if (!got.has(m)) injuryStats.unmatched.push(`${t.slug}:${m.name}`);
+          console.log(`    부상(FotMob): ${injured.length}명 중 ${hits.size}명 맞춤`);
+        } else {
+          for (const [id, inj] of await prevInjuries(t.slug)) if (athletes[id]) athletes[id].inj = inj;
+        }
+      }
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
         codeVersion: CODE_VERSION,
@@ -2309,6 +2359,10 @@ async function main() {
           gone: [...tsdbGone],
           at: new Date().toISOString(),
         },
+      } : {}),
+      /* FotMob 부상 수집 결과 — 숨은 시트·점검용 */
+      ...(name === 'meta-slow.json' && (injuryStats.ok || injuryStats.failed) ? {
+        injuries: { ...injuryStats, unmatched: injuryStats.unmatched.slice(0, 40), at: new Date().toISOString() },
       } : {}),
       /* 부상 정보 점검 — 로스터를 받은 느린 회차에만 */
       ...(name === 'meta-slow.json' && Object.keys(injuryProbe.teams).length ? {
