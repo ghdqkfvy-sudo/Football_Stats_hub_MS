@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, sofascoreImage } from './sofascore.mjs';
+import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames, sofascoreImage } from './sofascore.mjs';
 
 const TODAY = new Date('2026-10-16T00:00:00Z');
 const ent = (ss, born) => ({
@@ -65,4 +65,10 @@ test('mergeIdMaps: 찾은 ID 는 잃지 않는다 — 겹친 회차가 작은 �
   /* 둘 다 ID 가 있으면 더 최근 쪽 */
   assert.equal(mergeIdMaps({ x: { ss: '1', at: '2026-01-01' } }, { x: { ss: '9', at: '2026-02-01' } }).x.ss, '9');
   assert.deepEqual(mergeIdMaps(undefined, undefined), {});
+});
+
+test('searchNames: 위키데이터에 다른 이름으로 올라 있는 선수 (사비우 → Savinho)', () => {
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  assert.deepEqual(searchNames('Sávio', norm), ['Sávio', 'Savinho']);
+  assert.deepEqual(searchNames('Víctor Muñoz', norm), ['Víctor Muñoz']);
 });
