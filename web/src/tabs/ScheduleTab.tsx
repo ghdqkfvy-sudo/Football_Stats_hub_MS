@@ -312,7 +312,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
       <section>
         <div className="sec__head">
           <h2 className="sec__title">{cursor?.m}월 경기</h2>
-          <span className="sec__note">경기를 누르면 위 히어로에 그 경기가 뜹니다 · 종료된 경기는 골 기록도 펼쳐집니다</span>
+          <span className="sec__note sch__note"><span>경기를 누르면 위 히어로에 그 경기가 뜹니다</span><span>종료된 경기는 골 기록도 펼쳐집니다</span></span>
         </div>
         <MonthList
           matches={monthMatches}

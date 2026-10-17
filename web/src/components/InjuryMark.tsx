@@ -38,6 +38,7 @@ export function InjuryLine({ inj }: { inj?: Injury }) {
     <div className="pinj" data-doubt={inj.doubtful || undefined} data-long={inj.long || undefined} role="note">
       <i className="injb" data-doubt={inj.doubtful || undefined} aria-hidden="true"><InjuryGlyph inj={inj} size={10} /></i>
       <b>{inj.doubtful ? '출전 불투명' : '부상'}</b>
+      {inj.injName && <span className="pinj__what">{inj.injName}</span>}
       {!inj.doubtful && <span>{inj.ko}</span>}
       {inj.long && <em className="pinj__long">장기</em>}
     </div>

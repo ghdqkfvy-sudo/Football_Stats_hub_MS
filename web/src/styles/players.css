@@ -323,7 +323,10 @@
 }
 .pinj .injb { flex: none; width: 18px; height: 18px; border-radius: 5px; }
 .pinj b { font-weight: 800; color: #FF6B70; }
-.pinj span { font-weight: 600; }
+.pinj { flex-wrap: wrap; row-gap: 5px; }
+/* 낱말 중간에서 끊지 않는다 — 줄이 모자라면 '·' 마디째로 다음 줄 */
+.pinj span { font-weight: 600; white-space: nowrap; }
+.pinj .pinj__what { color: var(--text-hi); font-weight: 700; }
 .pinj span::before { content: '·'; margin-right: 8px; color: var(--text-lo); }
 /* 장기 부상 태그 */
 .pinj__long {
@@ -387,7 +390,10 @@
 .injl__who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .injl__who b { font-size: 13px; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .injl__who > span { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-lo); }
-.injl__ret { display: flex; align-items: center; gap: 6px; justify-self: end; text-align: right; }
+.injl__ret { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; justify-self: end; text-align: right; }
+.injl__retl { display: flex; align-items: center; gap: 6px; }
+/* 부상명 — 복귀 예상 아래 한 줄 */
+.injl__what { font-size: 10.5px; font-weight: 600; color: var(--text-lo); white-space: nowrap; }
 .injl__ret b { font-size: 12px; font-weight: 700; color: var(--text-mid); white-space: nowrap; }
 .injl__row[data-doubt] .injl__ret b { color: #F5B544; }
 /* 출전 정지 명단 — 오른쪽 두 줄(대회·기간 / 사유) */
