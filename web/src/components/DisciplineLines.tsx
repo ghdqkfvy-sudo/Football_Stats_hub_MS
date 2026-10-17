@@ -2,7 +2,7 @@ import type { Discipline, Suspension } from '../lib/discipline';
 import { CARD_RULES, susNote } from '../lib/discipline';
 import { comp, mobileName } from '../config/targets';
 import { kstParts } from '../lib/kst';
-import { CardGlyph } from './InjuryMark';
+import { CardShape } from './InjuryMark';
 
 const when = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date} (${p.weekdayKo})`; };
 const day = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date}`; };
@@ -38,7 +38,7 @@ export function DisciplineLines({ d }: { d?: Discipline }) {
     <>
       {d.all.map((s) => (
         <div className="pdis" data-kind="red" role="note" key={s.competition}>
-          <i className="injb" aria-hidden="true"><CardGlyph color="red" size={11} /></i>
+          <i className="pdis__card" aria-hidden="true"><CardShape color="red" w={12} /></i>
           <div>
             <b>출전 정지</b>
             <span className="pdis__what"><SusWhat s={s} /></span>
@@ -48,7 +48,7 @@ export function DisciplineLines({ d }: { d?: Discipline }) {
       ))}
       {d.risks.map((r) => (
         <div className="pdis" data-kind="yellow" role="note" key={r.competition}>
-          <i className="injb" aria-hidden="true"><CardGlyph color="yellow" size={11} /></i>
+          <i className="pdis__card" aria-hidden="true"><CardShape color="yellow" w={12} /></i>
           <div>
             <b>경고 누적 주의</b>
             <span className="pdis__what"><CompName k={r.competition} /> {r.yellows}장</span>
