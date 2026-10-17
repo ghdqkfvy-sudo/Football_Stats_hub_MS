@@ -1,0 +1,30 @@
+name: 점검 — 주장·부주장 정보 소스
+
+# 주장·부주장을 어디서 받을 수 있는지 FotMob · ESPN 을 불러 본다(2026-10-17).
+# 사이트·데이터 파일은 건드리지 않는다 — 결과는 작업 요약과 아티팩트(JSON)로만 남는다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-captains.mjs'
+      - '.github/workflows/captain-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 소스별 주장 정보 불러 보기
+        run: node scripts/probe-captains.mjs "$RUNNER_TEMP/captain-probe.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: captain-probe
+          path: ${{ runner.temp }}/captain-probe.json
