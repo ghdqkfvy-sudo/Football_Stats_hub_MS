@@ -68,3 +68,31 @@ export function compareRows(a: PlayerSeason, b: PlayerSeason): { season: Compare
     ],
   };
 }
+
+/**
+ * 대회별 비교 — 대회마다 출전 · 선발 · 출전 시간 · 골 · 도움.
+ * 출전 시간은 대회별 집계가 없어 경기별 기록(recent)에서 그 대회 경기만 더한다.
+ * 대회 순서: 두 선수 출전 합이 많은 순(보통 리그 → 챔스 → 컵).
+ */
+export function compareByComp(a: PlayerSeason, b: PlayerSeason): { competition: string; rows: CompareRow[] }[] {
+  const comps = [...new Set([...a.byComp, ...b.byComp].map((c) => c.competition))];
+  const of = (p: PlayerSeason, k: string) => p.byComp.find((c) => c.competition === k);
+  const mins = (p: PlayerSeason, k: string) => p.recent.filter((g) => g.competition === k).reduce((s, g) => s + g.minutes, 0);
+  return comps
+    .map((k) => {
+      const x = of(a, k), y = of(b, k);
+      return {
+        competition: k,
+        total: (x?.apps ?? 0) + (y?.apps ?? 0),
+        rows: [
+          row('apps', '출전', x?.apps ?? 0, y?.apps ?? 0),
+          row('starts', '선발', x?.starts ?? 0, y?.starts ?? 0),
+          row('minutes', '출전 시간', mins(a, k), mins(b, k), { unit: '분' }),
+          row('goals', '골', x?.goals ?? 0, y?.goals ?? 0),
+          row('assists', '도움', x?.assists ?? 0, y?.assists ?? 0),
+        ],
+      };
+    })
+    .sort((p, q) => q.total - p.total)
+    .map(({ competition, rows }) => ({ competition, rows }));
+}

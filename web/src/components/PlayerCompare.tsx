@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { PlayerSeason } from '../lib/squad';
-import { compareRows, type CompareRow } from '../lib/playerCompare';
+import { compareByComp, compareRows, type CompareRow } from '../lib/playerCompare';
 import { useIsMobile } from '../lib/useMedia';
 import { useClosing } from '../lib/motion';
 import { usePalette } from '../lib/palette';
@@ -63,7 +63,7 @@ function Recent({ p }: { p: PlayerSeason }) {
  * 팀 내 선수 비교 창 — 두 선수의 시즌 기록을 좌우로.
  *  · 시즌 기록(출전 · 선발 · 시간 · 골 · 도움 · 공격 포인트)
  *  · 90분당 · 선발률 · 카드(적을수록 좋다)
- *  · 대회별 · 최근 5경기 출전 시간 · 부상/징계 상태
+ *  · 대회별(대회마다 출전 · 선발 · 시간 · 골 · 도움) · 최근 5경기 출전 시간 · 부상/징계 상태
  * 폰은 바텀시트, 넓은 화면은 가운데 창(선수 상세와 같은 틀).
  */
 export function PlayerCompare({ pair, onClose, onChange }: {
@@ -86,8 +86,7 @@ export function PlayerCompare({ pair, onClose, onChange }: {
   }, [pair, close]);
 
   const rows = pair ? compareRows(pair[0], pair[1]) : null;
-  const comps = pair ? [...new Set([...pair[0].byComp, ...pair[1].byComp].map((c) => c.competition))] : [];
-  const split = (p: PlayerSeason, k: string) => p.byComp.find((c) => c.competition === k);
+  const byComp = pair ? compareByComp(pair[0], pair[1]) : [];
 
   return (
     <div className="sheet sheet--modal" data-open={!!pair} data-closing={closing || undefined} aria-hidden={!pair}>
@@ -113,24 +112,15 @@ export function PlayerCompare({ pair, onClose, onChange }: {
             {rows.rate.map((r) => <Bar key={r.key} r={r} />)}
           </div>
 
-          {comps.length > 0 && (
-            <div className="pcmp__sec">
-              <span className="eyebrow">대회별</span>
-              {comps.map((k) => {
-                const a = split(pair[0], k), b = split(pair[1], k);
-                const cell = (c?: typeof a) => (c ? `${c.apps}경기 · ${c.goals}G ${c.assists}A` : '–');
-                return (
-                  <div className="pcmp__comp" key={k}>
-                    <span className="num">{cell(a)}</span>
-                    <span className="pcmp__cn"><CompCrest k={k} size={13} />
-                      <span className="m-full">{palette.name(k)}</span><span className="m-short">{mobileName(k)}</span>
-                    </span>
-                    <span className="num">{cell(b)}</span>
-                  </div>
-                );
-              })}
+          {byComp.map(({ competition: k, rows: cr }) => (
+            <div className="pcmp__sec pcmp__sec--comp" key={k}>
+              <span className="eyebrow pcmp__ch">
+                <CompCrest k={k} size={13} />
+                <span className="m-full">{palette.name(k)}</span><span className="m-short">{mobileName(k)}</span>
+              </span>
+              {cr.map((r) => <Bar key={r.key} r={r} />)}
             </div>
-          )}
+          ))}
 
           <div className="pcmp__sec">
             <span className="eyebrow">최근 5경기 출전 시간</span>

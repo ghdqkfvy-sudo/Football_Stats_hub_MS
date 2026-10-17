@@ -79,6 +79,7 @@
 .pcmp__row[data-win='b'] .pcmp__v--b { color: #7FE3FF; }
 .pcmp__row[data-win='b'] .pcmp__bar--b i { background: #7FE3FF; }
 
+.pcmp__ch { display: flex !important; align-items: center; gap: 6px; }
 .pcmp__comp { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 5px 0; font-size: 12px; color: var(--text-hi); }
 .pcmp__comp > span:first-child { text-align: left; }
 .pcmp__comp > span:last-child { text-align: right; }
