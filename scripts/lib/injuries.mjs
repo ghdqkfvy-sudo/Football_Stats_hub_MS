@@ -111,6 +111,16 @@ export function injuryRecord(m, now = new Date()) {
 }
 
 /**
+ * 이 부상 상태를 처음 본 때 — 지난 회차와 상태(복귀 문구 · 종류)가 같으면 그때 시각을 잇는다.
+ * 앱은 이 시각 **뒤에 열린 경기에 뛴** 선수의 부상 표시를 지운다 — FotMob 이 갱신을 늦게 해서
+ * "출전 불투명" 인 채로 경기에 나온 선수들(2026-10-17 리버풀: 소보슬라이 · 이사크 · 학포)이 있었다.
+ */
+export function carrySince(cur, prev, nowIso) {
+  const same = prev && cur && (prev.ret ?? null) === (cur.ret ?? null) && String(prev.kind ?? '') === String(cur.kind ?? '');
+  return same && prev.since ? prev.since : nowIso;
+}
+
+/**
  * 부상자 명단 — 팀의 FotMob 부상 선수 전부(경기에 한 번도 안 나와 우리 목록에 없는 장기 부상자 포함).
  * 우리 선수와 맞춘 경우 espn id 를 붙여 앱이 상세 카드를 열 수 있게 한다.
  * 정렬: 출전 불투명 → 복귀가 빠른 순(장기는 뒤).

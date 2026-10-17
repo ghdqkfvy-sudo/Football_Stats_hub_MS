@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { groupSuspensions, upcomingMatchIds, injuredMembers, injuryList, isLongTerm, matchInfo, matchInjured, nextMatchId, normName, returnKo, squadSize, suspendedFrom } from './injuries.mjs';
+import { carrySince, groupSuspensions, upcomingMatchIds, injuredMembers, injuryList, isLongTerm, matchInfo, matchInjured, nextMatchId, normName, returnKo, squadSize, suspendedFrom } from './injuries.mjs';
 
 test('normName: 악센트·대소문자·기호', () => {
   assert.equal(normName('Álex Baena'), 'alex baena');
@@ -126,4 +126,13 @@ test('groupSuspensions: 몇 경기째까지 정지인지 선수별로', () => {
     { utc: 'C', league: 'UCL', suspended: [{ name: 'Other' }] },
   ]);
   assert.deepEqual(got.map((x) => [x.name, x.games.map((g) => g.utc)]), [['Cristian Romero', ['A', 'B']], ['Other', ['C']]]);
+});
+
+test('carrySince: 같은 상태면 처음 본 시각을 잇고, 바뀌면 지금부터', () => {
+  const now = '2026-10-17T20:00:00.000Z';
+  const prev = { ret: 'Doubtful', kind: '42', since: '2026-10-17T07:00:00.000Z' };
+  assert.equal(carrySince({ ret: 'Doubtful', kind: 42 }, prev, now), prev.since);
+  assert.equal(carrySince({ ret: 'Late October 2026', kind: '42' }, prev, now), now);
+  assert.equal(carrySince({ ret: 'Doubtful', kind: '42' }, { ret: 'Doubtful', kind: '42' }, now), now);
+  assert.equal(carrySince({ ret: 'Doubtful', kind: '42' }, undefined, now), now);
 });

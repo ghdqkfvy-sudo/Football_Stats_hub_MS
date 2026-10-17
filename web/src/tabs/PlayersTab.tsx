@@ -5,7 +5,7 @@ import type { SquadData } from '../lib/api';
 import { loadSquad } from '../lib/api';
 import { bestEleven, buildSquad, orderForList, teamCohesion } from '../lib/squad';
 import { discipline } from '../lib/discipline';
-import { seasonFromInjury } from '../lib/injury';
+import { liveInjuries, seasonFromInjury } from '../lib/injury';
 import { Pitch } from '../components/Pitch';
 import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
@@ -99,6 +99,8 @@ export function PlayersTab({
       .map(seasonFromInjury);
     return [...orderForList(players, xi.slots), ...absent];
   }, [players, xi, squad]);
+
+  const injList = useMemo(() => liveInjuries(squad?.injuries ?? [], players), [squad, players]);
 
   /** 선수를 눌렀을 때 — 비교 고르는 중이면 2번으로, 아니면 상세 */
   const pick = (p: PlayerSeason) => {
@@ -206,9 +208,7 @@ export function PlayersTab({
 
       <SuspensionList players={players} onOpen={pick} />
 
-      {!!squad?.injuries?.length && (
-        <InjuryList list={squad.injuries} players={players} onOpen={pick} />
-      )}
+      {!!injList.length && <InjuryList list={injList} players={players} onOpen={pick} />}
 
       <section>
         <div className="sec__head">
