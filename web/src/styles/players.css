@@ -351,7 +351,7 @@
 .pdis .injb { flex: none; width: 18px; height: 18px; border-radius: 5px; margin-top: 1px; }
 .pdis > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
 .pdis b { font-weight: 800; color: #FF6B70; }
-.pdis__what { font-weight: 700; }
+.pdis__what { font-weight: 700; white-space: nowrap; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .pdis small { flex-basis: 100%; font-size: 11px; color: var(--text-mid); }
 .pdis[data-kind='yellow'] { background: rgba(245, 197, 24, .10); box-shadow: inset 0 0 0 1px rgba(245, 197, 24, .40); }
 .pdis[data-kind='yellow'] b { color: #F5C518; }
@@ -376,6 +376,13 @@
 .injl__ret { display: flex; align-items: center; gap: 6px; justify-self: end; text-align: right; }
 .injl__ret b { font-size: 12px; font-weight: 700; color: var(--text-mid); white-space: nowrap; }
 .injl__row[data-doubt] .injl__ret b { color: #F5B544; }
+/* 출전 정지 명단 — 오른쪽 두 줄(대회·기간 / 사유) */
+.injl__ret--sus { flex-direction: column; align-items: flex-end; gap: 2px; }
+.injl__ret--sus { min-width: 0; max-width: 200px; }
+.injl__ret--sus b { color: #FF8A8E; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.injl__ret--sus small { font-size: 10.5px; color: var(--text-lo); white-space: nowrap; }
+.injl__hs .injb[data-kind='red'] { box-shadow: 0 0 0 1.5px #E5262E, 0 1px 5px rgba(0, 0, 0, .45); }
+.injl--sus { margin-bottom: 0; }
 .injl__row[data-long] .injl__ret b { color: #FF8A8E; }
 @media (max-width: 640px) {
   .injl__row { padding: 9px 12px; gap: 9px; }

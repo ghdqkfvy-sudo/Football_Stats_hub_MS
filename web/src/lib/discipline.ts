@@ -1,4 +1,5 @@
 import type { Match } from './types';
+import { kstParts } from './kst';
 import type { RecentGame } from './squad';
 
 /**
@@ -52,7 +53,10 @@ export interface Suspension {
 export interface CardRisk { competition: string; yellows: number; limit: number }
 
 export interface Discipline {
+  /** 가장 가까운 출전 정지 (all[0]) */
   sus?: Suspension;
+  /** 대회별 출전 정지 전부 — 리그 퇴장 + 챔스 경고 누적처럼 동시에 걸릴 수 있다(가까운 순) */
+  all: Suspension[];
   risks: CardRisk[];
   /** 팀의 바로 다음 경기 기준 배지 — 레드(그 경기 출전 정지) · 옐로(그 대회 경고 1장 남음) */
   badge?: 'red' | 'yellow';
@@ -82,7 +86,8 @@ export function discipline(
   const nextAll = upcoming[0];
   const nextIn = (comp: string) => upcoming.find((m) => m.competition === comp);
 
-  let sus: Suspension | undefined;
+  /* 대회별로 하나씩 — 같은 대회는 FotMob 확정을 우선하고 계산 사유를 보탠다 */
+  const byComp = new Map<string, Suspension>();
 
   /* 1) FotMob 확정 — 그 경기들이 우리 일정의 어느 경기인지 시각으로 찾는다(±12시간) */
   const near = (iso: string | null | undefined) => {
@@ -101,7 +106,7 @@ export function discipline(
     const after = upcoming.find((m) => m.competition === first.competition && m.kickoffUtc > last.kickoffUtc);
     const limit = fotmob?.checkedUntil ? Date.parse(fotmob.checkedUntil) + 12 * 3600_000 : -Infinity;
     const back = after && Date.parse(after.kickoffUtc) <= limit ? after : undefined;
-    sus = { competition: first.competition, reason: 'fotmob', confirmed: true, match: first, missed, back, ret: fotmob?.ret ?? null };
+    byComp.set(first.competition, { competition: first.competition, reason: 'fotmob', confirmed: true, match: first, missed, back, ret: fotmob?.ret ?? null });
   }
 
   /* 2) 우리 계산 — 대회마다, 그 선수의 마지막 경기 뒤로 팀이 그 대회를 아직 안 치렀을 때만 */
@@ -125,9 +130,10 @@ export function discipline(
         if (hit) calc = { competition: comp, reason: 'yellow', confirmed: false, yellows: total, match: next };
       }
       if (calc) {
-        /* FotMob 확정이 같은 경기면 사유만 보태고, 없으면 계산값을 쓴다(가장 가까운 경기 우선) */
-        if (sus && sus.match?.id === calc.match?.id) sus = { ...sus, reason: calc.reason, yellows: calc.yellows };
-        else if (!sus || (calc.match && sus.match && byKick(calc.match, sus.match) < 0)) sus = calc;
+        /* 같은 대회에 FotMob 확정이 있으면 사유만 보탠다(같은 경기일 때), 없으면 계산값 */
+        const fm = byComp.get(comp);
+        if (!fm) byComp.set(comp, calc);
+        else if (fm.match?.id === calc.match?.id) byComp.set(comp, { ...fm, reason: calc.reason, yellows: calc.yellows });
       }
     }
 
@@ -138,11 +144,26 @@ export function discipline(
     }
   }
 
-  if (sus?.match && teamId) sus = { ...sus, opp: (sus.match.home.id === teamId ? sus.match.away : sus.match.home).name };
+  const all = [...byComp.values()]
+    .map((x) => (x.match && teamId ? { ...x, opp: (x.match.home.id === teamId ? x.match.away : x.match.home).name } : x))
+    .sort((a, b) => (a.match && b.match ? byKick(a.match, b.match) : 0));
+  const sus = all[0];
 
+  /* 레드 배지 — 어느 대회 정지든 그 경기가 팀의 바로 다음 경기일 때만 */
   const badge: Discipline['badge'] =
-    sus?.match && nextAll && sus.match.id === nextAll.id ? 'red'
+    nextAll && all.some((x) => x.match?.id === nextAll.id) ? 'red'
       : nextAll && risks.some((r) => r.competition === nextAll.competition) ? 'yellow'
         : undefined;
-  return { sus, risks, badge };
+  return { sus, all, risks, badge };
 }
+
+const REASON: Record<Suspension['reason'], string> = { red: '퇴장', yellow: '경고 누적', fotmob: '징계' };
+const shortDay = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date}`; };
+
+/** 징계 사유 한 줄 — "퇴장 · 확정 · 11.8 복귀" (폰에서 줄이 갈리지 않게 짧게) */
+export const susNote = (s: Suspension) =>
+  [
+    `${REASON[s.reason]}${s.yellows ? ` ${s.yellows}장` : ''}`,
+    s.confirmed ? '확정' : '예상',
+    s.back ? `${shortDay(s.back.kickoffUtc)} 복귀` : s.confirmed && (s.missed?.length ?? 0) > 1 ? '이후 미정' : '',
+  ].filter(Boolean).join(' · ');
