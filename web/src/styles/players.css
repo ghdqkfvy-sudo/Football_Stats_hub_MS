@@ -337,14 +337,18 @@
 }
 
 /* 카드 배지(레드·옐로) — 흰 바탕은 부상과 같고 테두리만 카드 색 */
-/* 레드·옐로카드 배지 바탕은 흰색이 아니라 **등번호 배지와 같은 포지션 색**(포메이션은 --pc, 목록은 --pos).
-   카드 그림에 흰 테두리를 둘러 빨강(FW) 바탕 위에서도 카드가 보인다. */
-.chipbox__ring .chipbox__no--inj[data-kind='red'], .chipbox__ring .chipbox__no--inj[data-kind='yellow'] {
-  background: var(--pc) !important; box-shadow: 0 1px 5px rgba(0, 0, 0, .5);
+/* 레드·옐로카드 — 배지 바탕 없이 **카드 그 자체**를 등번호 자리에 붙인다(A안).
+   자리 · 중심은 등번호 원과 같고, 카드는 흰 테두리 + 그림자로 띄운다. */
+.chipbox__ring .chipbox__no--card, .pt__hs .pt__no--card {
+  background: none !important; box-shadow: none !important; border: 0 !important; padding: 0;
+  display: grid; place-items: center;
 }
-.pt__hs .pt__no--inj[data-kind='red'], .pt__hs .pt__no--inj[data-kind='yellow'] {
-  background: var(--pos, var(--accent)) !important; box-shadow: none; border: 1.5px solid var(--ink-900);
-}
+.chipbox__ring .chipbox__no--card { width: 19px; height: 19px; }
+.chipbox__ring .chipbox__no--card .cardshape { width: 13px; height: 18px; }
+.pt__hs .pt__no--card { width: 17px; height: 17px; }
+.pt__hs .pt__no--card .cardshape { width: 11px; height: 15px; }
+.cardshape { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)); }
+.injl__card { position: absolute; right: -4px; bottom: -5px; display: grid; }
 .chipbox__no--inj[data-kind='red'] svg, .chipbox__no--inj[data-kind='yellow'] svg { width: 12px; height: 12px; }
 
 /* 카드의 징계 줄 */

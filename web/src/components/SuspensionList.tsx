@@ -1,6 +1,6 @@
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { CardGlyph } from './InjuryMark';
+import { CardShape } from './InjuryMark';
 import { SusWhat } from './DisciplineLines';
 import { susNote } from '../lib/discipline';
 
@@ -36,7 +36,7 @@ export function SuspensionList({ players, onOpen }: { players: PlayerSeason[]; o
           >
             <span className="injl__hs">
               <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={String(p.jersey)} size={34} />
-              <i className="injb" data-kind="red" aria-hidden="true"><CardGlyph color="red" size={10} /></i>
+              <i className="injl__card" aria-hidden="true"><CardShape color="red" w={10} /></i>
             </span>
             <span className="injl__who">
               <b>{p.name}</b>
