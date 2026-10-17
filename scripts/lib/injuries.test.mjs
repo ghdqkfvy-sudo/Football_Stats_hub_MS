@@ -40,6 +40,7 @@ test('returnKo', () => {
   assert.equal(returnKo('A few weeks').ko, '몇 주 뒤 복귀 예상');
   assert.equal(returnKo('Out for the season').ko, '시즌 아웃');
   assert.equal(returnKo('').ko, '복귀 시점 미정');
+  assert.deepEqual(returnKo('Back in training'), { ko: '훈련 복귀', doubtful: false });
   assert.equal(returnKo('Something new').ko, 'Something new');
 });
 

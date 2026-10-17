@@ -57,6 +57,8 @@ export function returnKo(text) {
   const m = t.match(/^(early|mid|late)\s+([a-z]+)(?:\s+(\d{4}))?$/i);
   if (m && MONTH[m[2].toLowerCase()]) return { ko: `${MONTH[m[2].toLowerCase()]}월 ${PART[m[1].toLowerCase()]} 복귀 예상`, doubtful: false };
   if (/^doubtful/i.test(t)) return { ko: '출전 불투명', doubtful: true };
+  /* 2026-10-17 레알 멘디 — 다 나아 훈련에 돌아왔지만 아직 경기엔 안 나온 단계 */
+  if (/back in training/i.test(t)) return { ko: '훈련 복귀', doubtful: false };
   if (/few days/i.test(t)) return { ko: '며칠 뒤 복귀 예상', doubtful: false };
   if (/few weeks/i.test(t)) return { ko: '몇 주 뒤 복귀 예상', doubtful: false };
   if (/few months/i.test(t)) return { ko: '몇 달 뒤 복귀 예상', doubtful: false };
