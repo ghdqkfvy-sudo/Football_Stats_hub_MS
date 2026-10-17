@@ -172,6 +172,57 @@ async function transfermarkt(t) {
   return { status: r.status, bytes: r.body.length, players: names.length, sample: names.slice(0, 5) };
 }
 
+/* ── 8 판타지 게임 (키·횟수 제한 없음, 2026-10-17 추가) ──────
+   판타지는 출전 가능 여부가 게임의 핵심이라 공식 사이트가 부상·징계를 매일 갱신한다. */
+const fantasy = {};
+async function probeFantasy() {
+  /* 프리미어리그 공식 FPL — status(a/d/i/s/u) · news · chance_of_playing */
+  {
+    const r = await hit('https://fantasy.premierleague.com/api/bootstrap-static/');
+    const els = r.json?.elements ?? [];
+    const teams = Object.fromEntries((r.json?.teams ?? []).map((x) => [x.id, x.name]));
+    const flagged = els.filter((e) => e.status && e.status !== 'a');
+    const byTeam = {};
+    for (const e of flagged) byTeam[teams[e.team]] = (byTeam[teams[e.team]] ?? 0) + 1;
+    fantasy.fpl = {
+      status: r.status, players: els.length, flagged: flagged.length, byTeam,
+      sample: flagged.slice(0, 5).map((e) => ({ name: e.web_name, team: teams[e.team], status: e.status, news: e.news, chance: e.chance_of_playing_next_round })),
+    };
+  }
+  /* 라리가 공식 판타지 */
+  {
+    const r = await hit('https://api-fantasy.llt-services.com/api/v3/players?x-lang=es');
+    const list = Array.isArray(r.json) ? r.json : r.json?.players ?? [];
+    const flagged = list.filter((p) => p?.playerStatus && p.playerStatus !== 'ok');
+    fantasy.laliga = {
+      status: r.status, players: list.length, flagged: flagged.length,
+      statuses: list.reduce((o, p) => { const k = p?.playerStatus ?? '?'; o[k] = (o[k] ?? 0) + 1; return o; }, {}),
+      sample: flagged.filter((p) => /real madrid|atl/i.test(p?.team?.name ?? '')).slice(0, 5)
+        .map((p) => ({ name: p.nickname ?? p.name, team: p.team?.name, status: p.playerStatus })),
+      body: r.json ? undefined : clip(r.body, 150),
+    };
+  }
+  /* UEFA 챔스 판타지 — 선수 피드(주소 형식이 시즌마다 바뀌어 몇 개를 시도) */
+  {
+    const tried = [];
+    for (const u of [
+      'https://gaming.uefa.com/en/uclfantasy/services/feeds/players/players_80_en_1.json',
+      'https://gaming.uefa.com/en/uclfantasy/services/feeds/players/players_70_en_1.json',
+      'https://fantasy.uefa.com/api/v1/players?lang=en',
+    ]) {
+      const r = await hit(u);
+      const list = r.json?.data?.value?.playerList ?? r.json?.data ?? (Array.isArray(r.json) ? r.json : null);
+      tried.push(`${u} → ${r.status}${Array.isArray(list) ? ` · ${list.length}명` : ''}`);
+      if (Array.isArray(list) && list.length) {
+        const keys = Object.keys(list[0] ?? {});
+        fantasy.ucl = { status: r.status, players: list.length, keys, sample: clip(list.slice(0, 2), 500) };
+        break;
+      }
+    }
+    fantasy.ucl = { ...(fantasy.ucl ?? {}), tried };
+  }
+}
+
 /* ── 7 API-Football ──────────────────────────────────── */
 const AF_KEY = process.env.API_FOOTBALL_KEY;
 let afStatus = null;
@@ -213,6 +264,10 @@ for (const t of TEAMS) {
   await sleep(800);
 }
 result.apiFootballStatus = afStatus;
+await probeFantasy();
+result.fantasy = fantasy;
+console.log('\n=== 판타지');
+for (const [k, v] of Object.entries(fantasy)) console.log(`  ${k}: ${clip(v, 1500)}`);
 
 await fs.writeFile(OUT, JSON.stringify(result, null, 2));
 console.log(`\n결과 JSON: ${OUT}`);
@@ -235,6 +290,11 @@ const lines = [
     `| ${k} | ${cell(r.espnRoster)} | ${cell(r.espnLeague)} | ${cell(r.espnSummary)} | ${cell(r.sofascore)} | ${cell(r.fotmob)} | ${cell(r.transfermarkt)} | ${cell(r.apiFootball)} |`),
   '',
   `API-Football 계정: ${afStatus ?? '키 없음'}`,
+  '',
+  '### 판타지 게임',
+  `- FPL(프리미어리그): ${fantasy.fpl?.status} · 선수 ${fantasy.fpl?.players ?? 0} · 부상/의심/징계 ${fantasy.fpl?.flagged ?? 0}`,
+  `- 라리가 판타지: ${fantasy.laliga?.status} · 선수 ${fantasy.laliga?.players ?? 0} · 상태 ${clip(fantasy.laliga?.statuses ?? {}, 200)}`,
+  `- UCL 판타지: ${(fantasy.ucl?.tried ?? []).join(' / ')}`,
 ];
 if (process.env.GITHUB_STEP_SUMMARY) await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 console.log('\n' + lines.join('\n'));
