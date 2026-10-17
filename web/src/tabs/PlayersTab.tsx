@@ -5,6 +5,7 @@ import type { SquadData } from '../lib/api';
 import { loadSquad } from '../lib/api';
 import { bestEleven, buildSquad, orderForList, teamCohesion } from '../lib/squad';
 import { discipline } from '../lib/discipline';
+import { seasonFromInjury } from '../lib/injury';
 import { Pitch } from '../components/Pitch';
 import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
@@ -82,7 +83,15 @@ export function PlayersTab({
   }, [marks, xi, players]);
 
   /** 베스트 11(공격→골키퍼) 먼저, 나머지는 선발·출전·득점 순 */
-  const ordered = useMemo(() => orderForList(players, xi.slots), [players, xi]);
+  /* 선수 목록 — 경기에 나온 선수 + 맨 아래에 **시즌 내내 결장한 부상자**(호드리구 · 사비 시몬스 …).
+     라인업 기록이 없어 베스트 11 · 공격 포인트에는 넣지 않고, 목록에서만 출전 0 · 부상 표시로 보인다. */
+  const ordered = useMemo(() => {
+    const ids = new Set(players.map((p) => p.id));
+    const absent = (squad?.injuries ?? [])
+      .filter((x) => !x.espnId || !ids.has(x.espnId))
+      .map(seasonFromInjury);
+    return [...orderForList(players, xi.slots), ...absent];
+  }, [players, xi, squad]);
 
   const leaders = useMemo(
     () =>
