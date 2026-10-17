@@ -598,7 +598,7 @@ export function posByFormation(
   const rows = shape ? slotRows(slotShape, shape) : null;
   if (!rows) return map;
   rows.forEach((row, ri) => {
-    const pos = POS_BY_LINE[lineKind(ri, rows.length)];
+    const pos = POS_BY_LINE[lineKind(ri, rows.length, row.length)];
     for (const abbr of row) if (!map.has(abbr)) map.set(abbr, pos);
   });
   return map;
@@ -806,11 +806,13 @@ function fillByDepth(players: PlayerSeason[], shape: string): { slots: Slot[]; v
 
 export type LineKind = 'GK' | 'DEF' | 'MID' | 'AM' | 'FW';
 
-export function lineKind(rowIdx: number, rowTotal: number): LineKind {
+/* 2선(AM)은 필드 줄이 넷 이상일 때(4-2-3-1 · 3-4-2-1 …)만 있다. 4-4-2 · 4-3-3 · 3-5-2 처럼
+   셋이면 가운데 줄은 그냥 중원이고, 4-1-4-1 의 넷 줄도 2선이 아니라 중원이다(n > 3). */
+export function lineKind(rowIdx: number, rowTotal: number, n = 0): LineKind {
   if (rowIdx === 0) return 'GK';
   if (rowIdx === 1) return 'DEF';
   if (rowIdx === rowTotal - 1) return 'FW';
-  if (rowIdx === rowTotal - 2 && rowTotal >= 4) return 'AM';
+  if (rowIdx === rowTotal - 2 && rowTotal >= 5 && n <= 3) return 'AM';
   return 'MID';
 }
 
@@ -826,7 +828,7 @@ export function lineLabels(kind: LineKind, n: number): string[] {
       1: ['CM'],
       /* 두 명 줄은 2선(AM) 아래의 더블 볼란치다 — 4-2-3-1 의 4·8 번 자리(README) */
       2: ['LDM', 'RDM'],
-      3: ['LM', 'CM', 'RM'],
+      3: ['LCM', 'CM', 'RCM'],
       4: ['LM', 'LCM', 'RCM', 'RM'],
       5: ['LM', 'LCM', 'CM', 'RCM', 'RM'],
     },

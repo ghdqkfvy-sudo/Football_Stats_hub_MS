@@ -76,7 +76,7 @@ export function Pitch({
 
         {Array.from({ length: rowCount }, (_, r) => rowCount - 1 - r).map((r) => {
           const row = slots.filter((s) => s.row === r);
-          const kind = lineKind(r, rowCount);
+          const kind = lineKind(r, rowCount, row.length);
           const labels = lineLabels(kind, row.length);
           return (
             <div className="pitch__row" key={r}>
