@@ -130,11 +130,13 @@
 }
 .chipbox__hs { border-color: transparent; }
 .chipbox__hs.hs--fallback { background: rgba(6,24,14,.72); color: #EAF7EE; }
+/* 등번호 — 두 자리여도 정원(선수 목록 배지와 같은 규칙) · 숫자는 가운데 */
 .chipbox__no {
   position: absolute; right: -3px; bottom: -2px;
-  min-width: 17px; height: 17px; padding: 0 3px; border-radius: 999px;
-  display: grid; place-items: center;
-  font-size: 9.5px; font-weight: 800; color: #06210F; background: var(--pc);
+  width: 19px; height: 19px; padding: 0; border-radius: 50%; box-sizing: border-box;
+  display: grid; place-items: center; line-height: 1;
+  font-size: 9px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  color: #06210F; background: var(--pc);
   box-shadow: 0 1px 5px rgba(0,0,0,.5);
 }
 .chipbox__name {
@@ -308,7 +310,7 @@
   box-shadow: 0 0 0 1px rgba(229, 38, 46, .35), 0 1px 5px rgba(0, 0, 0, .45);
 }
 .pt__hs .pt__no--inj { min-width: 14px; width: 14px; height: 14px; padding: 0; border-radius: 4px; right: -9px; bottom: -4px; }
-.chipbox__ring .chipbox__no--inj { min-width: 17px; width: 17px; padding: 0; border-radius: 5px; }
+.chipbox__ring .chipbox__no--inj { min-width: 17px; width: 17px; height: 17px; padding: 0; border-radius: 5px; }
 .chipbox__no--inj svg { width: 11px; height: 11px; }
 
 /* 카드의 부상 줄 — [＋] 부상 · 11월 중순 복귀 예상 */
