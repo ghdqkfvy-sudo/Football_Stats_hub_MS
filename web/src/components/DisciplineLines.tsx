@@ -25,10 +25,13 @@ export function DisciplineLines({ d }: { d?: Discipline }) {
             <b>출전 정지</b>
             <span className="pdis__what">
               {comp(s.competition).name}
-              {s.match ? ` · ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
+              {(s.missed?.length ?? 0) > 1
+                ? ` · ${s.missed!.length}경기 (${s.missed!.map((m) => when(m.kickoffUtc)).join(', ')})`
+                : s.match ? ` · ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
             </span>
             <small>
               {REASON[s.reason]}{s.yellows ? ` ${s.yellows}장` : ''} · {s.confirmed ? '확정(FotMob)' : '카드 기록으로 예상'}
+              {s.back ? ` · ${when(s.back.kickoffUtc)} 경기부터 출전 가능` : s.confirmed ? ' · 이후 경기는 아직 미정' : ''}
               {s.ret ? ` · 복귀 예상 ${s.ret}` : ''}
             </small>
           </div>

@@ -48,8 +48,8 @@ export function InjuryLine({ inj }: { inj?: Injury }) {
 export function CardGlyph({ color, size = 10 }: { color: 'red' | 'yellow'; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden="true">
-      <rect x="2" y="0.6" width="6.2" height="8.8" rx="1.1" fill={color === 'red' ? '#E5262E' : '#F5C518'}
-        stroke={color === 'red' ? '#B3141A' : '#C99A00'} strokeWidth=".6" transform="rotate(8 5 5)" />
+      <rect x="1.9" y="0.6" width="6.2" height="8.8" rx="1.1" fill={color === 'red' ? '#E5262E' : '#F5C518'}
+        stroke={color === 'red' ? '#B3141A' : '#C99A00'} strokeWidth=".6" />
     </svg>
   );
 }

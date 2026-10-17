@@ -72,6 +72,19 @@ describe('징계 — 대회별', () => {
     expect(d.badge).toBe('red');
   });
 
+  it('FotMob 이 두 경기에 올려 두면 2경기 정지 · 확인 범위 안의 다음 같은 대회 경기가 복귀', () => {
+    const t = [...team, m('L6', 'eng.1', '2026-10-26T15:00Z', 'scheduled'), m('L7', 'eng.1', '2026-11-02T15:00Z', 'scheduled')];
+    const d = discipline([], t, {
+      games: [{ utc: '2026-10-19T15:00:00Z' }, { utc: '2026-10-26T15:00:00Z' }],
+      checkedUntil: '2026-11-02T15:00:00Z',
+    }, NOW);
+    expect(d.sus?.missed?.map((x) => x.id)).toEqual(['L5', 'L6']);
+    expect(d.sus?.back?.id).toBe('L7');
+    /* 확인 범위가 L6 까지면 복귀는 미정 */
+    const d2 = discipline([], t, { games: [{ utc: '2026-10-19T15:00:00Z' }, { utc: '2026-10-26T15:00:00Z' }], checkedUntil: '2026-10-26T15:00:00Z' }, NOW);
+    expect(d2.sus?.back).toBeUndefined();
+  });
+
   it('규정을 모르는 대회(MLS)는 경고 위험을 띄우지 않는다', () => {
     const mls = [m('M1', 'usa.1', '2026-10-01T00:00Z', 'finished'), m('M2', 'usa.1', '2026-10-20T00:00Z', 'scheduled')];
     const d = discipline([g('M1', 'usa.1', '2026-10-01T00:00Z', 4)], mls, undefined, NOW);

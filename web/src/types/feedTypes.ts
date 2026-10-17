@@ -68,7 +68,13 @@ export interface AthleteInfo {
   /** 부상 — FotMob 스쿼드의 injury (2026-10 부터 수집). 없으면 정상 */
   inj?: Injury;
   /** 다음 경기 징계 — FotMob 결장자 type=suspension (경기 시각 utc 로 일정과 맞춘다) */
-  sus?: { ret?: string | null; utc?: string | null; league?: string | null; source?: string };
+  sus?: {
+    ret?: string | null; utc?: string | null; league?: string | null; source?: string;
+    /** 징계로 못 뛰는 경기들 (FotMob 앞으로 4경기 결장자에서) */
+    games?: { utc: string | null; league?: string | null }[];
+    /** 확인한 마지막 경기 시각 — 그 뒤는 정지인지 모른다 */
+    checkedUntil?: string | null;
+  };
 }
 
 export interface Nationality { name?: string; code?: string; flag?: string }
