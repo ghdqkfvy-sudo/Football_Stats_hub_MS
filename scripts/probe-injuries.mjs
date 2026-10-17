@@ -143,8 +143,15 @@ async function sofascore(t) {
 
 /* ── 5 FotMob ────────────────────────────────────────── */
 async function fotmob(t) {
-  const r = await hit(`https://www.fotmob.com/api/teams?id=${t.fm}&ccode3=KOR`);
-  if (!r.json) return { status: r.status, body: clip(r.body, 120) };
+  /* 2026-10-17 첫 회차: /api/teams 는 404 — 주소가 /api/data/... 로 옮겨졌을 수 있어 차례로 시도 */
+  let r;
+  const tried = [];
+  for (const u of [`https://www.fotmob.com/api/data/teams?id=${t.fm}&ccode3=KOR`, `https://www.fotmob.com/api/teams?id=${t.fm}&ccode3=KOR`]) {
+    r = await hit(u);
+    tried.push(`${u.replace('https://www.fotmob.com', '')} → ${r.status}`);
+    if (r.json) break;
+  }
+  if (!r.json) return { status: r.status, tried };
   const groups = r.json?.squad?.squad ?? r.json?.squad ?? [];
   const members = [];
   for (const g of Array.isArray(groups) ? groups : []) members.push(...(g?.members ?? []));
