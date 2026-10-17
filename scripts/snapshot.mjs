@@ -570,6 +570,44 @@ async function coreLineupInfo(leagueSlug, eventId, teamId) {
    그래서 팀 단위로 한 번 받아 두고 선수별 실제 주소를 박아 준다. */
 const rosterPhotoCache = new Map();
 
+/*
+ * 부상 정보 점검(2026-10-17) — ESPN 이 축구에서도 부상을 주는지 모른다.
+ * 이미 받는 팀 로스터 응답의 injuries · status 칸과, 리그 부상 목록 주소가 있는지를
+ * 세어 meta-slow.json 의 injuryProbe 로 남긴다. 화면에는 아직 쓰지 않는다.
+ */
+const injuryProbe = { teams: {}, leagues: {} };
+const clip = (v, n = 300) => {
+  try { const t = JSON.stringify(v); return t.length > n ? `${t.slice(0, n)}…` : t; } catch { return String(v); }
+};
+function probeRosterInjuries(teamKey, flat) {
+  const out = { roster: flat.length, withInjuries: 0, statuses: {}, keys: {}, samples: [] };
+  for (const a of flat) {
+    const st = a?.status?.name ?? a?.status?.type ?? (typeof a?.status === 'string' ? a.status : undefined);
+    if (st) out.statuses[st] = (out.statuses[st] ?? 0) + 1;
+    const inj = Array.isArray(a?.injuries) ? a.injuries : [];
+    if (inj.length) {
+      out.withInjuries++;
+      for (const k of Object.keys(inj[0] ?? {})) out.keys[k] = (out.keys[k] ?? 0) + 1;
+      if (out.samples.length < 3) out.samples.push({ name: a?.displayName ?? a?.fullName, injuries: clip(inj) });
+    }
+  }
+  /* 처음 보는 응답 모양을 알 수 있게, 로스터 선수 한 명이 가진 최상위 칸 이름도 남긴다 */
+  if (flat[0]) out.athleteFields = Object.keys(flat[0]).sort();
+  injuryProbe.teams[teamKey] = out;
+}
+async function probeLeagueInjuries(lg) {
+  if (injuryProbe.leagues[lg]) return;
+  injuryProbe.leagues[lg] = { status: 'pending' };
+  try {
+    const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/injuries`, 1);
+    const list = j?.injuries ?? j?.items ?? [];
+    const n = Array.isArray(list) ? list.reduce((s, t) => s + (Array.isArray(t?.injuries) ? t.injuries.length : 1), 0) : 0;
+    injuryProbe.leagues[lg] = { status: 200, topKeys: Object.keys(j ?? {}), entries: n, sample: clip(Array.isArray(list) ? list[0] : j, 500) };
+  } catch (e) {
+    injuryProbe.leagues[lg] = { status: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /**
  * 로스터 선수의 국적 — 선수 카드의 포지션 옆 국기(2026-10-16 요청).
  * ESPN 로스터는 citizenship(이름) · citizenshipCountry.abbreviation(3글자) · flag.href 를 준다.
@@ -596,6 +634,8 @@ async function teamPhotos(leagueSlug, teamId) {
     if (Array.isArray(a?.items)) flat.push(...a.items);
     else flat.push(a);
   }
+  probeRosterInjuries(key, flat);
+  await probeLeagueInjuries(leagueSlug);
   for (const a of flat) {
     const id = String(a?.id ?? '');
     if (!id) continue;
@@ -2269,6 +2309,10 @@ async function main() {
           gone: [...tsdbGone],
           at: new Date().toISOString(),
         },
+      } : {}),
+      /* 부상 정보 점검 — 로스터를 받은 느린 회차에만 */
+      ...(name === 'meta-slow.json' && Object.keys(injuryProbe.teams).length ? {
+        injuryProbe: { ...injuryProbe, at: new Date().toISOString() },
       } : {}),
     });
   }
