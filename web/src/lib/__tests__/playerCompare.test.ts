@@ -29,7 +29,8 @@ describe('선수 비교', () => {
     const got = compareByComp(a, b);
     expect(got.map((x) => x.competition)).toEqual(['eng.1', 'uefa.champions']);
     expect(got[0].rows.find((r) => r.key === 'minutes')).toMatchObject({ a: 150, b: 270, win: 'b' });
-    expect(got[1].rows.find((r) => r.key === 'apps')).toMatchObject({ a: 2, b: 0, win: 'a' });
+    expect(got[1].rows.find((r) => r.key === 'apps')).toMatchObject({ a: 2, b: 0, win: 'a', subA: '(1선발)', subB: '(0선발)' });
+    expect(got[0].rows.some((r) => r.key === 'starts')).toBe(false);
   });
 
   it('카드는 적은 쪽이 낫다 · 같으면 승자 없음', () => {

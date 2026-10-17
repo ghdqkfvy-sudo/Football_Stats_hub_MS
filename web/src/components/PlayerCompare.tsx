@@ -18,11 +18,11 @@ function Bar({ r }: { r: CompareRow }) {
   const w = (v: number | null) => `${v === null ? 0 : Math.max(4, (v / max) * 100)}%`;
   return (
     <div className="pcmp__row" data-win={r.win ?? undefined}>
-      <b className="num pcmp__v pcmp__v--a">{r.fa}</b>
+      <b className="num pcmp__v pcmp__v--a">{r.fa}{r.subA && <small>{r.subA}</small>}</b>
       <span className="pcmp__bar pcmp__bar--a"><i style={{ width: w(r.a) }} /></span>
       <span className="pcmp__lbl">{r.label}</span>
       <span className="pcmp__bar pcmp__bar--b"><i style={{ width: w(r.b) }} /></span>
-      <b className="num pcmp__v pcmp__v--b">{r.fb}</b>
+      <b className="num pcmp__v pcmp__v--b">{r.fb}{r.subB && <small>{r.subB}</small>}</b>
     </div>
   );
 }
@@ -112,15 +112,21 @@ export function PlayerCompare({ pair, onClose, onChange }: {
             {rows.rate.map((r) => <Bar key={r.key} r={r} />)}
           </div>
 
-          {byComp.map(({ competition: k, rows: cr }) => (
-            <div className="pcmp__sec pcmp__sec--comp" key={k}>
-              <span className="eyebrow pcmp__ch">
-                <CompCrest k={k} size={13} />
-                <span className="m-full">{palette.name(k)}</span><span className="m-short">{mobileName(k)}</span>
-              </span>
-              {cr.map((r) => <Bar key={r.key} r={r} />)}
+          {byComp.length > 0 && (
+            <div className="pcmp__sec">
+              <span className="eyebrow">대회별</span>
+              {/* 대회마다 상자 하나 — 대회 색 띠 + 큰 엠블럼 · 이름으로 시즌 기록과 구분한다 */}
+              {byComp.map(({ competition: k, rows: cr }) => (
+                <div className="pcmp__cbox" key={k} style={{ ['--cc' as string]: palette.color(k) }}>
+                  <div className="pcmp__ch">
+                    <CompCrest k={k} size={18} />
+                    <b><span className="m-full">{palette.name(k)}</span><span className="m-short">{mobileName(k)}</span></b>
+                  </div>
+                  {cr.map((r) => <Bar key={r.key} r={r} />)}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
 
           <div className="pcmp__sec">
             <span className="eyebrow">최근 5경기 출전 시간</span>

@@ -46,7 +46,14 @@
   background: rgba(255, 255, 255, .07); border: 1px solid var(--line-2);
 }
 .pdet__cmp:hover { background: rgba(255, 255, 255, .12); }
-.pdet--card .pdet__cmp { top: 10px; right: 50px; }
+/* 폰 — 첫 상자(요약) 맨 아래 넓은 버튼 */
+.pdet__cmpm {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 800; color: var(--text-hi);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
 
 /* 비교 창 */
 .pcmp { outline: none; }
@@ -79,7 +86,17 @@
 .pcmp__row[data-win='b'] .pcmp__v--b { color: #7FE3FF; }
 .pcmp__row[data-win='b'] .pcmp__bar--b i { background: #7FE3FF; }
 
-.pcmp__ch { display: flex !important; align-items: center; gap: 6px; }
+/* 대회별 — 대회마다 상자, 왼쪽에 대회 색 띠 */
+.pcmp__cbox {
+  margin-top: 8px; padding: 8px 10px 4px; border-radius: 12px;
+  background: color-mix(in srgb, var(--cc) 8%, rgba(255, 255, 255, .02));
+  border: 1px solid color-mix(in srgb, var(--cc) 30%, transparent);
+  box-shadow: inset 3px 0 0 var(--cc);
+}
+.pcmp__ch { display: flex; align-items: center; gap: 8px; padding: 2px 0 6px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+.pcmp__ch b { font-size: 13.5px; font-weight: 800; color: var(--text-hi); }
+.pcmp__cbox .pcmp__row { padding: 6px 0; }
+.pcmp__v small { display: block; margin-top: 1px; font-family: var(--font-body, inherit); font-size: 10px; font-weight: 600; color: var(--text-lo); }
 .pcmp__comp { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 5px 0; font-size: 12px; color: var(--text-hi); }
 .pcmp__comp > span:first-child { text-align: left; }
 .pcmp__comp > span:last-child { text-align: right; }

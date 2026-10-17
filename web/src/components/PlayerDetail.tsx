@@ -60,10 +60,11 @@ export function PlayerDetail({ p, onClose, onCompare }: {
         >
           <div className="sheet__grab" />
           <button className="pdet__x" aria-label="닫기" onClick={close}>✕</button>
-          {onCompare && (
+          {/* 비교 — 넓은 화면은 닫기 옆 작은 버튼, 폰은 첫 상자 아래 넓은 버튼(카드 밖 머리 자리는 가려져 안 보였다) */}
+          {onCompare && !mobile && (
             <button className="pdet__cmp" onClick={() => onCompare(p)} title="다른 선수와 시즌 기록 비교">⇄ 비교</button>
           )}
-          {mobile ? <CardBody p={p} /> : <TableBody p={p} />}
+          {mobile ? <CardBody p={p} onCompare={onCompare} /> : <TableBody p={p} />}
         </div>
       )}
     </div>
@@ -71,11 +72,12 @@ export function PlayerDetail({ p, onClose, onCompare }: {
 }
 
 /** 폰 — 호버 카드와 같은 두 상자 */
-function CardBody({ p }: { p: PlayerSeason }) {
+function CardBody({ p, onCompare }: { p: PlayerSeason; onCompare?: (p: PlayerSeason) => void }) {
   return (
     <div className="pdet__body">
       <div className="pcard__main">
         <PlayerSummary p={p} />
+        {onCompare && <button className="pdet__cmpm" onClick={() => onCompare(p)}>⇄ 다른 선수와 비교</button>}
       </div>
       <BenchLine p={p} />
       <div className="pcard__side">
