@@ -35,6 +35,9 @@ export interface CompareRow {
   higherBetter: boolean;
   /** 더 나은 쪽 — 'a' · 'b' · 같음/비교 불가면 null */
   win: 'a' | 'b' | null;
+  /** 값 아래 작은 글씨 — 대회별 출전의 "4선발" */
+  subA?: string;
+  subB?: string;
 }
 
 const fmt = (v: number | null, digits = 0, unit = '') =>
@@ -69,8 +72,11 @@ export function compareRows(a: PlayerSeason, b: PlayerSeason): { season: Compare
   };
 }
 
+/** 출전 칸에 선발 수를 붙인다 — 경기 수 아래 "(4선발)" (좁은 칸에서 잘리지 않게 두 줄) */
+const withStarts = (r: CompareRow, sa: number, sb: number): CompareRow => ({ ...r, subA: `(${sa}선발)`, subB: `(${sb}선발)` });
+
 /**
- * 대회별 비교 — 대회마다 출전 · 선발 · 출전 시간 · 골 · 도움.
+ * 대회별 비교 — 대회마다 출전(선발) · 출전 시간 · 골 · 도움.
  * 출전 시간은 대회별 집계가 없어 경기별 기록(recent)에서 그 대회 경기만 더한다.
  * 대회 순서: 두 선수 출전 합이 많은 순(보통 리그 → 챔스 → 컵).
  */
@@ -85,8 +91,8 @@ export function compareByComp(a: PlayerSeason, b: PlayerSeason): { competition: 
         competition: k,
         total: (x?.apps ?? 0) + (y?.apps ?? 0),
         rows: [
-          row('apps', '출전', x?.apps ?? 0, y?.apps ?? 0),
-          row('starts', '선발', x?.starts ?? 0, y?.starts ?? 0),
+          /* 출전 "6 (4선발)" — 선발은 따로 줄을 두지 않고 경기 수 옆에 */
+          withStarts(row('apps', '출전', x?.apps ?? 0, y?.apps ?? 0), x?.starts ?? 0, y?.starts ?? 0),
           row('minutes', '출전 시간', mins(a, k), mins(b, k), { unit: '분' }),
           row('goals', '골', x?.goals ?? 0, y?.goals ?? 0),
           row('assists', '도움', x?.assists ?? 0, y?.assists ?? 0),
