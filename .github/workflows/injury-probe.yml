@@ -1,0 +1,33 @@
+name: 점검 — 부상 정보 소스 비교
+
+# 부상 선수 정보를 어디서 받을지 정하려고 후보 소스를 한 번에 불러 본다(2026-10-17).
+# 사이트·데이터 파일은 건드리지 않는다 — 결과는 작업 요약과 아티팩트(JSON)로만 남는다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-injuries.mjs'
+      - '.github/workflows/injury-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 소스별 부상 정보 불러 보기
+        env:
+          # 있으면 API-Football 도 시험한다(저장소 Secret). 없으면 "키 없음" 으로 남는다
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        run: node scripts/probe-injuries.mjs web/public/data "$RUNNER_TEMP/injury-probe.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: injury-probe
+          path: ${{ runner.temp }}/injury-probe.json
