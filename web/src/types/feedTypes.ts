@@ -89,10 +89,10 @@ export interface Injury {
   doubtful?: boolean;
   /** 장기 부상 — 복귀 예상까지 4주 넘게 남음 · 몇 달 · 시즌 아웃 */
   long?: boolean;
-  /** FotMob 부상 종류 번호 (이름 표는 아직 없다) */
+  /** FotMob 부상 종류 번호 */
   kind?: string | null;
-  /** 이 상태를 처음 본 시각 — 그 뒤 경기에 뛰었으면 지난 정보로 보고 표시하지 않는다 */
-  since?: string | null;
+  /** 부상명 — 번호를 한국어로(햄스트링 · 십자인대 …), 표에 없는 번호는 FotMob 영어 이름 */
+  injName?: string | null;
 }
 
 export interface Lineup {

@@ -8,6 +8,12 @@
 }
 .sec__title { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.015em; white-space: nowrap; }
 .sec__note { font-size: 11px; color: var(--text-lo); }
+/* 월 경기 설명 — PC 는 한 줄(가운뎃점), 폰은 문장마다 한 줄씩. 낱말 중간에서 끊기지 않게 */
+.sch__note > span + span::before { content: ' · '; }
+@media (max-width: 640px) {
+  .sch__note > span { display: block; word-break: keep-all; }
+  .sch__note > span + span::before { content: none; }
+}
 
 /* ── 다음 경기 히어로 ───────────────────────────────
    레퍼런스: 패널을 칠하지 않고 얇은 골드 테두리만 두른다.

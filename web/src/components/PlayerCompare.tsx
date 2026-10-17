@@ -37,7 +37,7 @@ function Head({ p, side }: { p: PlayerSeason; side: 'a' | 'b' }) {
         <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
         <span className="num">#{p.jersey}</span>
       </span>
-      {p.inj && <small className="pcmp__st" data-kind={p.inj.doubtful ? 'doubt' : 'inj'}>{p.inj.doubtful ? '출전 불투명' : `부상 · ${p.inj.ko}`}</small>}
+      {p.inj && <small className="pcmp__st" data-kind={p.inj.doubtful ? 'doubt' : 'inj'}>{p.inj.doubtful ? `출전 불투명${p.inj.injName ? ` · ${p.inj.injName}` : ''}` : `${p.inj.injName ?? '부상'} · ${p.inj.ko}`}</small>}
       {!p.inj && p.disc?.sus && <small className="pcmp__st" data-kind="red">출전 정지</small>}
     </div>
   );

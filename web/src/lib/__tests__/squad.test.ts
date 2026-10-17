@@ -410,21 +410,3 @@ describe('lineKind — 줄 성격', () => {
     expect(kinds([4, 1, 4, 1])).toEqual(['GK', 'DEF', 'MID', 'MID', 'FW']);
   });
 });
-
-describe('buildSquad — 지난 부상 정보', () => {
-  it('부상 상태를 처음 본 뒤 열린 경기에 뛰었으면 표시를 지운다 (안 뛰었거나 그 전 경기면 둔다)', () => {
-    const inj = { ret: 'Doubtful', ko: '출전 불투명', doubtful: true, since: '2026-09-05T07:00:00.000Z' };
-    const { players } = buildSquad(
-      [match('3'), match('6')],
-      {
-        3: lineup([['1', 1, true, null, null, 0, 0, 'CM'], ['2', 2, true, null, null, 0, 0, 'CM']]),
-        6: lineup([['1', 1, true, null, null, 0, 0, 'CM'], ['2', 0, false, null, null, 0, 0, 'SUB']]),
-      },
-      { 1: { ...info('Played'), inj }, 2: { ...info('Benched'), inj } },
-      '363',
-    );
-    const by = Object.fromEntries(players.map((p) => [p.name, p]));
-    expect(by.Played.inj).toBeUndefined();
-    expect(by.Benched.inj?.doubtful).toBe(true);
-  });
-});

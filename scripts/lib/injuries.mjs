@@ -103,21 +103,27 @@ export function isLongTerm(text, now = new Date()) {
   return at - now.getTime() > LONG_DAYS * 86_400_000;
 }
 
+/**
+ * FotMob 부상 번호 → 한국어 부상명. 팀 스쿼드는 번호만 주고, 이름은 선수 API(playerData)의
+ * injuryInformation.name 에 있다(2026-10-17 점검 — 9팀 부상자 36명, 번호와 이름이 1:1).
+ * 표에 없는 번호는 수집기가 선수 API 로 영어 이름을 받아 와 그대로 쓴다(injury.name).
+ * 저장 칸은 injName — 부상자 명단 한 건에는 선수 이름(name)이 이미 있다.
+ */
+export const INJURY_KO = {
+  14: '무릎', 21: '발', 30: '발목', 42: '햄스트링', 45: '허리', 69: '허벅지', 71: '인대',
+  73: '아킬레스건', 74: '다리', 76: '십자인대', 83: '팔', 92: '질병', 104: '복부',
+  121: '컨디션 난조', 130: '타박상',
+};
+export const injuryName = (injury) => INJURY_KO[Number(injury?.id)] ?? (injury?.name ? String(injury.name) : null);
+
 /** 수집기가 저장하는 부상 한 건 */
 export function injuryRecord(m, now = new Date()) {
   const ret = m?.injury?.expectedReturn ?? null;
   const r = returnKo(ret);
-  return { ret, ko: r.ko, doubtful: r.doubtful, long: !r.doubtful && isLongTerm(ret, now), kind: m?.injury?.id ?? null };
-}
-
-/**
- * 이 부상 상태를 처음 본 때 — 지난 회차와 상태(복귀 문구 · 종류)가 같으면 그때 시각을 잇는다.
- * 앱은 이 시각 **뒤에 열린 경기에 뛴** 선수의 부상 표시를 지운다 — FotMob 이 갱신을 늦게 해서
- * "출전 불투명" 인 채로 경기에 나온 선수들(2026-10-17 리버풀: 소보슬라이 · 이사크 · 학포)이 있었다.
- */
-export function carrySince(cur, prev, nowIso) {
-  const same = prev && cur && (prev.ret ?? null) === (cur.ret ?? null) && String(prev.kind ?? '') === String(cur.kind ?? '');
-  return same && prev.since ? prev.since : nowIso;
+  return {
+    ret, ko: r.ko, doubtful: r.doubtful, long: !r.doubtful && isLongTerm(ret, now),
+    kind: m?.injury?.id ?? null, injName: injuryName(m?.injury),
+  };
 }
 
 /**

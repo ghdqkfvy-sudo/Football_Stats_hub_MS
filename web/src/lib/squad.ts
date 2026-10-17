@@ -257,9 +257,6 @@ export function buildSquad(
          스쿼드가 비어 보인다(루닌이 7경기 전부 미출전이라 사라졌었다).
          출전 0 으로 목록 맨 아래에 남고, 베스트 11 후보에서는 빠진다. */
       if (mins === 0) continue;
-      /* 부상 표시를 처음 본 뒤에 열린 경기에 뛰었다 — FotMob 이 아직 안 고친 지난 정보다
-         (2026-10-17 리버풀: "출전 불투명" 셋이 그날 경기에 그대로 나왔다) */
-      if (p.inj?.since && Date.parse(m.kickoffUtc) > Date.parse(p.inj.since)) p.inj = undefined;
 
       /* 라인업이 선수별 골·도움을 들고 있으면 그걸 쓴다(ESPN 집계 원본).
          없을 때만 예전처럼 득점 이벤트의 이름을 맞춰 본다 — 표기가 달라

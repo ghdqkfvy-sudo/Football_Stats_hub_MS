@@ -66,8 +66,11 @@ export function InjuryList({ list, players, onOpen }: {
                 </span>
               </span>
               <span className="injl__ret">
-                <b>{x.doubtful ? '출전 불투명' : x.ko}</b>
-                {x.long && <em className="pinj__long">장기</em>}
+                <span className="injl__retl">
+                  <b>{x.doubtful ? '출전 불투명' : x.ko}</b>
+                  {x.long && <em className="pinj__long">장기</em>}
+                </span>
+                {x.injName && <small className="injl__what">{x.injName}</small>}
               </span>
             </li>
           );
