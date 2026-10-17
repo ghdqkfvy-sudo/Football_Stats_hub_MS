@@ -134,3 +134,51 @@ export function squadSize(json) {
   const groups = json?.squad?.squad ?? json?.squad ?? [];
   return (Array.isArray(groups) ? groups : []).reduce((s, g) => s + (g?.members?.length ?? 0), 0);
 }
+
+/* ── 징계 — FotMob 다음 경기 matchDetails 의 결장자(unavailable) ──
+   2026-10-17 점검: 결장자 type 이 injury / suspension 으로 나뉘어 온다(토트넘 · 리버풀 1명씩).
+   결장자 목록에는 두 팀이 다 들어 있어서, 우리 팀 쪽만 골라야 한다. */
+
+/** FotMob 팀 응답에서 다음 경기 id (어느 깊이에 있든) */
+export function nextMatchId(json) {
+  const seen = new Set();
+  const walk = (o, d) => {
+    if (!o || typeof o !== 'object' || d > 6 || seen.has(o)) return undefined;
+    seen.add(o);
+    if (o.nextMatch?.id != null) return String(o.nextMatch.id);
+    for (const v of Object.values(o)) { const f = walk(v, d + 1); if (f) return f; }
+    return undefined;
+  };
+  return walk(json, 0) ?? null;
+}
+
+/**
+ * 경기 상세 → 우리 팀(fm) 쪽 징계 결장자.
+ * lineup.homeTeam / awayTeam 중 id 가 fm 인 쪽의 unavailable 에서 type 이 suspension 인 것.
+ * 팀을 못 가리면(모양이 다름) 빈 배열 — 상대 팀 선수를 우리 선수로 지어내지 않는다.
+ */
+export function suspendedFrom(details, fm) {
+  const lineup = details?.content?.lineup ?? details?.lineup;
+  const sides = [lineup?.homeTeam, lineup?.awayTeam].filter(Boolean);
+  const mine = sides.find((t) => String(t?.id) === String(fm));
+  if (!mine) return [];
+  return (mine.unavailable ?? [])
+    .filter((x) => String(x?.unavailability?.type ?? '').toLowerCase() === 'suspension')
+    .map((x) => ({
+      name: String(x?.name ?? ''),
+      id: x?.id != null ? String(x.id) : null,
+      /* 알려진 칸만 옮기고, 처음 보는 칸은 raw 로 남긴다(날짜가 있으면 화면이 쓴다) */
+      ret: x?.unavailability?.expectedReturn ?? null,
+      raw: x?.unavailability ?? null,
+    }))
+    .filter((x) => x.name);
+}
+
+/** 경기 상세의 경기 시각 · 대회 이름 */
+export function matchInfo(details) {
+  const g = details?.general ?? {};
+  return {
+    utc: g.matchTimeUTCDate ?? g.matchTimeUTC ?? null,
+    league: g.leagueName ?? g.parentLeagueName ?? null,
+  };
+}

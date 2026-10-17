@@ -43,3 +43,31 @@ export function InjuryLine({ inj }: { inj?: Injury }) {
     </div>
   );
 }
+
+/** 카드 모양 — 흰 바탕 배지 안의 레드(출전 정지) · 옐로(경고 1장 남음) */
+export function CardGlyph({ color, size = 10 }: { color: 'red' | 'yellow'; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden="true">
+      <rect x="2" y="0.6" width="6.2" height="8.8" rx="1.1" fill={color === 'red' ? '#E5262E' : '#F5C518'}
+        stroke={color === 'red' ? '#B3141A' : '#C99A00'} strokeWidth=".6" transform="rotate(8 5 5)" />
+    </svg>
+  );
+}
+
+/**
+ * 등번호 배지 자리 — 우선순위: 다음 경기 출전 정지(레드카드) → 부상(십자가) → 출전 불투명(물음표)
+ * → 다음 경기 대회에서 경고 1장 남음(옐로카드) → 등번호.
+ */
+export function NumberBadge({ p, cls, title }: {
+  p: { jersey?: number; inj?: Injury; disc?: { badge?: 'red' | 'yellow' } };
+  cls: string;
+  title?: (kind: string) => string | undefined;
+}) {
+  const kind = p.disc?.badge === 'red' ? 'red' : p.inj ? (p.inj.doubtful ? 'doubt' : 'inj') : p.disc?.badge === 'yellow' ? 'yellow' : null;
+  if (!kind) return p.jersey !== undefined ? <span className={`${cls} num`}>{p.jersey}</span> : null;
+  return (
+    <span className={`${cls} ${cls}--inj`} data-kind={kind} data-doubt={kind === 'doubt' || undefined} title={title?.(kind)}>
+      {kind === 'red' || kind === 'yellow' ? <CardGlyph color={kind} /> : <InjuryGlyph inj={p.inj!} />}
+    </span>
+  );
+}

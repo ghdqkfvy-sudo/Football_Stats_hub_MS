@@ -38,7 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore } from './lib/sofascore.mjs';
-import { injuredMembers, injuryList, injuryRecord, matchInjured, squadSize } from './lib/injuries.mjs';
+import { injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -576,19 +576,36 @@ const rosterPhotoCache = new Map();
  * 9팀 모두 답한 유일한 곳이다(scripts/probe-injuries.mjs). 주소가 바뀐 적이 있어(/api/teams →
  * /api/data/teams) 응답이 이상하면 null — 그 회차는 지난 회차 값을 그대로 둔다.
  */
-const injuryStats = { ok: 0, failed: 0, matched: 0, unmatched: [] };
+const injuryStats = { ok: 0, failed: 0, matched: 0, unmatched: [], suspended: 0 };
+const FOTMOB_HEADERS = { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' };
+async function fotmobJson(path) {
+  const res = await fetch(`https://www.fotmob.com/api/data/${path}`, { headers: FOTMOB_HEADERS, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+/**
+ * 팀의 부상 선수 + 다음 경기 징계 결장자.
+ * 징계는 다음 경기 상세(matchDetails)의 우리 팀 결장자 중 type=suspension (2026-10-17 점검으로 확인).
+ * 징계 쪽이 실패해도 부상은 살린다(suspended: null = 이번 회차는 모름).
+ */
 async function fotmobInjured(fm) {
   if (!fm) return null;
   try {
-    const res = await fetch(`https://www.fotmob.com/api/data/teams?id=${fm}&ccode3=KOR`, {
-      headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const j = await res.json();
+    const j = await fotmobJson(`teams?id=${fm}&ccode3=KOR`);
     if (squadSize(j) < 15) throw new Error(`스쿼드 ${squadSize(j)}명 — 응답 모양이 바뀐 듯`);
     injuryStats.ok++;
-    return injuredMembers(j);
+    let suspended = null;
+    const next = nextMatchId(j);
+    if (next) {
+      try {
+        const md = await fotmobJson(`matchDetails?matchId=${next}`);
+        const info = matchInfo(md);
+        suspended = suspendedFrom(md, fm).map((x) => ({ ...x, utc: info.utc, league: info.league }));
+      } catch (e) {
+        note(`FotMob 다음 경기(${next})`, `${String(e).split('\n')[0]} — 징계는 이번 회차 모름`);
+      }
+    }
+    return Object.assign(injuredMembers(j), { suspended });
   } catch (e) {
     injuryStats.failed++;
     note(`FotMob 부상(${fm})`, `${String(e).split('\n')[0]} — 지난 회차 값을 유지`);
@@ -601,9 +618,11 @@ async function prevInjuries(slug) {
     const j = JSON.parse(await readFile(join(OUT, `squad-${slug}.json`), 'utf8'));
     return {
       byId: new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.inj).map(([id, a]) => [id, a.inj])),
+      /* 징계는 경기 시각(utc)을 들고 있어서, 지난 경기 것이면 앱이 알아서 무시한다 */
+      susById: new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.sus).map(([id, a]) => [id, a.sus])),
       list: Array.isArray(j?.injuries) ? j.injuries : null,
     };
-  } catch { return { byId: new Map(), list: null }; }
+  } catch { return { byId: new Map(), susById: new Map(), list: null }; }
 }
 
 /*
@@ -2229,6 +2248,13 @@ async function main() {
           const hits = matchInjured(injured, athletes);
           for (const [id, m] of hits) athletes[id].inj = injuryRecord(m);
           injuries = injuryList(injured, hits);
+          /* 다음 경기 징계 — FotMob 확정. 대회 구분은 앱이 일정과 맞춰 한다(경기 시각) */
+          if (injured.suspended) {
+            for (const [id, x] of matchInjured(injured.suspended, athletes)) {
+              athletes[id].sus = { ret: x.ret, utc: x.utc, league: x.league, raw: x.raw, source: 'fotmob' };
+              injuryStats.suspended++;
+            }
+          }
           injuryStats.matched += hits.size;
           const got = new Set([...hits.values()]);
           for (const m of injured) if (!got.has(m)) injuryStats.unmatched.push(`${t.slug}:${m.name}`);
@@ -2236,6 +2262,7 @@ async function main() {
         } else {
           const prev = await prevInjuries(t.slug);
           for (const [id, inj] of prev.byId) if (athletes[id]) athletes[id].inj = inj;
+          for (const [id, sus] of prev.susById) if (athletes[id]) athletes[id].sus = sus;
           injuries = prev.list;
         }
       }
