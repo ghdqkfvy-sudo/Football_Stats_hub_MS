@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { injuredMembers, injuryList, isLongTerm, matchInjured, normName, returnKo, squadSize } from './injuries.mjs';
+import { injuredMembers, injuryList, isLongTerm, matchInfo, matchInjured, nextMatchId, normName, returnKo, squadSize, suspendedFrom } from './injuries.mjs';
 
 test('normName: 악센트·대소문자·기호', () => {
   assert.equal(normName('Álex Baena'), 'alex baena');
@@ -80,4 +80,28 @@ test('injuryList: 불투명 → 단기 → 장기, 우리 선수면 espnId', () 
   assert.equal(list[2].jersey, 7);
   assert.equal(list[0].doubtful, true);
   assert.equal(list[0].long, false);
+});
+
+test('nextMatchId: 어느 깊이에 있든', () => {
+  assert.equal(nextMatchId({ overview: { nextMatch: { id: 5795484 } } }), '5795484');
+  assert.equal(nextMatchId({ fixtures: { allFixtures: { nextMatch: { id: 1 } } } }), '1');
+  assert.equal(nextMatchId({}), null);
+});
+
+test('suspendedFrom: 우리 팀 쪽 징계만 (상대 팀 · 부상은 뺀다)', () => {
+  const details = {
+    general: { matchTimeUTCDate: '2026-10-19T19:00:00Z', leagueName: 'Premier League' },
+    content: { lineup: {
+      homeTeam: { id: 8586, unavailable: [
+        { id: 1, name: 'Cristian Romero', unavailability: { type: 'suspension', expectedReturn: 'Late October 2026' } },
+        { id: 2, name: 'Xavi Simons', unavailability: { type: 'injury', expectedReturn: 'Early February 2027' } },
+      ] },
+      awayTeam: { id: 9825, unavailable: [{ id: 3, name: 'Other Guy', unavailability: { type: 'suspension' } }] },
+    } },
+  };
+  const got = suspendedFrom(details, 8586);
+  assert.deepEqual(got.map((x) => x.name), ['Cristian Romero']);
+  assert.equal(got[0].ret, 'Late October 2026');
+  assert.deepEqual(suspendedFrom(details, 1234), []);
+  assert.deepEqual(matchInfo(details), { utc: '2026-10-19T19:00:00Z', league: 'Premier League' });
 });

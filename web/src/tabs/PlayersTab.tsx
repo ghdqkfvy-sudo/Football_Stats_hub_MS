@@ -4,6 +4,7 @@ import type { Match } from '../lib/types';
 import type { SquadData } from '../lib/api';
 import { loadSquad } from '../lib/api';
 import { bestEleven, buildSquad, orderForList, teamCohesion } from '../lib/squad';
+import { discipline } from '../lib/discipline';
 import { Pitch } from '../components/Pitch';
 import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
@@ -57,9 +58,14 @@ export function PlayersTab({
   /* 일정이 아직 안 왔을 때(matchesLoading)도 불러오는 중 — 경기 0개로 계산하면 같은 안내가 뜬다 */
   const loadingSquad = squadOf?.team !== target.espnTeamId || matchesLoading;
 
-  const { players, departed, formation, covered, formationTally, slotShape } = useMemo(
+  const { players: built, departed, formation, covered, formationTally, slotShape } = useMemo(
     () => buildSquad(matches, squad?.lineups ?? {}, squad?.athletes ?? {}, target.espnTeamId),
     [matches, squad, target.espnTeamId],
+  );
+  /* 징계 — 대회별 경고·퇴장 + FotMob 확정(squad 파일의 sus)을 팀 일정과 맞춰 붙인다 */
+  const players = useMemo(
+    () => built.map((p) => ({ ...p, disc: discipline(p.recent, matches, squad?.athletes?.[p.id]?.sus, undefined, target.espnTeamId) })),
+    [built, matches, squad, target.espnTeamId],
   );
 
   const xi = useMemo(

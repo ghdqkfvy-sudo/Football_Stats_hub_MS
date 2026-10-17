@@ -1,7 +1,7 @@
 import { lineKind, lineLabels, LINE_COLOR, type PlayerSeason, type Slot } from '../lib/squad';
 import { Headshot } from './Headshot';
-import { InjuryGlyph } from './InjuryMark';
-import { injuryTitle } from '../lib/injury';
+import { NumberBadge } from './InjuryMark';
+import { badgeTitle } from '../lib/injury';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
 import { KorFlag } from './KorFlag';
@@ -156,10 +156,8 @@ function PlayerChip({
           size={44}
           className="chipbox__hs"
         />
-        {/* 부상이면 등번호 대신 흰 바탕 빨간 십자가 */}
-        {p.inj ? (
-          <span className="chipbox__no chipbox__no--inj" data-doubt={p.inj.doubtful || undefined} title={injuryTitle(p.inj)}><InjuryGlyph inj={p.inj} /></span>
-        ) : p.jersey !== undefined && <span className="chipbox__no num">{p.jersey}</span>}
+        {/* 등번호 자리 — 출전 정지(레드카드) · 부상(십자가) · 출전 불투명(물음표) · 경고 위험(옐로카드) */}
+        <NumberBadge p={p} cls="chipbox__no" title={(k) => badgeTitle(p, k)} />
         {ko && <KorFlag className="chipbox__flag" />}
       </span>
       <span className="chipbox__name">{last}</span>

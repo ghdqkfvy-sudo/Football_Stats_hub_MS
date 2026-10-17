@@ -67,6 +67,8 @@ export interface AthleteInfo {
   nat?: Nationality;
   /** 부상 — FotMob 스쿼드의 injury (2026-10 부터 수집). 없으면 정상 */
   inj?: Injury;
+  /** 다음 경기 징계 — FotMob 결장자 type=suspension (경기 시각 utc 로 일정과 맞춘다) */
+  sus?: { ret?: string | null; utc?: string | null; league?: string | null; source?: string };
 }
 
 export interface Nationality { name?: string; code?: string; flag?: string }

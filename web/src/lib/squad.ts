@@ -8,6 +8,7 @@
  */
 import type { Match } from './types';
 import type { AthleteInfo, Injury, Lineup, Nationality } from '../types/feedTypes';
+import type { Discipline } from './discipline';
 
 export interface CompSplit {
   competition: string;
@@ -43,6 +44,8 @@ export interface PlayerSeason {
   nat?: Nationality;
   /** 부상 — 등번호 배지가 흰 바탕 빨간 십자가로 바뀐다 */
   inj?: Injury;
+  /** 징계 — PlayersTab 이 일정과 함께 계산해 붙인다(lib/discipline) */
+  disc?: Discipline;
   /** formationPlace → 선발 횟수 */
   slots: Record<number, number>;
   modalSlot: number;
