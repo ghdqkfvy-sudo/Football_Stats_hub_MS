@@ -85,6 +85,18 @@ describe('징계 — 대회별', () => {
     expect(d2.sus?.back).toBeUndefined();
   });
 
+  it('정지 경기가 지나가면 남은 경기 수가 줄고, 다 지나면 정지가 사라진다', () => {
+    const t = [...team, m('L6', 'eng.1', '2026-10-26T15:00Z', 'scheduled'), m('L7', 'eng.1', '2026-11-02T15:00Z', 'scheduled')];
+    const fm = { games: [{ utc: '2026-10-19T15:00:00Z' }, { utc: '2026-10-26T15:00:00Z' }, { utc: '2026-11-02T15:00:00Z' }] };
+    expect(discipline([], t, fm, NOW).sus?.missed?.length).toBe(3);
+    /* L5 가 끝난 뒤 */
+    const t2 = t.map((x) => (x.id === 'L5' ? { ...x, status: 'finished' as const } : x));
+    expect(discipline([], t2, fm, Date.parse('2026-10-20T00:00:00Z')).sus?.missed?.length).toBe(2);
+    /* 셋 다 끝난 뒤 */
+    const t3 = t.map((x) => (['L5', 'L6', 'L7'].includes(x.id) ? { ...x, status: 'finished' as const } : x));
+    expect(discipline([], t3, fm, Date.parse('2026-11-03T00:00:00Z')).sus).toBeUndefined();
+  });
+
   it('규정을 모르는 대회(MLS)는 경고 위험을 띄우지 않는다', () => {
     const mls = [m('M1', 'usa.1', '2026-10-01T00:00Z', 'finished'), m('M2', 'usa.1', '2026-10-20T00:00Z', 'scheduled')];
     const d = discipline([g('M1', 'usa.1', '2026-10-01T00:00Z', 4)], mls, undefined, NOW);
