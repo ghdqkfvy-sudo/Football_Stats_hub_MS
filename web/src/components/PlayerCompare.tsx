@@ -63,7 +63,7 @@ function Recent({ p }: { p: PlayerSeason }) {
  * 팀 내 선수 비교 창 — 두 선수의 시즌 기록을 좌우로.
  *  · 시즌 기록(출전 · 선발 · 시간 · 골 · 도움 · 공격 포인트)
  *  · 90분당 · 선발률 · 카드(적을수록 좋다)
- *  · 대회별(대회마다 출전 · 선발 · 시간 · 골 · 도움) · 최근 5경기 출전 시간 · 부상/징계 상태
+ *  · 대회별(대회마다 한 줄: 경기(선발) · 시간 · 골 · 도움) · 최근 5경기 출전 시간 · 부상/징계 상태
  * 폰은 바텀시트, 넓은 화면은 가운데 창(선수 상세와 같은 틀).
  */
 export function PlayerCompare({ pair, onClose, onChange }: {
@@ -115,16 +115,30 @@ export function PlayerCompare({ pair, onClose, onChange }: {
           {byComp.length > 0 && (
             <div className="pcmp__sec">
               <span className="eyebrow">대회별</span>
-              {/* 대회마다 상자 하나 — 대회 색 띠 + 큰 엠블럼 · 이름으로 시즌 기록과 구분한다 */}
-              {byComp.map(({ competition: k, rows: cr }) => (
-                <div className="pcmp__cbox" key={k} style={{ ['--cc' as string]: palette.color(k) }}>
-                  <div className="pcmp__ch">
-                    <CompCrest k={k} size={18} />
-                    <b><span className="m-full">{palette.name(k)}</span><span className="m-short">{mobileName(k)}</span></b>
+              {/* 대회마다 한 줄 — 왼쪽/오른쪽에 "6경기 (4선발)" · "531분 · 2G 3A", 가운데 대회 (칸을 적게 쓰게) */}
+              {byComp.map(({ competition: k, rows: cr }) => {
+                const v = (key: string) => cr.find((r) => r.key === key)!;
+                const side = (s2: 'a' | 'b') => {
+                  const apps = v('apps'), mins = v('minutes'), g = v('goals'), as = v('assists');
+                  const val = (r: CompareRow) => (s2 === 'a' ? r.a : r.b) ?? 0;
+                  const won = (r: CompareRow) => r.win === s2 || undefined;
+                  return (
+                    <span className="pcmp__cs" data-side={s2}>
+                      <span><b data-win={won(apps)}>{val(apps)}</b>경기 <small>({s2 === 'a' ? apps.subA?.slice(1, -1) : apps.subB?.slice(1, -1)})</small></span>
+                      <span>
+                        <b data-win={won(mins)}>{val(mins)}</b>분 · <b data-win={won(g)}>{val(g)}</b>G <b data-win={won(as)}>{val(as)}</b>A
+                      </span>
+                    </span>
+                  );
+                };
+                return (
+                  <div className="pcmp__crow" key={k} style={{ ['--cc' as string]: palette.color(k) }}>
+                    {side('a')}
+                    <span className="pcmp__cname"><CompCrest k={k} size={16} /><span>{mobileName(k)}</span></span>
+                    {side('b')}
                   </div>
-                  {cr.map((r) => <Bar key={r.key} r={r} />)}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
