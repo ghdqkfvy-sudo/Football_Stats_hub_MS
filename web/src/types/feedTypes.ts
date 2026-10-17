@@ -91,6 +91,8 @@ export interface Injury {
   long?: boolean;
   /** FotMob 부상 종류 번호 (이름 표는 아직 없다) */
   kind?: string | null;
+  /** 이 상태를 처음 본 시각 — 그 뒤 경기에 뛰었으면 지난 정보로 보고 표시하지 않는다 */
+  since?: string | null;
 }
 
 export interface Lineup {

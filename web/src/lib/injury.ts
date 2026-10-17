@@ -13,6 +13,15 @@ export function badgeTitle(p: { inj?: Injury; disc?: Discipline }, kind: string)
   return p.inj ? injuryTitle(p.inj) : undefined;
 }
 
+/** 부상자 명단에서 지난 정보(표시를 처음 본 뒤 경기에 뛴 선수 — squad.ts 가 inj 를 지운다)를 뺀다 */
+export function liveInjuries(list: InjuryEntry[], players: PlayerSeason[]): InjuryEntry[] {
+  const byId = new Map(players.map((p) => [p.id, p]));
+  return list.filter((x) => {
+    const p = x.espnId ? byId.get(x.espnId) : undefined;
+    return !p || !!p.inj;
+  });
+}
+
 export const fotmobImage = (id: string) => `https://images.fotmob.com/image_resources/playerimages/${id}.png`;
 
 /**

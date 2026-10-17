@@ -38,7 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
-import { groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
+import { carrySince, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
 /** 지금 고른 사진의 등급 (없으면 0) */
@@ -2263,8 +2263,15 @@ async function main() {
         const injured = await fotmobInjured(t.fm);
         if (injured) {
           const hits = matchInjured(injured, athletes);
-          for (const [id, m] of hits) athletes[id].inj = injuryRecord(m);
-          injuries = injuryList(injured, hits);
+          /* 상태를 처음 본 시각(since)을 지난 회차에서 잇는다 — 앱이 그 뒤 경기에 뛴 선수의 표시를 지운다 */
+          const before = await prevInjuries(t.slug);
+          const nowIso = new Date().toISOString();
+          for (const [id, m] of hits) {
+            const inj = injuryRecord(m);
+            athletes[id].inj = { ...inj, since: carrySince(inj, before.byId.get(id), nowIso) };
+          }
+          const prevByFm = new Map((before.list ?? []).filter((x) => x?.fm).map((x) => [String(x.fm), x]));
+          injuries = injuryList(injured, hits).map((x) => ({ ...x, since: carrySince(x, prevByFm.get(String(x.fm)), nowIso) }));
           /* 다음 경기 징계 — FotMob 확정. 대회 구분은 앱이 일정과 맞춰 한다(경기 시각) */
           if (injured.suspended) {
             for (const [id, x] of matchInjured(injured.suspended, athletes)) {
