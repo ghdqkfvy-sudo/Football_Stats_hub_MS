@@ -1,49 +1,58 @@
-import type { Discipline } from '../lib/discipline';
-import { CARD_RULES } from '../lib/discipline';
-import { comp } from '../config/targets';
+import type { Discipline, Suspension } from '../lib/discipline';
+import { CARD_RULES, susNote } from '../lib/discipline';
+import { comp, mobileName } from '../config/targets';
 import { kstParts } from '../lib/kst';
 import { CardGlyph } from './InjuryMark';
 
-const REASON: Record<string, string> = { red: '퇴장', yellow: '경고 누적', fotmob: '징계' };
+const when = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date} (${p.weekdayKo})`; };
+const day = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date}`; };
 
-/**
- * 상세·호버 카드의 징계 줄.
- *  · 출전 정지: [레드] 출전 정지 · 프리미어리그 · 10.19 (일) vs Arsenal — 퇴장 · 확정/예상
- *  · 경고 위험: [옐로] 경고 누적 주의 · 챔스 2장 — 1장 더 받으면 다음 챔스 경기 정지
- * 정지 경기 수는 징계위원회가 정해 알 수 없다 — 날짜는 "못 뛰는 다음 경기" 다.
- */
-export function DisciplineLines({ d }: { d?: Discipline }) {
-  if (!d || (!d.sus && !d.risks.length)) return null;
-  const s = d.sus;
-  const when = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date} (${p.weekdayKo})`; };
+/** 대회 이름 — 데스크톱은 전체, 폰은 약칭(EPL · UCL) */
+export function CompName({ k }: { k: string }) {
+  return <><span className="m-full">{comp(k).name}</span><span className="m-short">{mobileName(k)}</span></>;
+}
+
+/** "La Liga 3경기 (~ 11.2)" · "EPL 10.19 (월) vs Arsenal" */
+export function SusWhat({ s }: { s: Suspension }) {
+  const n = s.missed?.length ?? 0;
   return (
     <>
-      {s && (
-        <div className="pdis" data-kind="red" role="note">
+      <CompName k={s.competition} />
+      {n > 1
+        ? ` ${n}경기 (~ ${day(s.missed![n - 1].kickoffUtc)})`
+        : s.match ? ` ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
+    </>
+  );
+}
+
+/**
+ * 상세·호버 카드의 징계 줄 — 폰에서 줄이 갈리지 않게 두 줄로 짧게.
+ *   [레드] 출전 정지  La Liga 3경기 (~ 11.2)
+ *          퇴장 · 확정 · 이후 미정
+ * 대회마다 한 줄씩(리그 퇴장 + 챔스 누적이 동시에 걸릴 수 있다).
+ * 정지 경기 수는 징계위원회가 정해 알 수 없다 — 날짜는 "못 뛰는 경기" 다.
+ */
+export function DisciplineLines({ d }: { d?: Discipline }) {
+  if (!d || (!d.all.length && !d.risks.length)) return null;
+  return (
+    <>
+      {d.all.map((s) => (
+        <div className="pdis" data-kind="red" role="note" key={s.competition}>
           <i className="injb" aria-hidden="true"><CardGlyph color="red" size={11} /></i>
           <div>
             <b>출전 정지</b>
-            <span className="pdis__what">
-              {comp(s.competition).name}
-              {(s.missed?.length ?? 0) > 1
-                ? ` · ${s.missed!.length}경기 (~ ${when(s.missed![s.missed!.length - 1].kickoffUtc)})`
-                : s.match ? ` · ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
-            </span>
-            <small>
-              {REASON[s.reason]}{s.yellows ? ` ${s.yellows}장` : ''} · {s.confirmed ? '확정(FotMob)' : '카드 기록으로 예상'}
-              {s.back ? ` · ${when(s.back.kickoffUtc)} 경기부터 출전 가능` : s.confirmed ? ' · 이후 경기는 아직 미정' : ''}
-              {s.ret ? ` · 복귀 예상 ${s.ret}` : ''}
-            </small>
+            <span className="pdis__what"><SusWhat s={s} /></span>
+            <small>{susNote(s)}</small>
           </div>
         </div>
-      )}
+      ))}
       {d.risks.map((r) => (
         <div className="pdis" data-kind="yellow" role="note" key={r.competition}>
           <i className="injb" aria-hidden="true"><CardGlyph color="yellow" size={11} /></i>
           <div>
             <b>경고 누적 주의</b>
-            <span className="pdis__what">{CARD_RULES[r.competition]?.name ?? comp(r.competition).name} 경고 {r.yellows}장</span>
-            <small>1장 더 받으면 다음 {CARD_RULES[r.competition]?.name ?? '같은 대회'} 경기 출전 정지</small>
+            <span className="pdis__what"><CompName k={r.competition} /> {r.yellows}장</span>
+            <small>1장 더 받으면 다음 {CARD_RULES[r.competition]?.name ?? '같은 대회'} 경기 정지</small>
           </div>
         </div>
       ))}

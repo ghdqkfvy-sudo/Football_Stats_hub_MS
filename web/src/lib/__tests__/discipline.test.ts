@@ -97,6 +97,19 @@ describe('징계 — 대회별', () => {
     expect(discipline([], t3, fm, Date.parse('2026-11-03T00:00:00Z')).sus).toBeUndefined();
   });
 
+  it('리그 퇴장 + 챔스 경고 누적이 동시에 — 대회별로 둘 다 담는다', () => {
+    const recent = [
+      g('C1', 'uefa.champions', '2026-09-20T19:00Z', 3),
+      g('L4', 'eng.1', '2026-10-10T15:00Z', 0, 1),
+    ];
+    const d = discipline(recent, team, undefined, NOW);
+    expect(d.all.map((x) => [x.competition, x.reason, x.match?.id])).toEqual([
+      ['eng.1', 'red', 'L5'],
+      ['uefa.champions', 'yellow', 'C2'],
+    ]);
+    expect(d.badge).toBe('red');
+  });
+
   it('규정을 모르는 대회(MLS)는 경고 위험을 띄우지 않는다', () => {
     const mls = [m('M1', 'usa.1', '2026-10-01T00:00Z', 'finished'), m('M2', 'usa.1', '2026-10-20T00:00Z', 'scheduled')];
     const d = discipline([g('M1', 'usa.1', '2026-10-01T00:00Z', 4)], mls, undefined, NOW);

@@ -10,6 +10,7 @@ import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { PlayerDetail } from '../components/PlayerDetail';
 import { InjuryList } from '../components/InjuryList';
+import { SuspensionList } from '../components/SuspensionList';
 import type { PlayerSeason } from '../lib/squad';
 import { KorFlag } from '../components/KorFlag';
 
@@ -168,6 +169,8 @@ export function PlayersTab({
           <PlayerDetail p={detail} onClose={closeDetail} />
         </div>
       </section>
+
+      <SuspensionList players={players} onOpen={(p) => { setHoverId(null); setDetail(p); }} />
 
       {!!squad?.injuries?.length && (
         <InjuryList list={squad.injuries} players={players} onOpen={(p) => { setHoverId(null); setDetail(p); }} />
