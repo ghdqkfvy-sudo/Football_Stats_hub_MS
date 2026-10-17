@@ -195,4 +195,6 @@ export interface InjuryEntry extends Injury {
   fm?: string | null;
   jersey?: number | null;
   pos?: 'G' | 'D' | 'M' | 'F' | null;
+  age?: number | null;
+  nat?: Nationality | null;
 }

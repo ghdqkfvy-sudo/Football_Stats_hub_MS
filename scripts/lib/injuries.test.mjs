@@ -71,7 +71,7 @@ test('isLongTerm: 복귀까지 4주 넘으면 장기', () => {
 
 test('injuryList: 불투명 → 단기 → 장기, 우리 선수면 espnId', () => {
   const now = new Date('2026-10-17T00:00:00Z');
-  const a = { name: 'Long Guy', id: 1, shirtNumber: 7, pos: 'F', injury: { expectedReturn: 'Early February 2027' } };
+  const a = { name: 'Long Guy', id: 1, shirtNumber: 7, pos: 'F', age: 24, ccode: 'BRA', cname: 'Brazil', injury: { expectedReturn: 'Early February 2027' } };
   const b = { name: 'Short Guy', id: 2, pos: 'M', injury: { expectedReturn: 'A few days' } };
   const c = { name: 'Maybe Guy', id: 3, pos: 'D', injury: { expectedReturn: 'Doubtful' } };
   const list = injuryList([a, b, c], new Map([['99', b]]), now);
@@ -79,6 +79,8 @@ test('injuryList: 불투명 → 단기 → 장기, 우리 선수면 espnId', () 
   assert.equal(list[1].espnId, '99');
   assert.equal(list[2].long, true);
   assert.equal(list[2].jersey, 7);
+  assert.equal(list[2].age, 24);
+  assert.deepEqual(list[2].nat, { name: 'Brazil', code: 'BRA', flag: 'https://a.espncdn.com/i/teamlogos/countries/500/bra.png' });
   assert.equal(list[0].doubtful, true);
   assert.equal(list[0].long, false);
 });
