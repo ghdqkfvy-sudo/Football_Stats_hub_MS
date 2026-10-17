@@ -7,6 +7,7 @@
  *   2. FotMob 최근 경기 상세   — 라인업 선수 칸의 주장 표시 (최근 끝난 경기 6개)
  *   3. ESPN 팀 로스터          — 주장 칸이 있는지
  *   4. ESPN 최근 경기 요약     — rosters 선수 칸의 주장 표시
+ *   5. SofaScore 최근 경기     — lineups 선수 칸의 captain (비공식, 최근 끝난 경기 6개)
  * 결과는 작업 요약(GITHUB_STEP_SUMMARY)과 로그 · 아티팩트(JSON)로만 남긴다.
  *
  * 사용: node scripts/probe-captains.mjs [결과 JSON 경로]
@@ -18,15 +19,15 @@ const OUT = process.argv[2] ?? path.join(process.env.RUNNER_TEMP ?? '.', 'captai
 const SITE = 'https://site.api.espn.com';
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 const TEAMS = [
-  { slug: 'real-madrid', espn: '86', league: 'esp.1', fm: 8633 },
-  { slug: 'chelsea', espn: '363', league: 'eng.1', fm: 8455 },
-  { slug: 'man-united', espn: '360', league: 'eng.1', fm: 10260 },
-  { slug: 'tottenham', espn: '367', league: 'eng.1', fm: 8586 },
-  { slug: 'newcastle', espn: '361', league: 'eng.1', fm: 10261 },
-  { slug: 'liverpool', espn: '364', league: 'eng.1', fm: 8650 },
-  { slug: 'bayern', espn: '132', league: 'ger.1', fm: 9823 },
-  { slug: 'atletico', espn: '1068', league: 'esp.1', fm: 9906 },
-  { slug: 'lafc', espn: '18966', league: 'usa.1', fm: 867280 },
+  { slug: 'real-madrid', ss: 2829, espn: '86', league: 'esp.1', fm: 8633 },
+  { slug: 'chelsea', ss: 38, espn: '363', league: 'eng.1', fm: 8455 },
+  { slug: 'man-united', ss: 35, espn: '360', league: 'eng.1', fm: 10260 },
+  { slug: 'tottenham', ss: 33, espn: '367', league: 'eng.1', fm: 8586 },
+  { slug: 'newcastle', ss: 39, espn: '361', league: 'eng.1', fm: 10261 },
+  { slug: 'liverpool', ss: 44, espn: '364', league: 'eng.1', fm: 8650 },
+  { slug: 'bayern', ss: 2672, espn: '132', league: 'ger.1', fm: 9823 },
+  { slug: 'atletico', ss: 2836, espn: '1068', league: 'esp.1', fm: 9906 },
+  { slug: 'lafc', ss: null, espn: '18966', league: 'usa.1', fm: 867280 },
 ];
 const KEY = /capt|armband|vice/i;
 
@@ -118,29 +119,61 @@ async function espn(t) {
   return r;
 }
 
+const SS = 'https://api.sofascore.com/api/v1';
+async function sofascore(t) {
+  const r = { matches: [] };
+  try {
+    if (!t.ss) {
+      const s = await json(`${SS}/search/teams?q=${encodeURIComponent('Los Angeles FC')}`);
+      t.ss = s?.results?.[0]?.entity?.id ?? null;
+      if (!t.ss) return { error: '팀 검색 실패' };
+    }
+    const last = await json(`${SS}/team/${t.ss}/events/last/0`);
+    const evs = (last.events ?? []).filter((e) => e.status?.type === 'finished').sort((a, b) => b.startTimestamp - a.startTimestamp).slice(0, 6);
+    for (const ev of evs) {
+      try {
+        const lu = await json(`${SS}/event/${ev.id}/lineups`);
+        const side = ev.homeTeam?.id === t.ss ? lu.home : lu.away;
+        const players = side?.players ?? [];
+        r.matches.push({
+          id: ev.id, when: new Date(ev.startTimestamp * 1000).toISOString(), league: ev.tournament?.name,
+          playerKeys: players[0] ? Object.keys(players[0]) : [],
+          flagged: players.map((p) => ({ name: p.player?.name, flags: capFlag(p) })).filter((p) => p.flags.length),
+          hits: hits(lu, 6),
+        });
+      } catch (e) { r.matches.push({ id: ev.id, error: String(e.message) }); }
+    }
+  } catch (e) { r.error = String(e.message); }
+  return r;
+}
+
 const results = [];
 for (const t of TEAMS) {
-  const [fm, es] = await Promise.all([fotmob(t), espn(t)]);
-  results.push({ slug: t.slug, fotmob: fm, espn: es });
+  const [fm, es, ss] = await Promise.all([fotmob(t), espn(t), sofascore(t)]);
+  results.push({ slug: t.slug, fotmob: fm, espn: es, sofascore: ss });
   console.log(`\n=== ${t.slug} ===`);
   console.log('FotMob 팀 API:', JSON.stringify(fm.team));
   for (const m of fm.matches) console.log(' FotMob 경기', JSON.stringify(m));
   console.log('ESPN:', JSON.stringify(es));
+  console.log('SofaScore:', JSON.stringify(ss));
 }
 
 /* 팀별 요약: 경기마다 주장 표시된 선수 */
-const lines = ['# 주장·부주장 소스 점검', '', '| 팀 | FotMob 팀 API 칸 | FotMob 최근 경기 주장 (최신→과거) | ESPN 로스터 칸 | ESPN 최근 경기 |', '|---|---|---|---|---|'];
+const lines = ['# 주장·부주장 소스 점검', '', '| 팀 | FotMob 팀 API 칸 | FotMob 최근 경기 주장 (최신→과거) | ESPN 로스터 칸 | ESPN 최근 경기 | SofaScore 최근 경기 주장 |', '|---|---|---|---|---|---|'];
 for (const r of results) {
   const fmTeam = r.fotmob.team.ok ? (r.fotmob.team.hits.map((h) => h.path.split('.').slice(-1)[0]).join(', ') || '없음') : `실패 ${r.fotmob.team.error}`;
   const fmMatches = r.fotmob.matches.map((m) => m.error ? '오류' : (m.flagged.map((p) => `${p.name}(${p.flags.join('/')})`).join('+') || (m.side ? '표시 없음' : '팀 못 찾음'))).join(' → ') || '-';
   const esR = r.espn.roster?.ok ? (r.espn.roster.hits.map((h) => h.path.split('.').slice(-1)[0]).join(', ') || '없음') : '실패';
   const esS = r.espn.summary?.ok ? (r.espn.summary.flagged.map((p) => `${p.name}(${p.flags.join('/')})`).join('+') || '표시 없음') : `실패 ${r.espn.summary?.error ?? ''}`;
-  lines.push(`| ${r.slug} | ${fmTeam} | ${fmMatches} | ${esR} | ${esS} |`);
+  const ssM = r.sofascore.error ? `실패 ${r.sofascore.error}` : (r.sofascore.matches.map((m) => m.error ? `오류 ${m.error}` : (m.flagged.map((p) => `${p.name}(${p.flags.join('/')})`).join('+') || '표시 없음')).join(' → ') || '-');
+  lines.push(`| ${r.slug} | ${fmTeam} | ${fmMatches} | ${esR} | ${esS} | ${ssM} |`);
 }
 const ex = results.flatMap((r) => r.fotmob.matches).find((m) => m.starterKeys?.length);
 if (ex) lines.push('', `FotMob 라인업 선수 칸 예시: \`${ex.starterKeys.join(', ')}\``);
 const ee = results.map((r) => r.espn.summary).find((s) => s?.rosterKeys?.length);
 if (ee) lines.push('', `ESPN rosters 선수 칸 예시: \`${ee.rosterKeys.join(', ')}\``);
+const se = results.flatMap((r) => r.sofascore.matches ?? []).find((m) => m.playerKeys?.length);
+if (se) lines.push('', `SofaScore lineups 선수 칸 예시: \`${se.playerKeys.join(', ')}\``);
 console.log('\n' + lines.join('\n'));
 if (process.env.GITHUB_STEP_SUMMARY) await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 await fs.writeFile(OUT, JSON.stringify(results, null, 2));
