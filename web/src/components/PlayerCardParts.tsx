@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { RatingBadge } from './RatingBadge';
+import { seasonRatingTitle } from '../lib/rating';
 import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
 import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
@@ -53,7 +54,7 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
           <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
           {` #${p.jersey}`}
           {p.age ? ` · ${p.age}세` : ''}
-          {p.rating != null && <span className="pmeta__rtg">· 평점 <RatingBadge v={p.rating} title="FotMob 시즌 평균 평점" /></span>}
+          {p.rating != null && <span className="pmeta__rtg">· 시즌 평점 <RatingBadge v={p.rating} title={seasonRatingTitle(p)} /></span>}
         </span>
       </div>
     </div>

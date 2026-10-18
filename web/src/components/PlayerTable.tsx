@@ -5,6 +5,7 @@ import { NumberBadge } from './InjuryMark';
 import { badgeTitle } from '../lib/injury';
 import { KorFlag } from './KorFlag';
 import { RatingBadge } from './RatingBadge';
+import { seasonRatingTitle } from '../lib/rating';
 import { Swap } from './Swap';
 import { useLongPress } from '../lib/useLongPress';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
@@ -294,7 +295,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
             <span className="num pt__g" data-on={p.goals > 0}>{p.goals}</span>
             <span className="num pt__a" data-on={p.assists > 0}>{p.assists}</span>
             <span className="num pt__p" data-on={p.points > 0}>{p.points}</span>
-            <span className="pt__rtg"><RatingBadge v={p.rating} title={p.rating ? `FotMob 시즌 평균 평점 ${p.rating}` : undefined} /></span>
+            <span className="pt__rtg"><RatingBadge v={p.rating} title={p.rating ? seasonRatingTitle(p) : undefined} /></span>
             <span className="pt__cards"><Cards yellow={p.yellow} red={p.red} /></span>
           </div>
         ))}

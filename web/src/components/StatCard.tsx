@@ -200,7 +200,7 @@ export function StatCard({
           <b>
             {name}
             {posLabel && <em data-pos={pos}>{posLabel}</em>}
-            <RatingBadge v={rating} cls="krc__rtg" title="FotMob 시즌 평균 평점" />
+            <RatingBadge v={rating} cls="krc__rtg" title={rating ? `FotMob 시즌 평균 평점 ${rating}` : undefined} />
           </b>
           {club && (
             <span className="krc__club">
