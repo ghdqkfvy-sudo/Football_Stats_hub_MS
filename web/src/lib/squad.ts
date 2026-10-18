@@ -46,8 +46,6 @@ export interface PlayerSeason {
   inj?: Injury;
   /** FotMob 시즌 평균 평점 */
   rating?: number;
-  /** 시즌 평점을 FotMob 이 주지 않아 경기 평점 평균으로 채웠으면 그 경기 수 */
-  ratingGames?: number;
   /** 징계 — PlayersTab 이 일정과 함께 계산해 붙인다(lib/discipline) */
   disc?: Discipline;
   /** formationPlace → 선발 횟수 */
@@ -360,15 +358,6 @@ export function buildSquad(
     else if (role) p.pos = role.pos;
     p.points = p.goals + p.assists;
     p.byComp.sort((x, y) => y.goals + y.assists - (x.goals + x.assists) || y.apps - x.apps);
-    /* 시즌 평점 — FotMob 스쿼드가 비워 둔 선수(출전이 아주 적은 엔드릭 등)는
-       우리가 받은 경기 평점의 평균으로 채우고, 몇 경기 평균인지 남긴다 */
-    if (p.rating == null) {
-      const rs = p.recent.map((g) => g.rating).filter((v): v is number => v != null);
-      if (rs.length) {
-        p.rating = Math.round((rs.reduce((a, b) => a + b, 0) / rs.length) * 100) / 100;
-        p.ratingGames = rs.length;
-      }
-    }
     /*
      * 경기별 교체 시각(subbedIn/OutAtMinute)은 ESPN 응답 필드명이 검증되지
      * 않아 대부분 비어 오고, 그러면 선발은 90분·교체는 0분으로 어림돼

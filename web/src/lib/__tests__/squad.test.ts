@@ -422,11 +422,4 @@ describe('buildSquad — 평점', () => {
     expect(by.B.recent[0].rating).toBeUndefined();
   });
 
-  it('FotMob 이 시즌 평점을 비워 두면 받은 경기 평점 평균으로 (몇 경기인지 남긴다)', () => {
-    const lu1 = { ...lineup([['1', 1, true, null, null, 0, 0, 'F']]), ratings: { 1: 6.8 } };
-    const lu2 = { ...lineup([['1', 0, false, 80, null, 0, 0, 'F']]), ratings: { 1: 7.3 } };
-    const { players } = buildSquad([match('1'), match('2')], { 1: lu1, 2: lu2 }, { 1: info('Endrick', 'F') }, '363');
-    expect(players[0].rating).toBe(7.05);
-    expect(players[0].ratingGames).toBe(2);
-  });
 });
