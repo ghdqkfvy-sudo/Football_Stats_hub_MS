@@ -112,7 +112,7 @@ export function isLongTerm(text, now = new Date()) {
 export const INJURY_KO = {
   14: '무릎', 21: '발', 30: '발목', 42: '햄스트링', 45: '허리', 69: '허벅지', 71: '인대',
   73: '아킬레스건', 74: '다리', 76: '십자인대', 83: '팔', 92: '질병', 104: '복부',
-  121: '컨디션 난조', 130: '타박상',
+  121: '컨디션 난조', 122: '정강이', 130: '타박상',
 };
 export const injuryName = (injury) => INJURY_KO[Number(injury?.id)] ?? (injury?.name ? String(injury.name) : null);
 
