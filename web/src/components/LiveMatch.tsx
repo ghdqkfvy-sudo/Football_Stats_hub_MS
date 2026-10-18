@@ -60,7 +60,8 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
           )}
         </div>
         {!wide && <TeamBar side={live[ours]} crest={crest(ours, 18)} />}
-        <p className="lm__key">평점 · 카드는 이 경기 기록(FotMob 실시간) · <b className="lm__ink">↑74&apos;</b> 교체 투입</p>
+        {/* 범례 — 예전엔 "↑74' 교체 투입" 이라 실제 선수(마운트 74분) 기록처럼 읽혔다 */}
+        <p className="lm__key">평점 · 카드는 이 경기 기록(FotMob 실시간) · 칩 아래 <b className="lm__ink">↑분</b> = 교체로 들어온 시간</p>
       </section>
 
       <section className="lm__squads">
@@ -133,7 +134,7 @@ function TeamBar({ side, crest }: { side: LiveSide; crest: React.ReactNode }) {
     <div className="lm__bar">
       {crest}<b>{side.name}</b>
       {side.formation && <em className="num">{side.formation}</em>}
-      {side.rating && <RatingBadge v={side.rating} cls="rtg--sm" title="팀 평점 (FotMob)" />}
+      {side.rating && <span className="lm__trt">팀 평점 <RatingBadge v={side.rating} cls="rtg--sm" title="이 경기 팀 평점 (FotMob)" /></span>}
     </div>
   );
 }
