@@ -256,6 +256,8 @@ export interface LiveMatch {
   clock: string | null;
   score: [number, number];
   lineupType: string | null;
+  /** 팀 색 후보 [어두운 화면용, 밝은 화면용] — 예전 파일에는 없다 */
+  colors?: { home: string[]; away: string[] } | null;
   ours: 'home' | 'away' | null;
   home: LiveSide;
   away: LiveSide;

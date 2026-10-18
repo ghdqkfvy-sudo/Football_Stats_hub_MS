@@ -178,6 +178,11 @@ export function liveSnapshot(md, ourFm) {
     score: [num(teams[0]?.score) ?? 0, num(teams[1]?.score) ?? 0],
     /* predicted = 발표 전 예상 라인업 */
     lineupType: lu?.lineupType ?? null,
+    /* 팀 색 — FotMob 의 어두운 화면용 · 밝은 화면용 두 벌(앱이 어두운 배경에 보이는 쪽을 고른다) */
+    colors: md?.general?.teamColors ? {
+      home: [md.general.teamColors.darkMode?.home, md.general.teamColors.lightMode?.home].filter(Boolean),
+      away: [md.general.teamColors.darkMode?.away, md.general.teamColors.lightMode?.away].filter(Boolean),
+    } : null,
     ours: String(home.fm) === String(ourFm) ? 'home' : String(away.fm) === String(ourFm) ? 'away' : null,
     home, away, events,
   };
