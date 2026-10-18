@@ -6,6 +6,7 @@ import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
 import { KorFlag } from './KorFlag';
 import { RatingBadge } from './RatingBadge';
+import { seasonRatingTitle } from '../lib/rating';
 import { useLongPress } from '../lib/useLongPress';
 
 interface Props {
@@ -173,7 +174,7 @@ function PlayerChip({
         <NumberBadge p={p} cls="chipbox__no" title={(k) => badgeTitle(p, k)} />
         {ko && <KorFlag className="chipbox__flag" />}
         {/* 시즌 평균 평점 — 왼쪽 아래(포지션 이름표 · 태극기는 위, 등번호는 오른쪽 아래) */}
-        <RatingBadge v={p.rating} cls="chipbox__rtg" title={p.rating ? `FotMob 시즌 평균 평점 ${p.rating}` : undefined} />
+        <RatingBadge v={p.rating} cls="chipbox__rtg" title={p.rating ? seasonRatingTitle(p) : undefined} />
       </span>
       <span className="chipbox__name">{last}</span>
       {/*

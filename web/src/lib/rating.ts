@@ -15,5 +15,9 @@ export function ratingTier(raw: number): RatingTier {
   return 'low';
 }
 
+/** 시즌 평점 마우스 올림 문구 — 경기 평점 평균으로 채운 것이면 그렇게 적는다 */
+export const seasonRatingTitle = (p: { rating?: number; ratingGames?: number }) =>
+  p.ratingGames ? `FotMob 경기 평점 평균 (${p.ratingGames}경기) ${p.rating}` : `FotMob 시즌 평균 평점 ${p.rating}`;
+
 /** 7.05 → "7.1" · 경기 평점 7 → "7.0" */
 export const fmtRating = (v: number) => v.toFixed(1);

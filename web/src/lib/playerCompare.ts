@@ -62,7 +62,7 @@ export function compareRows(a: PlayerSeason, b: PlayerSeason): { season: Compare
       row('points', '공격 포인트', a.points, b.points),
       /* FotMob 시즌 평균 — 둘 다 없으면 줄을 빼고, 한쪽만 없으면 "–" */
       ...(a.rating != null || b.rating != null
-        ? [row('rating', '평균 평점 (FotMob)', a.rating ?? null, b.rating ?? null, { digits: 2 })]
+        ? [row('rating', '시즌 평균 평점', a.rating ?? null, b.rating ?? null, { digits: 2 })]
         : []),
     ],
     rate: [
