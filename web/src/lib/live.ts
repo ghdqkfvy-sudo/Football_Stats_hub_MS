@@ -55,6 +55,31 @@ export function useLives(slugs: readonly string[]): Record<string, LiveMatch> {
   return lives;
 }
 
+/**
+ * 일정(ESPN, 20분마다) 위에 오늘의 경기(FotMob, 경기 중 5분마다)의 스코어 · 경기 시간을 덮는다.
+ * 히어로 · Summary 가 일정 스코어를 그대로 쓰면 오늘의 경기보다 한참 늦었다(2026-10-18).
+ * FotMob 의 홈/원정이 ESPN 과 반대면(중립 경기 등) 스코어를 뒤집어 맞춘다.
+ */
+export function withLiveScore<M extends { id: string; home: { id: string }; status: string; statusDetail?: string; homeScore?: number; awayScore?: number }>(
+  matches: M[],
+  live: LiveMatch | null,
+  teamEspnId: string,
+): M[] {
+  if (!live || live.phase === 'pre') return matches;
+  return matches.map((m) => {
+    if (m.id !== live.espnId) return m;
+    const flip = live.ours != null && (live.ours === 'home') !== (m.home.id === teamEspnId);
+    const [h, a] = flip ? [live.score[1], live.score[0]] : live.score;
+    return {
+      ...m,
+      homeScore: h,
+      awayScore: a,
+      status: live.phase === 'live' ? 'live' : m.status === 'live' || m.status === 'scheduled' ? 'finished' : m.status,
+      statusDetail: live.phase === 'live' ? (live.clock ?? m.statusDetail) : m.statusDetail,
+    };
+  });
+}
+
 /** 탭을 보여 줄 경기인가 — 킥오프 2시간 전부터 킥오프 18시간 뒤까지(경기 끝난 그날 밤까지) */
 export function isTodayLive(live: LiveMatch | null, now = Date.now()): boolean {
   if (!live) return false;

@@ -31,7 +31,7 @@ import { BgArt } from './components/BgArt';
 import { RefreshSheet } from './components/RefreshSheet';
 import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
-import { isTodayLive, useLive } from './lib/live';
+import { isTodayLive, useLive, withLiveScore } from './lib/live';
 import { LiveMatchView } from './components/LiveMatch';
 import bgSummary from './assets/bg-summary.webp';
 
@@ -253,7 +253,12 @@ export default function App() {
   const [source, setSource] = useState<Source>('none');
   const [fetchedAt, setFetchedAt] = useState<string>('');
   const loading = sched.team !== target.espnTeamId;
-  const matches = loading ? NO_MATCHES : sched.matches;
+  const rawMatches = loading ? NO_MATCHES : sched.matches;
+  /* 오늘의 경기 스코어 · 시간을 일정 위에 덮는다 — 히어로가 오늘의 경기보다 늦지 않게 */
+  const matches = useMemo(
+    () => withLiveScore(rawMatches, todayOn ? live : null, target.espnTeamId),
+    [rawMatches, todayOn, live, target.espnTeamId],
+  );
 
   useEffect(() => {
     let alive = true;

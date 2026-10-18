@@ -31,3 +31,20 @@ describe('득점 강조 팀 색', () => {
     expect(teamColor({ colors: null } as unknown as LiveMatch, 'home')).toBe('var(--accent)');
   });
 });
+
+describe('일정 위에 오늘의 경기 스코어', () => {
+  const m = { id: 'e1', home: { id: '360' }, status: 'scheduled', homeScore: undefined as number | undefined, awayScore: undefined as number | undefined };
+  const base = { espnId: 'e1', phase: 'live', clock: "63'", score: [1, 2], ours: 'away' } as unknown as LiveMatch;
+  it('경기 중이면 스코어 · 시계 · 상태를 덮는다, 다른 경기는 그대로', async () => {
+    const { withLiveScore } = await import('../live');
+    const [x, y] = withLiveScore([m, { ...m, id: 'e2' }], base, '361');
+    expect([x.homeScore, x.awayScore, x.status, x.statusDetail]).toEqual([1, 2, 'live', "63'"]);
+    expect(y.status).toBe('scheduled');
+  });
+  it('FotMob 홈/원정이 ESPN 과 반대면 뒤집는다 · 시작 전이면 손대지 않는다', async () => {
+    const { withLiveScore } = await import('../live');
+    const [x] = withLiveScore([m], { ...base, ours: 'home' } as LiveMatch, '361');
+    expect([x.homeScore, x.awayScore]).toEqual([2, 1]);
+    expect(withLiveScore([m], { ...base, phase: 'pre' } as LiveMatch, '361')[0]).toBe(m);
+  });
+});
