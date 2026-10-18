@@ -28,6 +28,9 @@ interface Props {
   goalsLoading?: boolean;
   /** 바로 다음 경기가 아닌 미래 경기(목록에서 골랐을 때) — 꼬리표를 "예정 경기" 로 */
   notNext?: boolean;
+  /** 이 경기의 오늘의 경기 데이터가 있으면 — 버튼으로 탭을 연다 */
+  today?: { phase: 'pre' | 'live' | 'done'; clock: string | null; hasLineup: boolean } | null;
+  onToday?: () => void;
 }
 
 const PIN = (
@@ -169,7 +172,7 @@ function HeroGoals({ match, loading }: { match: Match; loading?: boolean }) {
   );
 }
 
-export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoading, notNext }: Props) {
+export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoading, notNext, today, onToday }: Props) {
   const palette = usePalette();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -181,7 +184,10 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
   const live = match.status === 'live';
   /* 같은 경기의 스코어가 바뀌었을 때만(경기를 바꾸면 id 가 달라 강조하지 않는다) */
   const scoreBump = useChanged(`${match.id}:${match.homeScore}-${match.awayScore}`, 1000);
-  const cd = done ? null : countdown(match.kickoffUtc, now);
+  /* 킥오프가 지나면 카운트다운(00:00:00)을 걷어낸다 — 오늘의 경기 버튼이 그 자리를 맡는다 */
+  const started = live || today?.phase === 'live' || now >= Date.parse(match.kickoffUtc);
+  const cd = done || started ? null : countdown(match.kickoffUtc, now);
+  const showToday = !!onToday && !!today && (today.phase !== 'pre' || today.hasLineup);
   const tagText = done ? '경기 결과' : live ? '진행 중' : notNext ? '예정 경기' : '다음 경기';
 
   return (
@@ -236,6 +242,15 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
           </div>
         )}
       </div>
+
+      {showToday && (
+        <button className="hero__live" data-phase={today!.phase} onClick={onToday}>
+          <i aria-hidden="true" />
+          {today!.phase === 'live' ? <>LIVE {today!.clock && <span className="num">{today!.clock}</span>} · 오늘의 경기 보기</>
+            : today!.phase === 'done' ? '오늘의 경기 · 라인업 · 평점 다시 보기'
+              : '라인업 발표 · 오늘의 경기 보기'}
+        </button>
+      )}
 
       {cd && (
         <div className="hero__cd" role="timer" aria-label="킥오프까지 남은 시간">

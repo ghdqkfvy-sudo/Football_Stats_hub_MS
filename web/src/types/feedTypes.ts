@@ -208,3 +208,57 @@ export interface InjuryEntry extends Injury {
   age?: number | null;
   nat?: Nationality | null;
 }
+
+/* ── 오늘의 경기 (live-{slug}.json — scripts/lib/live.mjs) ── */
+export interface LiveCard { kind: 'y' | 'r' | 'yr'; min?: number }
+export interface LivePlayer {
+  id: string;
+  name: string;
+  last: string;
+  no: number | null;
+  /** 경기장 좌표 — x 는 왼쪽→오른쪽(0~1), y 는 우리 골문→상대 골문(0~1). 선발만 */
+  x?: number;
+  y?: number;
+  rating: number | null;
+  cap?: boolean;
+  goals: number;
+  og: number;
+  assists: number;
+  cards: LiveCard[];
+  /** 교체 아웃 분 · 부상 교체 */
+  out?: number;
+  outInjury?: boolean;
+  /** 교체 투입 분 */
+  in?: number;
+}
+export interface LiveSide {
+  fm: number | null;
+  name: string;
+  formation: string | null;
+  rating: number | null;
+  coach: string | null;
+  starters: LivePlayer[];
+  bench: LivePlayer[];
+}
+export type LiveEvent =
+  | { t: 'goal'; min: number; plus?: number; side: 'home' | 'away'; player: string; pid: string; og?: boolean; pen?: boolean; score?: [number, number] }
+  | { t: 'card'; min: number; plus?: number; side: 'home' | 'away'; kind: LiveCard['kind']; player: string; pid: string }
+  | { t: 'sub'; min: number; plus?: number; side: 'home' | 'away'; in: string; inId: string; out: string; outId: string; injury?: boolean }
+  | { t: 'half'; min: number; label: string };
+export interface LiveMatch {
+  format: number;
+  slug: string;
+  espnId: string;
+  fmId: string;
+  kickoffUtc: string;
+  league: string | null;
+  phase: 'pre' | 'live' | 'done';
+  clock: string | null;
+  score: [number, number];
+  lineupType: string | null;
+  ours: 'home' | 'away' | null;
+  home: LiveSide;
+  away: LiveSide;
+  events: LiveEvent[];
+  updatedAt: string;
+}

@@ -34,6 +34,7 @@ const MD = {
 test('phaseOf: 시작 전 · 경기 중(시계) · 종료', () => {
   assert.deepEqual(phaseOf({ header: { status: {} } }), { phase: 'pre', clock: null });
   assert.deepEqual(phaseOf(MD), { phase: 'live', clock: "63'" });
+  assert.equal(phaseOf({ header: { status: { started: true, liveTime: { short: '95\u200e’\u200e' } } } }).clock, "95'");
   assert.deepEqual(phaseOf({ header: { status: { started: true, finished: true, reason: { short: 'FT' } } } }), { phase: 'done', clock: 'FT' });
 });
 

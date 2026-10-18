@@ -62,11 +62,14 @@ export function fixtureNear(teamJson, kickoff, tolMs = 3 * 3600_000) {
   return best?.id ?? null;
 }
 
+/** 시계 문자열 — FotMob 은 "95‎’‎" 처럼 방향 표시 문자(U+200E)와 굽은 따옴표를 섞어 준다 */
+const cleanClock = (s) => (s == null ? null : String(s).replace(/[\u200e\u200f\u202a-\u202e]/g, '').replace(/[’`]/g, "'").trim() || null);
+
 /** 경기 단계 · 시계 */
 export function phaseOf(md) {
   const st = md?.header?.status ?? {};
-  if (st.finished) return { phase: 'done', clock: st.reason?.short ?? 'FT' };
-  if (st.started) return { phase: 'live', clock: st.liveTime?.short ?? st.reason?.short ?? null };
+  if (st.finished) return { phase: 'done', clock: cleanClock(st.reason?.short) ?? 'FT' };
+  if (st.started) return { phase: 'live', clock: cleanClock(st.liveTime?.short ?? st.reason?.short) };
   return { phase: 'pre', clock: null };
 }
 
@@ -119,7 +122,8 @@ export function eventsOf(md) {
         pid: String(e?.player?.id ?? e?.playerId ?? ''),
         og: !!e?.ownGoal || undefined,
         pen: /penalty/i.test(String(e?.goalDescriptionKey ?? e?.goalDescription ?? '')) || undefined,
-        assist: e?.assistStr || e?.assistInput || undefined,
+        /* "assist by Youri Tielemans" → 이름만 */
+        assist: String(e?.assistStr || e?.assistInput || '').replace(/^assist by\s*/i, '') || undefined,
         score: Array.isArray(e?.newScore) ? e.newScore : undefined,
       });
     } else if (e?.type === 'Card') {

@@ -31,9 +31,11 @@ import { BgArt } from './components/BgArt';
 import { RefreshSheet } from './components/RefreshSheet';
 import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
+import { isTodayLive, useLive } from './lib/live';
+import { LiveMatchView } from './components/LiveMatch';
 import bgSummary from './assets/bg-summary.webp';
 
-type TabId = 'schedule' | 'standings' | 'players' | 'future' | 'news' | 'koreans' | 'clubs';
+type TabId = 'schedule' | 'today' | 'standings' | 'players' | 'future' | 'news' | 'koreans' | 'clubs';
 
 /* short: 폰에서 탭 5개가 한 줄에 다 들어가도록 쓰는 짧은 이름(styles/mobile.css).
    넓은 화면에서는 label 만 보인다. */
@@ -44,6 +46,8 @@ const CLUB_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'future', label: 'Future Resources', short: 'Future' },
   { id: 'news', label: '뉴스' },
 ];
+
+const TODAY_TAB: { id: TabId; label: string; short?: string } = { id: 'today', label: '오늘의 경기', short: '오늘' };
 
 const NATIONAL_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'koreans', label: '코리안리거' },
@@ -127,11 +131,16 @@ export default function App() {
 
   /* 조항 선수가 한 명도 없는 팀(리버풀)에는 Future 탭을 두지 않는다 —
      눌러 봐야 "등록되어 있지 않습니다" 뿐이다 */
+  /* 오늘의 경기 — 경기 날(킥오프 2시간 전 ~ 18시간 뒤)에만 일정 옆에 탭이 생긴다 */
+  const live = useLive(target.kind === 'club' ? target.id : null);
+  const todayOn = isTodayLive(live);
   const tabs = useMemo(
     () => (target.kind === 'club'
-      ? CLUB_TABS.filter((t) => t.id !== 'future' || futureFor(target.espnTeamId).length > 0)
+      ? CLUB_TABS
+        .filter((t) => t.id !== 'future' || futureFor(target.espnTeamId).length > 0)
+        .flatMap((t) => (t.id === 'schedule' && todayOn ? [t, TODAY_TAB] : [t]))
       : NATIONAL_TABS),
-    [target.kind, target.espnTeamId],
+    [target.kind, target.espnTeamId, todayOn],
   );
   /* 고른 탭이 이 팀에 없으면(클럽 → 대한민국) 첫 탭을 보여 준다 — 상태를 고치는
      이펙트 대신 계산으로. 클럽으로 돌아오면 고른 탭이 그대로 살아 있다. */
@@ -580,7 +589,12 @@ export default function App() {
               onGoalsLoaded={onGoalsLoaded}
               focusMatchId={focusMatch?.team === target.id ? focusMatch.id : null}
               onFocused={clearFocusMatch}
+              live={todayOn ? live : null}
+              onToday={() => goTab('today')}
             />
+          )}
+          {!summary && tab === 'today' && live && (
+            <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
           {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}
