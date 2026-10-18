@@ -28,6 +28,33 @@ export function useLive(slug: string | null): LiveMatch | null {
   return live?.slug === slug ? live : null;
 }
 
+/**
+ * 여러 팀의 오늘의 경기 파일을 한꺼번에 — Summary 가 쓴다.
+ * 누구든 경기 중이면 1분, 킥오프 전이면 2분, 아니면 10분마다 다시 받는다.
+ */
+export function useLives(slugs: readonly string[]): Record<string, LiveMatch> {
+  const [lives, setLives] = useState<Record<string, LiveMatch>>({});
+  const key = slugs.join(',');
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const list = key ? key.split(',') : [];
+    const tick = async () => {
+      const got = await Promise.all(list.map((s) => fetchJson(`${FEED}/live-${s}.json`).then((j) => j as LiveMatch).catch(() => null)));
+      if (!alive) return;
+      const next: Record<string, LiveMatch> = {};
+      got.forEach((l, i) => { if (l && l.slug === list[i]) next[list[i]] = l; });
+      setLives(next);
+      const any = Object.values(next);
+      const wait = any.some((l) => l.phase === 'live') ? 60_000 : any.some((l) => l.phase === 'pre') ? 120_000 : 600_000;
+      timer = setTimeout(tick, wait);
+    };
+    tick();
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, [key]);
+  return lives;
+}
+
 /** 탭을 보여 줄 경기인가 — 킥오프 2시간 전부터 킥오프 18시간 뒤까지(경기 끝난 그날 밤까지) */
 export function isTodayLive(live: LiveMatch | null, now = Date.now()): boolean {
   if (!live) return false;

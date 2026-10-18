@@ -158,8 +158,8 @@ export default function App() {
   const [clubPick, setClubPick] = useState<TargetId | null>(null);
 
   /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
-  const openTeam = useCallback((id: TargetId, focus?: { matchId: string }) => {
-    /* 코리안리거 소속팀은 팀 탭이 없다 — 대한민국 › 소속팀 의 그 클럽으로 */
+  const openTeam = useCallback((id: TargetId, focus?: { matchId: string; today?: boolean }) => {
+    /* 코리안리거 소속팀은 팀 탭이 없다 — 대한민국 › 소속팀 의 그 클럽으로(오늘의 경기는 그 화면 안에 펼친다) */
     if (isKoreanClub(id)) {
       setClubPick(id);
       setTab('clubs');
@@ -169,7 +169,10 @@ export default function App() {
       toTop();
       return;
     }
-    if (focus) {
+    if (focus?.today) {
+      /* 오늘의 경기 탭은 그 팀 라이브 파일을 받은 뒤에 생긴다 — 고른 탭으로 남겨 두면 생기는 대로 열린다 */
+      setTab('today');
+    } else if (focus) {
       setFocusMatch({ team: id, id: focus.matchId });
       setTab('schedule');
     } else if (id === targetId && view === 'team') {

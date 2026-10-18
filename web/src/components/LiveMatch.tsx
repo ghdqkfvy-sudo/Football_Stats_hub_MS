@@ -116,13 +116,13 @@ function LiveHead({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away'
         <span className="lm__ago">{ago < 1 ? '방금' : `${ago}분 전`} 갱신</span>
       </div>
       <div className="lm__score">
-        <div className="lm__team">{crest('home', 40)}<b>{live.home.name}</b></div>
+        <div className="lm__team">{crest('home', 40)}<b>{live.home.name}</b><TeamRating v={live.home.rating} /></div>
         <div className="lm__sc num">
           {live.phase === 'pre'
             ? <span className="lm__ko">{kstTime(live.kickoffUtc)}<small>{kstFullDate(live.kickoffUtc)}</small></span>
             : <>{live.score[0]}<i>:</i>{live.score[1]}</>}
         </div>
-        <div className="lm__team">{crest('away', 40)}<b>{live.away.name}</b></div>
+        <div className="lm__team">{crest('away', 40)}<b>{live.away.name}</b><TeamRating v={live.away.rating} /></div>
       </div>
       {goals.length > 0 && (
         <div className="lm__goals"><div>{scorers('home')}</div><i aria-hidden="true">⚽</i><div>{scorers('away')}</div></div>
@@ -131,12 +131,18 @@ function LiveHead({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away'
   );
 }
 
+/** 팀 평점 — 이 경기 FotMob 팀 평점. 라벨을 붙여 선수 평점과 헷갈리지 않게 */
+function TeamRating({ v }: { v: number | null }) {
+  if (v == null) return null;
+  return <span className="lm__trate"><small>팀 평점</small><RatingBadge v={v} title="이 경기 팀 평점 (FotMob)" /></span>;
+}
+
 function TeamBar({ side, crest }: { side: LiveSide; crest: React.ReactNode }) {
   return (
     <div className="lm__bar">
       {crest}<b>{side.name}</b>
       {side.formation && <em className="num">{side.formation}</em>}
-      {side.rating && <span className="lm__trt">팀 평점 <RatingBadge v={side.rating} cls="rtg--sm" title="이 경기 팀 평점 (FotMob)" /></span>}
+      <TeamRating v={side.rating} />
     </div>
   );
 }
