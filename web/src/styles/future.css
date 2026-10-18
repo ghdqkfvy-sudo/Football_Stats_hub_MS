@@ -44,7 +44,7 @@
 /* 피치 칩의 선발 출전 수 */
 .chipbox__stat em.s { color: var(--text-mid); font-weight: 700; }
 
-/* 팀 조직력 설명 툴팁 — 마우스를 올리면 산출식이 뜬다 */
+/* 전술 일관성 설명 툴팁 — 마우스를 올리면 산출식이 뜬다 */
 .pitch__chem { position: relative; }
 .pitch__chem .chem__tip {
   position: absolute; left: 0; top: calc(100% + 8px); z-index: 30;

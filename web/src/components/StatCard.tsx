@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { RatingBadge } from './RatingBadge';
 import { CREST, mobileName } from '../config/targets';
 import { tintOf } from '../config/crestTint';
 import { usePalette } from '../lib/palette';
@@ -51,6 +52,8 @@ export interface RecentLine {
   goals: number;
   assists: number;
   yellow?: boolean;
+  /** FotMob 경기 평점 */
+  rating?: number;
 }
 
 /**
@@ -124,6 +127,8 @@ interface Props {
   recent: RecentLine[];
   /** 오른쪽 위 배지 (Future 의 조항 종류 같은 것) */
   tag?: ReactNode;
+  /** FotMob 시즌 평균 평점 — 이름 줄 포지션 배지 옆 */
+  rating?: number;
   /** 지금 폼 — "직전 경기 1골" (lib/form.ts). 소속팀·나이 줄 옆 초록 배지 */
   hot?: string | null;
   /** 대회 기록이 하나도 없을 때의 문구 */
@@ -143,7 +148,7 @@ export function StatCard({
   id, name, posLabel, photo, photoKind, sofascoreId, fallbackLabel,
   clubId, club, age, league, leagueName, leagueLogo,
   comps, recent, tag, emptyNote, recentNote, open, onHover,
-  pos, tint = 'club', national, compLabel = true, hot,
+  pos, tint = 'club', national, compLabel = true, hot, rating,
 }: Props) {
   const palette = usePalette();
   const [clubBg, clubFg] = tintOf(clubId ?? '0');
@@ -195,6 +200,7 @@ export function StatCard({
           <b>
             {name}
             {posLabel && <em data-pos={pos}>{posLabel}</em>}
+            <RatingBadge v={rating} cls="krc__rtg" title="FotMob 시즌 평균 평점" />
           </b>
           {club && (
             <span className="krc__club">
@@ -441,6 +447,7 @@ function RecentPanel({
               {gm.goals > 0 && <em className="krr__gg">{gm.goals}G</em>}
               {gm.assists > 0 && <em className="krr__aa">A{gm.assists}</em>}
               {gm.yellow && <em className="krr__y" />}
+              <RatingBadge v={gm.rating} cls="rtg--sm krr__rtg" title="FotMob 경기 평점" />
             </span>
             </span>
           </div>

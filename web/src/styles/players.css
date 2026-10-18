@@ -835,7 +835,11 @@
   font-family: var(--font-body); font-size: 11px; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: 0; color: #fff; background: #5B6478;
 }
-.rtg[data-tier='top'] { background: #2F6BFF; }
+.rtg[data-tier='elite'] {
+  background: linear-gradient(135deg, #8B5CFF, #D946EF);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), 0 0 10px rgba(201, 84, 255, .65);
+}
+.rtg[data-tier='top'] { background: #2F6BFF; box-shadow: 0 0 8px rgba(47, 107, 255, .55); }
 .rtg[data-tier='good'] { background: #1FA855; }
 .rtg[data-tier='mid'] { background: #E2862A; }
 .rtg[data-tier='low'] { background: #E0353B; }
@@ -846,7 +850,12 @@
   min-width: 27px; height: 16px; padding: 0 4px; font-size: 10px; border-radius: 5px;
   box-shadow: 0 0 0 1.5px rgba(5, 10, 20, .85), 0 1px 5px rgba(0, 0, 0, .5);
 }
+.chipbox__rtg[data-tier='top'] { box-shadow: 0 0 0 1.5px rgba(5, 10, 20, .85), 0 0 9px rgba(47, 107, 255, .7); }
+.chipbox__rtg[data-tier='elite'] { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .7), 0 0 11px rgba(201, 84, 255, .8); }
 .pt__rtg { display: grid; place-items: center; }
+/* 코리안리거 · Future 카드 — 이름 줄의 포지션 배지 옆 · 최근 경기 줄 끝 */
+.krc__rtg { margin-left: 6px; vertical-align: 1px; font-size: 10.5px; height: 17px; min-width: 27px; }
+.krr__rtg { margin-left: 5px; }
 .pdet__rtg { display: grid; place-items: center end; }
 /* 이름 아래 한 줄(포지션 · 번호 · 나이) 끝의 시즌 평점 */
 .pmeta__rtg, .pcard__top span.pmeta__rtg { display: inline-flex; align-items: center; gap: 4px; margin-top: 0; }

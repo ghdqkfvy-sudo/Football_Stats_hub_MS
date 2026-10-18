@@ -38,7 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
-import { finishedFixtures, lineupRatings, pairFixture, squadRatings } from './lib/ratings.mjs';
+import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
@@ -1140,6 +1140,64 @@ async function attachSofascore(list) {
     } else if (entry?.ss) ssStats.known++;
     if (entry?.ss) target.sofascoreId = entry.ss;
   });
+}
+
+/* ── FotMob 평점 — 코리안리거 · Future (2026-10-18) ─────
+ * 선수마다 FotMob ID 를 검색(search/suggest)으로 한 번 찾아 fotmob-ids.json 에 남기고
+ * (못 찾은 선수는 7일 뒤 다시), 선수 API(playerData) 에서 시즌 평균 · 최근 경기 평점을 받는다.
+ * FotMob 이 답하지 않으면 지난 회차 값을 그대로 둔다.
+ */
+const FM_RETRY_MS = 7 * 86_400_000;
+let fmIdsP = null;
+const fotmobIds = () => (fmIdsP ??= readFile(join(OUT, 'fotmob-ids.json'), 'utf8').then((t) => JSON.parse(t)?.ids ?? {}).catch(() => ({})));
+async function prevRatings(fileName) {
+  try {
+    const j = JSON.parse(await readFile(join(OUT, fileName), 'utf8'));
+    return new Map((j?.players ?? []).map((p) => [String(p.id), {
+      rating: p.rating,
+      byEvent: new Map((p.recent ?? []).filter((g) => g?.rating && g?.eventId).map((g) => [String(g.eventId), g.rating])),
+    }]));
+  } catch { return new Map(); }
+}
+async function attachFotmobRatings(players, fileName) {
+  const ids = await fotmobIds();
+  const prev = await prevRatings(fileName);
+  const seasonStart = Date.UTC(SEASON, 6, 1);
+  let got = 0;
+  const carry = (p) => {
+    const old = prev.get(String(p.id));
+    if (!old) return;
+    if (old.rating) p.rating = old.rating;
+    for (const g of p.recent ?? []) if (!g.rating && g.eventId && old.byEvent.has(String(g.eventId))) g.rating = old.byEvent.get(String(g.eventId));
+  };
+  for (const p of players) {
+    const key = String(p.id);
+    let e = ids[key];
+    if (!e?.fm && !(e && Date.now() - Date.parse(e.at ?? '') < FM_RETRY_MS)) {
+      let fm = null;
+      try {
+        for (const term of searchTerms(p.name)) {
+          fm = pickSearchPlayer(await fotmobJson(`search/suggest?hits=8&lang=en&term=${encodeURIComponent(term)}`), p.name, p.club);
+          await sleep(150);
+          if (fm) break;
+        }
+        e = ids[key] = { fm, name: p.name, at: new Date().toISOString() };
+      } catch { /* 검색 실패 — 다음 회차에 다시 */ }
+    }
+    if (!e?.fm) { carry(p); continue; }
+    try {
+      const pd = await fotmobJson(`playerData?id=${e.fm}`);
+      const rows = recentRatings(pd);
+      const sr = seasonRating(pd, seasonStart);
+      if (sr) p.rating = sr;
+      for (const g of p.recent ?? []) { const r = ratingAt(g.date, rows); if (r) g.rating = r; }
+      carry(p);    // 이번에 못 받은 칸만 지난 값으로
+      got++;
+    } catch { carry(p); }
+    await sleep(150);
+  }
+  await save('fotmob-ids.json', { format: 1, ids, updatedAt: new Date().toISOString() });
+  console.log(`    FotMob 평점(${fileName}): ${got}/${players.length}명`);
 }
 
 async function wikipediaPhoto(name, age) {
@@ -2388,6 +2446,7 @@ async function main() {
     const players = got.filter(Boolean);
     if (players.length) {
       await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
+      await attachFotmobRatings(players, 'future.json');
       await save('future.json', { format: 2, players, season: SEASON, fetchedAt: new Date().toISOString() });
       console.log(`    퓨처 리소스 ${players.length}/${FUTURE.length}명`);
     } else if (await fileExists('future.json')) {
@@ -2410,6 +2469,7 @@ async function main() {
     if (games.length) for (const p of players) p.national = nationalFor(games, p.id, year);
     if (players.length) {
       await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
+      await attachFotmobRatings(players, 'koreans.json');
       await save('koreans.json', {
         players, season: SEASON,
         nationalSource: NATIONAL_SOURCE, nationalGames: games,
