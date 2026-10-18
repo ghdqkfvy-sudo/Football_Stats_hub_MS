@@ -33,7 +33,7 @@ describe('득점 강조 팀 색', () => {
 });
 
 describe('일정 위에 오늘의 경기 스코어', () => {
-  const m = { id: 'e1', home: { id: '360' }, status: 'scheduled', homeScore: undefined as number | undefined, awayScore: undefined as number | undefined };
+  const m = { id: 'e1', home: { id: '360' }, status: 'scheduled', statusDetail: undefined as string | undefined, homeScore: undefined as number | undefined, awayScore: undefined as number | undefined };
   const base = { espnId: 'e1', phase: 'live', clock: "63'", score: [1, 2], ours: 'away' } as unknown as LiveMatch;
   it('경기 중이면 스코어 · 시계 · 상태를 덮는다, 다른 경기는 그대로', async () => {
     const { withLiveScore } = await import('../live');
