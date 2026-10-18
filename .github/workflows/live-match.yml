@@ -1,0 +1,79 @@
+name: 오늘의 경기 (라이브)
+run-name: 라이브 ${{ inputs.slug }} ${{ inputs.espn }}
+
+# 대상 팀 경기가 있는 동안만 켜지는 수집 (2026-10-18).
+# 팀 일정 수집(snapshot.yml)이 킥오프 75분 전 ~ 150분 뒤의 경기를 찾으면 이 워크플로를 띄운다.
+# 안에서 1분마다(킥오프 전에는 2분) FotMob 경기 상세를 받아 live-{slug}.json 을 고치고,
+# 5분마다 커밋 + Pages 배포(배포는 시간당 10번 안쪽으로). 경기가 끝나면 마지막 값을 올리고 끝낸다.
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 팀 (live.mjs LIVE_TEAMS 의 키)
+        required: true
+      espn:
+        description: ESPN 경기 id
+        required: true
+      kickoff:
+        description: 킥오프 (ISO)
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+# 같은 경기를 두 번 받지 않는다 — 뒤에 띄운 것은 앞이 끝날 때까지 기다렸다가 바로 끝난다(phase=done)
+concurrency:
+  group: live-${{ inputs.slug }}-${{ inputs.espn }}
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 경기 끝날 때까지 받기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ inputs.slug }}
+          ESPN: ${{ inputs.espn }}
+          KICKOFF: ${{ inputs.kickoff }}
+        run: |
+          git config user.name  "stats-bot"
+          git config user.email "stats-bot@users.noreply.github.com"
+          FILE="web/public/data/live-${SLUG}.json"
+          ko=$(date -u -d "$KICKOFF" +%s)
+          stop=$((ko + 180*60))           # 킥오프 3시간 뒤에는 무조건 끝낸다(연장 · 승부차기 포함)
+          last=0
+          fails=0
+
+          publish() {
+            git add "$FILE"
+            if git diff --staged --quiet; then return 0; fi
+            git commit -q -m "chore(live): ${SLUG} $(date -u +'%H:%MZ')"
+            for i in 1 2 3 4; do
+              if git push -q; then
+                gh workflow run deploy-pages.yml --ref main || true
+                return 0
+              fi
+              git fetch -q origin main
+              git rebase -q -X theirs origin/main || { git rebase --abort || true; git reset -q --hard origin/main; return 0; }
+            done
+          }
+
+          while :; do
+            phase=$(node scripts/live-match.mjs web/public/data "$SLUG" "$ESPN" "$KICKOFF" | head -1)
+            now=$(date -u +%s)
+            if [ "$phase" = done ]; then publish; echo "경기 종료 — 끝낸다"; break; fi
+            if [ "$phase" = error ]; then fails=$((fails + 1)); else fails=0; fi
+            if [ "$fails" -ge 15 ]; then publish; echo "::warning::FotMob 이 15번 연속 실패 — 끝낸다"; break; fi
+            if [ $((now - last)) -ge 300 ]; then publish; last=$now; fi
+            if [ "$now" -ge "$stop" ]; then publish; echo "킥오프 3시간 — 끝낸다"; break; fi
+            if [ "$phase" = pre ]; then sleep 120; else sleep 60; fi
+          done
