@@ -119,3 +119,18 @@ jobs:
             done
           done
           gh workflow run deploy-pages.yml --ref main
+
+      # 오늘의 경기 — 킥오프 75분 전 ~ 150분 뒤의 대상 팀 경기마다 라이브 수집을 띄운다(이미 도는 경기는 건너뜀)
+      - name: 라이브 경기 수집 띄우기
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/live-detect.mjs web/public/data | while read -r slug espn kickoff; do
+            title="라이브 ${slug} ${espn}"
+            busy=$(gh run list --workflow live-match.yml --limit 40 --json displayTitle,status \
+              --jq "[.[] | select(.displayTitle == \"${title}\" and (.status == \"queued\" or .status == \"in_progress\" or .status == \"waiting\" or .status == \"pending\"))] | length")
+            if [ "${busy:-0}" != 0 ]; then echo "${title}: 이미 도는 중"; continue; fi
+            echo "${title}: 시작 (${kickoff})"
+            gh workflow run live-match.yml --ref main -f slug="$slug" -f espn="$espn" -f kickoff="$kickoff" || true
+          done
