@@ -232,7 +232,7 @@
 .pt__count { font-size: 11px; color: var(--text-lo); }
 
 .pt__head, .pt__row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px 46px 72px 30px 30px 34px 52px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px 46px 72px 30px 30px 34px 40px 52px;
   align-items: center; gap: 6px; padding: 0 14px;
 }
 .pt__head > span:nth-child(5) { text-align: center; }
@@ -624,9 +624,11 @@
      다음 줄로 밀리면서 표 전체가 어긋나 보였다.
      좁은 화면에서는 선발·분·게이지를 접고 6칸만 남긴다. */
   .pt__head, .pt__row {
-    grid-template-columns: minmax(0,1fr) 34px 28px 28px 32px 44px;
+    grid-template-columns: minmax(0,1fr) 34px 28px 28px 32px 40px;
     padding-inline: 11px;
   }
+  /* 폰은 카드 칸 자리에 평점 — 카드 수는 상세에, 경고 위험은 등번호 자리 옐로카드로 보인다 */
+  .pt__head > :nth-child(10), .pt__row > :nth-child(10) { display: none; }
   .pt__head > :nth-child(3), .pt__row > :nth-child(3),
   .pt__head > :nth-child(4), .pt__row > :nth-child(4),
   .pt__head > :nth-child(5), .pt__row > :nth-child(5) { display: none; }
@@ -702,7 +704,7 @@
 .pdet__list { list-style: none; margin: 0; padding: 0; }
 .pdet__g {
   display: grid; align-items: center; gap: 8px;
-  grid-template-columns: 66px 16px minmax(0, 1fr) 66px 112px 96px 66px;
+  grid-template-columns: 66px 16px minmax(0, 1fr) 66px 112px 96px 66px 32px;
   padding: 7px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-mid);
 }
 .pdet__when { color: var(--text-lo); font-size: 11px; white-space: nowrap; }
@@ -825,3 +827,27 @@
   .pdet:not(.pdet--card) .bench__pill { padding: 5px 9px; }
   .pdet:not(.pdet--card) .bench__pill b { font-size: 16px; }
 }
+
+/* ── 평점 (FotMob) — 색 구간은 lib/rating.ts ── */
+.rtg {
+  display: inline-grid; place-items: center; box-sizing: border-box;
+  min-width: 28px; height: 18px; padding: 0 5px; border-radius: 5px;
+  font-family: var(--font-body); font-size: 11px; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: 0; color: #fff; background: #5B6478;
+}
+.rtg[data-tier='top'] { background: #2F6BFF; }
+.rtg[data-tier='good'] { background: #1FA855; }
+.rtg[data-tier='mid'] { background: #E2862A; }
+.rtg[data-tier='low'] { background: #E0353B; }
+.rtg--sm { min-width: 26px; height: 16px; padding: 0 4px; font-size: 10px; border-radius: 4px; }
+/* 포메이션 칩 — 사진 원 왼쪽 아래 (위는 포지션 이름표 · 태극기, 오른쪽 아래는 등번호) */
+.chipbox__rtg {
+  position: absolute; left: -15px; bottom: -2px; z-index: 2;
+  min-width: 27px; height: 16px; padding: 0 4px; font-size: 10px; border-radius: 5px;
+  box-shadow: 0 0 0 1.5px rgba(5, 10, 20, .85), 0 1px 5px rgba(0, 0, 0, .5);
+}
+.pt__rtg { display: grid; place-items: center; }
+.pdet__rtg { display: grid; place-items: center end; }
+/* 이름 아래 한 줄(포지션 · 번호 · 나이) 끝의 시즌 평점 */
+.pmeta__rtg, .pcard__top span.pmeta__rtg { display: inline-flex; align-items: center; gap: 4px; margin-top: 0; }
+.pcard__top span.rtg { display: inline-grid; margin-top: 0; font-size: 10.5px; color: #fff; }

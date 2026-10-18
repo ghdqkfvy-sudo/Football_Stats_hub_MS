@@ -248,6 +248,12 @@ export function lineupFrom(
   };
 }
 
+/** 경기별 평점(matchRatings: 경기 id → { r: 선수 id → 평점 })을 그 경기 라인업에 붙인다 */
+function withRatings(lineups: Record<string, Lineup>, mr: unknown): Record<string, Lineup> {
+  const m = (mr ?? {}) as Record<string, { r?: Record<string, number> }>;
+  return Object.fromEntries(Object.entries(lineups).map(([id, lu]) => [id, m[id]?.r ? { ...lu, ratings: m[id].r } : lu]));
+}
+
 export interface SquadData {
   lineups: Record<string, Lineup>;
   athletes: Record<string, AthleteInfo>;
@@ -309,7 +315,7 @@ export async function loadSquad(
   return load<SquadData>({
     feedFile: slug ? `squad-${slug}.json` : undefined,
     pick: (json) => ({
-      lineups: (json?.lineups ?? {}) as Record<string, Lineup>,
+      lineups: withRatings((json?.lineups ?? {}) as Record<string, Lineup>, json?.matchRatings),
       athletes: (json?.athletes ?? {}) as Record<string, AthleteInfo>,
       injuries: Array.isArray(json?.injuries) ? (json.injuries as InjuryEntry[]) : undefined,
     }),

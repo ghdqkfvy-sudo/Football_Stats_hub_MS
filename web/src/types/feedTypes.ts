@@ -67,6 +67,8 @@ export interface AthleteInfo {
   nat?: Nationality;
   /** 부상 — FotMob 스쿼드의 injury (2026-10 부터 수집). 없으면 정상 */
   inj?: Injury;
+  /** FotMob 시즌 평균 평점 */
+  rating?: number;
   /** 다음 경기 징계 — FotMob 결장자 type=suspension (경기 시각 utc 로 일정과 맞춘다) */
   sus?: {
     ret?: string | null; utc?: string | null; league?: string | null; source?: string;
@@ -109,6 +111,8 @@ export interface Lineup {
    * false 면 경기별 출전 시간은 어림값이므로 시즌 누적값을 대신 쓴다.
    */
   hasMinutes?: boolean;
+  /** 그 경기 FotMob 평점 (선수 id → 평점) — 정적 피드의 matchRatings 를 앱이 붙인다 */
+  ratings?: Record<string, number>;
 }
 
 export interface Article {

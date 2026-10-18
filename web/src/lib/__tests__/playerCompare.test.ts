@@ -40,4 +40,11 @@ describe('선수 비교', () => {
     expect(r.rate.find((x) => x.key === 'yellow')?.win).toBe('a');
     expect(r.season.find((x) => x.key === 'goals')?.win).toBeNull();
   });
+
+  it('평균 평점 — 둘 다 없으면 줄이 없고, 있으면 높은 쪽이 이긴다', () => {
+    const a = P('a', 'M', {}), b = P('b', 'M', {});
+    expect(compareRows(a, b).season.some((r) => r.key === 'rating')).toBe(false);
+    const r = compareRows({ ...a, rating: 7.21 }, { ...b, rating: 6.9 }).season.find((x) => x.key === 'rating')!;
+    expect([r.fa, r.fb, r.win]).toEqual(['7.21', '6.90', 'a']);
+  });
 });

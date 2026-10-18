@@ -38,6 +38,7 @@ import {
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
+import { finishedFixtures, lineupRatings, pairFixture, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
@@ -628,7 +629,8 @@ async function fotmobInjured(fm) {
       } catch { /* 이름 없이 둔다 */ }
       await sleep(150);
     }
-    return Object.assign(members, { suspended });
+    /* team — 평점(시즌 평균 · 끝난 경기 목록)을 같은 응답에서 꺼낸다 */
+    return Object.assign(members, { suspended, team: j });
   } catch (e) {
     injuryStats.failed++;
     note(`FotMob 부상(${fm})`, `${String(e).split('\n')[0]} — 지난 회차 값을 유지`);
@@ -644,8 +646,42 @@ async function prevInjuries(slug) {
       /* 징계는 경기 시각(utc)을 들고 있어서, 지난 경기 것이면 앱이 알아서 무시한다 */
       susById: new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.sus).map(([id, a]) => [id, a.sus])),
       list: Array.isArray(j?.injuries) ? j.injuries : null,
+      ratingById: new Map(Object.entries(j?.athletes ?? {}).filter(([, a]) => a?.rating).map(([id, a]) => [id, a.rating])),
+      matchRatings: j?.matchRatings ?? {},
     };
-  } catch { return { byId: new Map(), susById: new Map(), list: null }; }
+  } catch { return { byId: new Map(), susById: new Map(), list: null, ratingById: new Map(), matchRatings: {} }; }
+}
+
+/**
+ * 경기별 평점 — ESPN 경기(done)마다 같은 FotMob 경기를 킥오프 시각으로 찾아 라인업 평점을 받는다.
+ * 한 번 받은 경기는 지난 회차 기록(prev)을 그대로 쓰고, 새 경기만 회차당 몇 건씩 받는다.
+ * @returns { [espnEventId]: { fm, r: { [espnAthleteId]: rating } } }
+ */
+const RATING_FETCH_MAX = 8;
+async function fotmobMatchRatings(fm, teamJson, done, athletes, prev = {}) {
+  const fixtures = finishedFixtures(teamJson);
+  const out = {};
+  let fetched = 0;
+  for (const ev of done) {
+    const key = String(ev.id);
+    if (prev[key]) { out[key] = prev[key]; continue; }
+    if (fetched >= RATING_FETCH_MAX) continue;
+    const fid = pairFixture(ev.date, fixtures);
+    if (!fid) continue;
+    fetched++;
+    try {
+      const rows = lineupRatings(await fotmobJson(`matchDetails?matchId=${fid}`), fm);
+      if (rows.length) {
+        const r = {};
+        for (const [id, m] of matchInjured(rows, athletes)) r[id] = m.rating;
+        out[key] = { fm: fid, r };
+      }
+    } catch (e) {
+      note(`FotMob 평점(${fid})`, `${String(e).split('\n')[0]} — 다음 회차에 다시`);
+    }
+    await sleep(150);
+  }
+  return out;
 }
 
 /*
@@ -2270,12 +2306,17 @@ async function main() {
       /* 부상 — FotMob 이 답하면 이번 값, 못 하면 지난 회차 값.
          injuries = 부상자 명단(우리 목록에 없는 장기 부상자까지 전부) */
       let injuries = null;
+      let matchRatings = null;
       if (t.fm) {
+        const before = await prevInjuries(t.slug);
         const injured = await fotmobInjured(t.fm);
         if (injured) {
           const hits = matchInjured(injured, athletes);
           for (const [id, m] of hits) athletes[id].inj = injuryRecord(m);
           injuries = injuryList(injured, hits);
+          /* 평점 — 시즌 평균(스쿼드 응답) · 경기별(경기 상세, 받은 경기는 이어 씀) */
+          for (const [id, m] of matchInjured(squadRatings(injured.team), athletes)) athletes[id].rating = m.rating;
+          matchRatings = await fotmobMatchRatings(t.fm, injured.team, done, athletes, before.matchRatings);
           /* 다음 경기 징계 — FotMob 확정. 대회 구분은 앱이 일정과 맞춰 한다(경기 시각) */
           if (injured.suspended) {
             for (const [id, x] of matchInjured(injured.suspended, athletes)) {
@@ -2289,8 +2330,10 @@ async function main() {
           for (const m of injured) if (!got.has(m)) injuryStats.unmatched.push(`${t.slug}:${m.name}`);
           console.log(`    부상(FotMob): ${injured.length}명 중 ${hits.size}명 맞춤`);
         } else {
-          const prev = await prevInjuries(t.slug);
+          const prev = before;
           for (const [id, inj] of prev.byId) if (athletes[id]) athletes[id].inj = inj;
+          for (const [id, r] of prev.ratingById) if (athletes[id]) athletes[id].rating = r;
+          matchRatings = prev.matchRatings;
           for (const [id, sus] of prev.susById) if (athletes[id]) athletes[id].sus = sus;
           injuries = prev.list;
         }
@@ -2298,6 +2341,7 @@ async function main() {
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
         ...(injuries ? { injuries } : {}),
+        ...(matchRatings && Object.keys(matchRatings).length ? { matchRatings } : {}),
         codeVersion: CODE_VERSION,
         fetchedAt: new Date().toISOString(),
       });

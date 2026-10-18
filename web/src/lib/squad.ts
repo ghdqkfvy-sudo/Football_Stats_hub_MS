@@ -44,6 +44,8 @@ export interface PlayerSeason {
   nat?: Nationality;
   /** 부상 — 등번호 배지가 흰 바탕 빨간 십자가로 바뀐다 */
   inj?: Injury;
+  /** FotMob 시즌 평균 평점 */
+  rating?: number;
   /** 징계 — PlayersTab 이 일정과 함께 계산해 붙인다(lib/discipline) */
   disc?: Discipline;
   /** formationPlace → 선발 횟수 */
@@ -105,6 +107,8 @@ export interface RecentGame {
   pos?: string;
   /** 교체로 들어갔을 때 대신한 선수 이름 */
   forName?: string;
+  /** 그 경기 FotMob 평점 */
+  rating?: number;
   /** 교체 투입 순간 / 교체 아웃(또는 종료) 때의 상황 — 득점 분을 아는 경기만 */
   stateIn?: GameState;
   stateOut?: GameState;
@@ -244,6 +248,7 @@ export function buildSquad(
           age: info.age,
           nat: info.nat,
           inj: info.inj,
+          rating: info.rating,
           apps: 0, starts: 0, minutes: 0, goals: 0, assists: 0, points: 0,
           yellow: 0, red: 0,
           slots: {}, modalSlot: 0, posPlaces: {}, posAny: {}, modalPos: '',
@@ -316,6 +321,7 @@ export function buildSquad(
            보장이 없다(윙어가 풀백과 바뀌면 보통 전체가 자리를 옮긴다) */
         pos: starter ? posLabel(abbr, lu.formation) : undefined,
         forName: !starter && forId ? athletes[forId]?.name : undefined,
+        rating: lu.ratings?.[id],
         goals: g,
         assists: a,
         yellow: ey ?? 0,

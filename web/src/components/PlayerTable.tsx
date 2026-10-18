@@ -4,6 +4,7 @@ import { Headshot } from './Headshot';
 import { NumberBadge } from './InjuryMark';
 import { badgeTitle } from '../lib/injury';
 import { KorFlag } from './KorFlag';
+import { RatingBadge } from './RatingBadge';
 import { Swap } from './Swap';
 import { useLongPress } from '../lib/useLongPress';
 import { Cards, GameRow, PlayerSummary } from './PlayerCardParts';
@@ -22,7 +23,7 @@ const FILTERS: { id: string; label: string }[] = [
 ];
 
 /** 정렬 가능한 열 — 머리글을 누르면 그 값 기준 내림차순부터 시작한다 */
-type SortKey = 'apps' | 'starts' | 'minutes' | 'goals' | 'assists' | 'points';
+type SortKey = 'apps' | 'starts' | 'minutes' | 'goals' | 'assists' | 'points' | 'rating';
 const NUM_OF: Record<SortKey, (p: PlayerSeason) => number> = {
   apps: (p) => p.apps,
   starts: (p) => p.starts,
@@ -30,6 +31,8 @@ const NUM_OF: Record<SortKey, (p: PlayerSeason) => number> = {
   goals: (p) => p.goals,
   assists: (p) => p.assists,
   points: (p) => p.points,
+  /* 평점이 없는 선수(출전 적음 · FotMob 미집계)는 내림차순에서 맨 뒤 */
+  rating: (p) => p.rating ?? -1,
 };
 
 interface Props {
@@ -225,6 +228,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
         ] as const).map(([k, label]) => (
           <SortHead key={k} k={k} label={label} sort={sort} onClick={clickSort} />
         ))}
+        <SortHead k="rating" label="평점" sort={sort} onClick={clickSort} />
         <span className="num">카드</span>
       </div>
 
@@ -290,6 +294,7 @@ export function PlayerTable({ players, activeId, onHover, onClose, onOpen, marks
             <span className="num pt__g" data-on={p.goals > 0}>{p.goals}</span>
             <span className="num pt__a" data-on={p.assists > 0}>{p.assists}</span>
             <span className="num pt__p" data-on={p.points > 0}>{p.points}</span>
+            <span className="pt__rtg"><RatingBadge v={p.rating} title={p.rating ? `FotMob 시즌 평균 평점 ${p.rating}` : undefined} /></span>
             <span className="pt__cards"><Cards yellow={p.yellow} red={p.red} /></span>
           </div>
         ))}
