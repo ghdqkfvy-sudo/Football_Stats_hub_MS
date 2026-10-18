@@ -4,7 +4,9 @@
  */
 export type RatingTier = 'top' | 'good' | 'mid' | 'low';
 
-export function ratingTier(v: number): RatingTier {
+export function ratingTier(raw: number): RatingTier {
+  /* 보이는 숫자(소수 한 자리)로 가른다 — 6.96 이 "7.0" 으로 보이면서 주황이면 어긋난다 */
+  const v = Math.round(raw * 10) / 10;
   if (v >= 8) return 'top';
   if (v >= 7) return 'good';
   if (v >= 6) return 'mid';
