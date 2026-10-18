@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { LiveMatch } from '../types/feedTypes';
 import { useFifaRank } from '../lib/fifa';
 import type { Match, StandingTable } from '../lib/types';
 import type { Target } from '../config/targets';
@@ -21,9 +22,12 @@ interface Props {
   /** 열자마자 띄울 경기 (Summary 매치데이 히어로에서 넘어올 때) — 쓰고 나면 onFocused */
   focusMatchId?: string | null;
   onFocused?: () => void;
+  /** 오늘의 경기(live-{slug}.json) — 히어로 경기와 같으면 버튼을 단다 */
+  live?: LiveMatch | null;
+  onToday?: () => void;
 }
 
-export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatchId, onFocused }: Props) {
+export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatchId, onFocused, live, onToday }: Props) {
   const next = useMemo(
     () => matches.find((m) => m.status === 'scheduled' || m.status === 'live'),
     [matches],
@@ -250,6 +254,8 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
             fifaOf={target.kind === 'national' ? fifaOf : undefined}
             goalsLoading={pending.has(heroMatch.id)}
             notNext={!!next && heroMatch.id !== next.id}
+            today={live && live.espnId === heroMatch.id ? { phase: live.phase, clock: live.clock, hasLineup: live.home.starters.length > 0 } : null}
+            onToday={onToday}
           />
         </div>
       )}

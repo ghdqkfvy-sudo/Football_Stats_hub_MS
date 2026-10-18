@@ -32,11 +32,11 @@ export interface Loaded<T> {
 const BASE = String(import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '');
 export const HAS_PROXY = BASE.length > 0;
 
-const FEED = `${import.meta.env.BASE_URL ?? '/'}data`.replace(/([^:])\/{2,}/g, '$1/');
+export const FEED = `${import.meta.env.BASE_URL ?? '/'}data`.replace(/([^:])\/{2,}/g, '$1/');
 
 const TIMEOUT_MS = 9000;
 
-async function fetchJson(url: string): Promise<any> {
+export async function fetchJson(url: string): Promise<any> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {

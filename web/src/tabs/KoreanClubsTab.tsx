@@ -13,6 +13,8 @@ import { CompCrest } from '../components/CompCrest';
 import { KorFlag } from '../components/KorFlag';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { PlayersTab } from './PlayersTab';
+import { LiveMatchView } from '../components/LiveMatch';
+import { isTodayLive, useLive } from '../lib/live';
 
 /**
  * 대한민국 › 소속팀 — 코리안리거가 뛰는 클럽(뮌헨 · LAFC · 아틀레티코).
@@ -103,6 +105,28 @@ export function KoreanClubsTab({ pick, onPick }: { pick: TargetId | null; onPick
   );
 }
 
+/**
+ * 소속팀 화면의 오늘의 경기 — 클럽 탭이 없어서(대한민국 › 소속팀) 버튼으로 같은 화면을 펼친다.
+ * 경기 중이면 처음부터 펼쳐 둔다.
+ */
+function ClubToday({ club, matches }: { club: KoreanClub; matches: Match[] }) {
+  const live = useLive(club.id);
+  const [open, setOpen] = useState<boolean | null>(null);
+  if (!live || !isTodayLive(live)) return null;
+  if (live.phase === 'pre' && !live.home.starters.length) return null;
+  const shown = open ?? live.phase === 'live';
+  return (
+    <div className="kclub__today">
+      <button className="hero__live" data-phase={live.phase} onClick={() => setOpen(!shown)} aria-expanded={shown}>
+        <i aria-hidden="true" />
+        {live.phase === 'live' ? <>LIVE {live.clock && <span className="num">{live.clock}</span>} · 오늘의 경기</> : '오늘의 경기'}
+        {shown ? ' 접기' : ' 보기'}
+      </button>
+      {shown && <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} />}
+    </div>
+  );
+}
+
 /** 고른 클럽 한 곳 — 팀 컬러·대회 색을 그 클럽 것으로 갈아 끼운다 */
 function ClubPanel({ club, matches, loaded }: { club: KoreanClub; matches: Match[] | undefined; loaded: boolean }) {
   const scope = useMemo<ReadonlySet<string>>(() => new Set([club.espnTeamId]), [club.espnTeamId]);
@@ -117,6 +141,7 @@ function ClubPanel({ club, matches, loaded }: { club: KoreanClub; matches: Match
           ) : (
             <>
               <ClubTop club={club} matches={matches} />
+              <ClubToday club={club} matches={matches} />
               <PlayersTab target={club} matches={matches} embedded marks={marks} />
             </>
           )}
