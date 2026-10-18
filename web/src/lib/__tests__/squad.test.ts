@@ -410,3 +410,15 @@ describe('lineKind — 줄 성격', () => {
     expect(kinds([4, 1, 4, 1])).toEqual(['GK', 'DEF', 'MID', 'MID', 'FW']);
   });
 });
+
+describe('buildSquad — 평점', () => {
+  it('시즌 평균은 선수 정보에서, 경기 평점은 그 경기 라인업 ratings 에서', () => {
+    const lu = { ...lineup([['1', 1, true, null, null, 0, 0, 'F'], ['2', 0, false, 70, null, 0, 0, 'F']]), ratings: { 1: 7.4 } };
+    const { players } = buildSquad([match('1')], { 1: lu }, { 1: { ...info('A', 'F'), rating: 7.05 }, 2: info('B', 'F') }, '363');
+    const by = Object.fromEntries(players.map((p) => [p.name, p]));
+    expect(by.A.rating).toBe(7.05);
+    expect(by.A.recent[0].rating).toBe(7.4);
+    expect(by.B.rating).toBeUndefined();
+    expect(by.B.recent[0].rating).toBeUndefined();
+  });
+});

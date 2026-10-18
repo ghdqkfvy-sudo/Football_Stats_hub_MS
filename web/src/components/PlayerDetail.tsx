@@ -10,6 +10,7 @@ import { InjuryLine } from './InjuryMark';
 import { DisciplineLines } from './DisciplineLines';
 import { Crest } from './Crest';
 import { CompCrest } from './CompCrest';
+import { RatingBadge } from './RatingBadge';
 import { BenchLine, Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -108,6 +109,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
           <NatFlag nat={p.nat} />
           <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
           {` #${p.jersey}`}{p.age ? ` · ${p.age}세` : ''}
+          {p.rating != null && <span className="pmeta__rtg">· 평점 <RatingBadge v={p.rating} title="FotMob 시즌 평균 평점" /></span>}
         </span>
       </div>
     </div>
@@ -171,6 +173,7 @@ function TableBody({ p }: { p: PlayerSeason }) {
                 {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
                 {(g.yellow > 0 || g.red > 0) && <Cards yellow={g.yellow} red={g.red} />}
               </span>
+              <span className="pdet__rtg"><RatingBadge v={g.rating} cls="rtg--sm" title="FotMob 경기 평점" /></span>
             </li>
           ))}
         </ol>

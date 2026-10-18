@@ -5,6 +5,7 @@ import { badgeTitle } from '../lib/injury';
 import { PitchMarkings } from './PitchMarkings';
 import { HAS_HOVER } from '../lib/useMedia';
 import { KorFlag } from './KorFlag';
+import { RatingBadge } from './RatingBadge';
 import { useLongPress } from '../lib/useLongPress';
 
 interface Props {
@@ -171,6 +172,8 @@ function PlayerChip({
         {/* 등번호 자리 — 출전 정지(레드카드) · 부상(십자가) · 출전 불투명(물음표) · 경고 위험(옐로카드) */}
         <NumberBadge p={p} cls="chipbox__no" title={(k) => badgeTitle(p, k)} />
         {ko && <KorFlag className="chipbox__flag" />}
+        {/* 시즌 평균 평점 — 왼쪽 아래(포지션 이름표 · 태극기는 위, 등번호는 오른쪽 아래) */}
+        <RatingBadge v={p.rating} cls="chipbox__rtg" title={p.rating ? `FotMob 시즌 평균 평점 ${p.rating}` : undefined} />
       </span>
       <span className="chipbox__name">{last}</span>
       {/*

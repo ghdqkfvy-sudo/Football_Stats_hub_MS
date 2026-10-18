@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { RatingBadge } from './RatingBadge';
 import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
 import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
@@ -52,6 +53,7 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
           <em className="pcard__pos" data-pos={p.pos}>{POS_LABEL[p.pos]}</em>
           {` #${p.jersey}`}
           {p.age ? ` · ${p.age}세` : ''}
+          {p.rating != null && <span className="pmeta__rtg">· 평점 <RatingBadge v={p.rating} title="FotMob 시즌 평균 평점" /></span>}
         </span>
       </div>
     </div>
@@ -263,7 +265,9 @@ export function GameRow({ g }: { g: RecentGame }) {
       <span className="pcard__gb">
         {g.goals > 0 && <em className="pcard__gg">{g.goals}G</em>}
         {g.assists > 0 && <em className="pcard__aa">{g.assists}A</em>}
-        <Cards yellow={g.yellow} red={g.red} />
+        {/* 카드 없음 "–" 은 평점이 없을 때만 — 평점 옆에 붙으면 빼기 기호처럼 읽힌다 */}
+        {(g.yellow > 0 || g.red > 0 || g.rating == null) && <Cards yellow={g.yellow} red={g.red} />}
+        <RatingBadge v={g.rating} cls="rtg--sm" title="FotMob 경기 평점" />
       </span>
     </div>
   );
