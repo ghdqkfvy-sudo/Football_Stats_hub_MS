@@ -19,6 +19,7 @@ import { MonthList } from '../components/MonthList';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { euroStage, pointsPerGame, seasonRecord } from '../lib/compare';
 import { Crest } from '../components/Crest';
+import { isTodayLive, useLives } from '../lib/live';
 
 /**
  * Summary — 앱에 들어오면 처음 보이는 화면.
@@ -36,7 +37,12 @@ const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
 /** 팀 비교의 유럽대항전 칸 — 위에 있는 대회부터 */
 const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
-export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string }) => void }) {
+/** 오늘의 경기 파일을 받는 팀 — 클럽 전부(대표팀은 라이브 수집이 없다) */
+const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].filter((t) => t.kind !== 'national').map((t) => t.id);
+
+export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
+  const lives = useLives(LIVE_SLUGS);
+  const todays = Object.values(lives).filter((l) => isTodayLive(l) && (l.phase !== 'pre' || l.home.starters.length > 0));
   /* ── 모든 팀 일정 ─────────────────────────────────── */
   const [feeds, setFeeds] = useState<Record<string, Match[]>>({});
   const [loading, setLoading] = useState(true);
@@ -76,6 +82,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   );
 
   const targetOf = (id: string) => getTarget(id as TargetId);
+  /** 오늘의 경기 줄의 엠블럼용 — 그 팀 일정에서 같은 경기 */
+  const boardMatch = (slug: string, id: string) => feeds[slug]?.find((m) => m.id === id);
 
   /* ── 매치데이 히어로 ──────────────────────────────── */
   const board = useMemo(
@@ -322,6 +330,30 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   return (
     <div className="page sum">
+      {/* ── 0. 오늘의 경기 — 경기 중 · 오늘 끝난 경기 · 라인업 발표된 경기. 누르면 그 팀 오늘의 경기로 ── */}
+      {todays.length > 0 && (
+        <section className="sum-today" aria-label="오늘의 경기">
+          {todays.map((l) => {
+            const t = targetOf(l.slug);
+            const m = boardMatch(l.slug, l.espnId);
+            const state = l.phase === 'live' ? (l.clock ?? 'LIVE') : l.phase === 'done' ? '종료' : '라인업';
+            return (
+              <button key={l.slug} className="sum-today__row" data-phase={l.phase} onClick={() => onOpenTeam(l.slug as TargetId, { matchId: l.espnId, today: true })}>
+                <span className="sum-today__st">{l.phase === 'live' && <i />}{state}</span>
+                <span className="sum-today__fx">
+                  {m ? <Crest team={m.home} size={20} /> : null}
+                  <b><span className="m-full">{l.home.name}</span><span className="m-short">{m?.home.shortName ?? l.home.name}</span></b>
+                  <em className="num">{l.phase === 'pre' ? 'vs' : `${l.score[0]} : ${l.score[1]}`}</em>
+                  <b><span className="m-full">{l.away.name}</span><span className="m-short">{m?.away.shortName ?? l.away.name}</span></b>
+                  {m ? <Crest team={m.away} size={20} /> : null}
+                </span>
+                <span className="sum-today__go">{t.name} 오늘의 경기 →</span>
+              </button>
+            );
+          })}
+        </section>
+      )}
+
       {/* ── 1. 매치데이 히어로 ── */}
       <section id="sum-next">
         <div className="sec__head">
@@ -336,7 +368,10 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
               match={hero.match}
               standingOf={standingOf}
               hero
-              onSelect={() => onOpenTeam(hero.teamId as TargetId, { matchId: hero.match.id })}
+              /* 경기 중이거나 오늘 끝난 경기면 곧장 그 팀 오늘의 경기로 */
+              onSelect={() => onOpenTeam(hero.teamId as TargetId, lives[hero.teamId]?.espnId === hero.match.id && isTodayLive(lives[hero.teamId]) && lives[hero.teamId].phase !== 'pre'
+                ? { matchId: hero.match.id, today: true }
+                : { matchId: hero.match.id })}
               /* 코리안리거 소속팀 경기면 대한민국 › 소속팀 의 그 클럽으로 간다(App.openTeam) */
               label={KOREAN_CLUBS.some((c) => c.id === hero.teamId)
                 ? `대한민국 소속팀에서 ${targetOf(hero.teamId).name} 보기`

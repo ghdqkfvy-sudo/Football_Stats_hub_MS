@@ -114,7 +114,8 @@ function ClubToday({ club, matches }: { club: KoreanClub; matches: Match[] }) {
   const [open, setOpen] = useState<boolean | null>(null);
   if (!live || !isTodayLive(live)) return null;
   if (live.phase === 'pre' && !live.home.starters.length) return null;
-  const shown = open ?? live.phase === 'live';
+  /* 경기 중이거나 오늘 끝났으면 펼친 채로 — Summary 의 오늘의 경기에서 넘어오면 바로 보이게 */
+  const shown = open ?? live.phase !== 'pre';
   return (
     <div className="kclub__today">
       <button className="hero__live" data-phase={live.phase} onClick={() => setOpen(!shown)} aria-expanded={shown}>
