@@ -21,3 +21,13 @@ describe('오늘의 경기', () => {
     expect(onPitch(P('z'), subs, [P('b')]).now.id).toBe('z');
   });
 });
+
+describe('득점 강조 팀 색', () => {
+  it('어두운 배경에 보이는 FotMob 색 — 너무 하얀 원정 색은 밝은 화면용으로, 없으면 강조색', async () => {
+    const { teamColor } = await import('../live');
+    const live = { colors: { home: ['#C00808', '#C00808'], away: ['#ffffff', '#00A398'] } } as unknown as LiveMatch;
+    expect(teamColor(live, 'home')).toBe('#C00808');
+    expect(teamColor(live, 'away')).toBe('#00A398');
+    expect(teamColor({ colors: null } as unknown as LiveMatch, 'home')).toBe('var(--accent)');
+  });
+});

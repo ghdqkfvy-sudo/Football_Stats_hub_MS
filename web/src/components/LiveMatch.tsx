@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { LiveEvent, LiveMatch, LivePlayer, LiveSide } from '../types/feedTypes';
 import type { Match } from '../lib/types';
-import { onPitch } from '../lib/live';
+import { onPitch, teamColor } from '../lib/live';
 import { fotmobImage } from '../lib/injury';
 import { kstFullDate, kstTime } from '../lib/kst';
 import { LINE_COLOR, lineKind, lineLabels } from '../lib/squad';
@@ -60,7 +60,8 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
           )}
         </div>
         {!wide && <TeamBar side={live[ours]} crest={crest(ours, 18)} />}
-        <p className="lm__key">평점 · 카드는 이 경기 기록(FotMob 실시간) · <b className="lm__ink">↑74&apos;</b> 교체 투입</p>
+        {/* 범례 — 예전엔 "↑74' 교체 투입" 이라 실제 선수(마운트 74분) 기록처럼 읽혔다 */}
+        <p className="lm__key"><span>평점 · 카드 = 이 경기 기록(FotMob)</span><span><b className="lm__ink">↑분</b> = 교체 투입 시간</span></p>
       </section>
 
       <section className="lm__squads">
@@ -79,7 +80,7 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
         </div>
       </section>
 
-      <Timeline live={live} crest={crest} />
+      <Timeline live={live} crest={crest} colors={{ home: teamColor(live, 'home', match?.home.id), away: teamColor(live, 'away', match?.away.id) }} />
     </div>
   );
 }
@@ -88,6 +89,8 @@ const subsOf = (live: LiveMatch, side: 'home' | 'away') =>
   live.events.filter((e): e is Sub => e.t === 'sub' && e.side === side);
 
 const lastName = (n: string) => n.split(' ').slice(-1)[0] ?? n;
+
+
 
 function TeamCrest({ live, match, k, size }: { live: LiveMatch; match?: Match; k: 'home' | 'away'; size: number }) {
   const t = match?.[k];
@@ -133,7 +136,7 @@ function TeamBar({ side, crest }: { side: LiveSide; crest: React.ReactNode }) {
     <div className="lm__bar">
       {crest}<b>{side.name}</b>
       {side.formation && <em className="num">{side.formation}</em>}
-      {side.rating && <RatingBadge v={side.rating} cls="rtg--sm" title="팀 평점 (FotMob)" />}
+      {side.rating && <span className="lm__trt">팀 평점 <RatingBadge v={side.rating} cls="rtg--sm" title="이 경기 팀 평점 (FotMob)" /></span>}
     </div>
   );
 }
@@ -269,7 +272,7 @@ function BenchCol({ side, subs, crest, active }: { side: LiveSide; subs: Sub[]; 
 }
 
 /** 경기 흐름 — 가운데 시간 줄, 홈은 왼쪽 · 원정은 오른쪽. 골은 줄 전체를 강조하고 그때 스코어를 크게 */
-function Timeline({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away', s: number) => React.ReactNode }) {
+function Timeline({ live, crest, colors }: { live: LiveMatch; crest: (k: 'home' | 'away', s: number) => React.ReactNode; colors: { home: string; away: string } }) {
   const evs = useMemo(
     () => [...live.events].sort((a, b) => a.min - b.min || ((a as { plus?: number }).plus ?? 0) - ((b as { plus?: number }).plus ?? 0)),
     [live.events],
@@ -294,7 +297,7 @@ function Timeline({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away'
           }
           const min = `${e.min}${e.plus ? `+${e.plus}` : ''}'`;
           return (
-            <li key={i} data-side={e.side} data-t={e.t}>
+            <li key={i} data-side={e.side} data-t={e.t} style={e.t === 'goal' ? { ['--tc' as string]: colors[e.side] } : undefined}>
               <div className="lm__ev">{evBody(e)}</div>
               <div className="lm__mid">
                 <span className="lm__mint num">{min}</span>

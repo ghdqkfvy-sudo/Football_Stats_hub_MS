@@ -4,7 +4,8 @@ import { eventsOf, fixtureNear, liveCandidates, liveSnapshot, phaseOf } from './
 
 /* 2026-10-17 브렌트퍼드 1-2 리버풀(FotMob 5795476) 응답에서 칸 모양만 줄여 옮긴 것 */
 const MD = {
-  general: { matchId: '5795476', matchTimeUTCDate: '2026-10-17T14:00:00.000Z', leagueName: 'Premier League' },
+  general: { matchId: '5795476', matchTimeUTCDate: '2026-10-17T14:00:00.000Z', leagueName: 'Premier League',
+    teamColors: { darkMode: { home: '#C00808', away: '#ffffff' }, lightMode: { home: '#C00808', away: '#00A398' } } },
   header: {
     teams: [{ name: 'Brentford', id: 9937, score: 1 }, { name: 'Liverpool', id: 8650, score: 2 }],
     status: { started: true, finished: false, liveTime: { short: "63'" } },
@@ -50,6 +51,7 @@ test('liveSnapshot: 스코어 · 우리 팀 쪽 · 선수(좌표 · 평점 · �
   assert.deepEqual([ny.in, ny.goals, ny.rating], [32, 1, 7.1]);
   assert.equal(s.away.bench[1].rating, null);
   assert.equal(s.home.coach, 'Keith Andrews');
+  assert.deepEqual(s.colors, { home: ['#C00808', '#C00808'], away: ['#ffffff', '#00A398'] });
 });
 
 test('eventsOf: 골 · 카드(경고/퇴장) · 교체(들어온/나간 · 부상) · 하프타임', () => {

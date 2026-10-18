@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { LiveMatch } from '../types/feedTypes';
 import { FEED, fetchJson } from './feed';
+import { tintOf } from '../config/crestTint';
 
 /**
  * 오늘의 경기 파일(live-{slug}.json) — 경기 중 워크플로가 1분마다 고치고 5분마다 배포한다.
@@ -51,4 +52,21 @@ export function onPitch<T extends { id: string; name: string }>(
     cur = nxt;
   }
   return { now: cur, chain };
+}
+
+/** 밝기 0~1 (#RRGGBB) */
+const lum = (hex: string) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+};
+/**
+ * 득점 강조에 쓸 팀 색 — FotMob 팀 색 중 어두운 배경에서 보이는 것(너무 하얗거나 까만 것은 건너뜀),
+ * 없으면 엠블럼 대체 색표(crestTint), 그것도 없으면 화면 강조색.
+ */
+export function teamColor(live: LiveMatch, k: 'home' | 'away', espnId?: string): string {
+  for (const c of live.colors?.[k] ?? []) { const l = lum(c); if (l != null && l > 0.12 && l < 0.85) return c; }
+  const t = espnId ? tintOf(espnId)[0] : null;
+  return t && lum(t) != null && lum(t)! > 0.12 && lum(t)! < 0.85 ? t : 'var(--accent)';
 }
