@@ -135,3 +135,8 @@ test('injuryName: 번호는 한국어 표로, 표에 없으면 선수 API 영어
   assert.equal(injuryName({ id: '999' }), null);
   assert.equal(injuryRecord({ injury: { id: '130', expectedReturn: 'Doubtful' } }).injName, '타박상');
 });
+
+test('matchInjured: 이름 순서만 다른 한국 이름도 맞춘다 (Kang-In Lee ↔ Lee Kang-In)', () => {
+  const hits = matchInjured([{ name: 'Kang-In Lee' }, { name: 'Heung-Min Son' }], { 7: { name: 'Lee Kang-In' }, 9: { name: 'Son Heung-Min' } });
+  assert.deepEqual([...hits.keys()].sort(), ['7', '9']);
+});
