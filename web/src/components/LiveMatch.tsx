@@ -5,6 +5,7 @@ import { onPitch } from '../lib/live';
 import { fotmobImage } from '../lib/injury';
 import { kstFullDate, kstTime } from '../lib/kst';
 import { LINE_COLOR, lineKind, lineLabels } from '../lib/squad';
+import { useIsMobile } from '../lib/useMedia';
 import { PitchMarkings } from './PitchMarkings';
 import { Headshot } from './Headshot';
 import { RatingBadge } from './RatingBadge';
@@ -28,6 +29,8 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
   const ours = live.ours ?? 'home';
   const theirs = ours === 'home' ? 'away' : 'home';
   const [pick, setPick] = useState<'home' | 'away'>(ours);
+  /* 넓은 화면은 경기장을 눕힌다(우리 팀 왼쪽 → 오른쪽 공격) — 세로로 두 팀을 쌓으면 화면 두 장 길이였다 */
+  const wide = !useIsMobile();
   const crest = (k: 'home' | 'away', size: number) => <TeamCrest live={live} match={match} k={k} size={size} />;
 
   return (
@@ -36,13 +39,27 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
       {live.lineupType === 'predicted' && <p className="lm__note">아직 공식 라인업 발표 전 — FotMob 예상 라인업입니다.</p>}
 
       <section className="lm__pitch">
-        <TeamBar side={live[theirs]} crest={crest(theirs, 18)} />
-        <div className="lm__field">
-          <PitchMarkings />
-          <Half side={live[theirs]} subs={subsOf(live, theirs)} top />
-          <Half side={live[ours]} subs={subsOf(live, ours)} />
+        {wide ? (
+          <div className="lm__bars">
+            <TeamBar side={live[ours]} crest={crest(ours, 18)} />
+            <TeamBar side={live[theirs]} crest={crest(theirs, 18)} />
+          </div>
+        ) : <TeamBar side={live[theirs]} crest={crest(theirs, 18)} />}
+        <div className="lm__field" data-wide={wide || undefined}>
+          <div className="lm__lines"><PitchMarkings /></div>
+          {wide ? (
+            <>
+              <Half side={live[ours]} subs={subsOf(live, ours)} wide />
+              <Half side={live[theirs]} subs={subsOf(live, theirs)} top wide />
+            </>
+          ) : (
+            <>
+              <Half side={live[theirs]} subs={subsOf(live, theirs)} top />
+              <Half side={live[ours]} subs={subsOf(live, ours)} />
+            </>
+          )}
         </div>
-        <TeamBar side={live[ours]} crest={crest(ours, 18)} />
+        {!wide && <TeamBar side={live[ours]} crest={crest(ours, 18)} />}
         <p className="lm__key">평점 · 카드는 이 경기 기록(FotMob 실시간) · <b className="lm__ink">↑74&apos;</b> 교체 투입</p>
       </section>
 
@@ -133,10 +150,12 @@ function rowsOf(starters: LivePlayer[]): LivePlayer[][] {
 }
 
 /** 경기장 반쪽 — top 이면 상대(골키퍼가 맨 위, 좌우를 뒤집어 우리 쪽에서 보는 방향) */
-function Half({ side, subs, top = false }: { side: LiveSide; subs: Sub[]; top?: boolean }) {
+function Half({ side, subs, top = false, wide = false }: { side: LiveSide; subs: Sub[]; top?: boolean; wide?: boolean }) {
   const rows = useMemo(() => rowsOf(side.starters), [side.starters]);
   const shown = rows.map((r, i) => ({ r: top ? [...r].reverse() : r, i }));
-  const ordered = top ? shown : [...shown].reverse();
+  /* 세로(폰): 상대는 골키퍼가 맨 위, 우리는 맨 아래. 가로(넓은 화면): 우리 골키퍼가 맨 왼쪽, 상대는 맨 오른쪽.
+     줄 안의 순서는 둘 다 같다 — 공격 방향 기준 왼쪽 선수가 위(가로) · 왼쪽(세로) */
+  const ordered = (wide ? !top : top) ? shown : [...shown].reverse();
   return (
     <div className="lm__half" data-top={top || undefined}>
       {ordered.map(({ r, i }) => {
@@ -171,7 +190,7 @@ function Chip({ starter, now: p, tag, color }: { starter: LivePlayer; now: LiveP
     <div className="chipbox lm__chip" style={{ ['--pc' as string]: color }} data-red={red || undefined} title={title}>
       {tag && <span className="chipbox__tag">{tag}</span>}
       <span className="chipbox__ring">
-        <Headshot id={`fm-${p.id}`} src={fotmobImage(p.id)} kind="espn" label={p.no != null ? String(p.no) : p.last.slice(0, 1)} size={44} className="chipbox__hs" />
+        <Headshot id={`fm-${p.id}`} src={fotmobImage(p.id)} kind="espn" label={p.no != null ? String(p.no) : p.last.slice(0, 1)} size={38} className="chipbox__hs" />
         {red || yellow
           ? <span className="chipbox__no chipbox__no--card" data-kind={red ? 'red' : 'yellow'}><CardShape color={red ? 'red' : 'yellow'} /></span>
           : <span className="chipbox__no num">{p.no ?? ''}</span>}
@@ -181,8 +200,8 @@ function Chip({ starter, now: p, tag, color }: { starter: LivePlayer; now: LiveP
       {/* 알약은 늘 그린다(비면 숨김) — 줄마다 칩 높이가 같아야 배치가 흔들리지 않는다 */}
       <span className="chipbox__stat num" data-empty={!stat || undefined}>
         {subbed && <em className="lm__ink">↑{p.in ?? ''}&apos;</em>}
-        {p.goals > 0 && <em className="g">⚽{p.goals > 1 ? p.goals : ''}</em>}
-        {p.assists > 0 && <em className="a">A{p.assists > 1 ? p.assists : ''}</em>}
+        {p.goals > 0 && <em className="g">⚽{p.goals}</em>}
+        {p.assists > 0 && <em className="a">A{p.assists}</em>}
         {!stat && <em>·</em>}
       </span>
     </div>

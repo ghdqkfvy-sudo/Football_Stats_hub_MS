@@ -44,10 +44,34 @@
   border-radius: 14px; overflow: hidden; border: 1.5px solid rgba(160, 255, 190, .45);
   box-shadow: 0 0 28px rgba(46, 213, 115, .16), inset 0 0 40px rgba(0, 0, 0, .18);
 }
-.lm__half { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 10px; padding: 14px 6px; }
-.lm__half[data-top] { padding-bottom: 22px; }
-.lm__half:not([data-top]) { padding-top: 22px; }
-.lm__chip { cursor: default; }
+.lm__lines { position: absolute; inset: 0; }
+.lm__half { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 4px; padding: 10px 4px; }
+.lm__half[data-top] { padding-bottom: 16px; }
+.lm__half:not([data-top]) { padding-top: 16px; }
+
+/* 넓은 화면 — 경기장을 눕힌다: 우리 팀 왼쪽(→ 공격) · 상대 오른쪽. 줄은 세로 기둥이 된다.
+   라인 마킹은 세로 그림을 90° 돌려 그대로 쓴다(.lm__lines — 돌리기 전 상자는 경기장의 세로·가로를 바꾼 크기) */
+.lm__field[data-wide] {
+  max-width: 880px; aspect-ratio: 105 / 64; grid-template-rows: none; grid-template-columns: 1fr 1fr;
+  container-type: size;
+}
+.lm__field[data-wide] .lm__lines {
+  inset: auto; left: 50%; top: 50%; width: 100cqh; height: 100cqw;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+.lm__field[data-wide] .lm__half { flex-direction: row; padding: 8px 14px; gap: 0; }
+.lm__field[data-wide] .pitch__row { flex-direction: column; justify-content: space-around; flex: 1 1 0; padding: 0; gap: 2px; }
+.lm__field[data-wide] .pitch__row > * { flex: 0 0 auto; max-width: none; width: 76px; margin: 0 auto; }
+.lm__bars { display: flex; justify-content: space-between; width: 100%; max-width: 880px; margin: 0 auto; padding-inline: 6px; }
+
+/* 칩 — 포메이션 탭 모양 그대로, 두 팀이 한 화면에 들어가게 조금 작게.
+   포지션 이름표는 링 위에 겹쳐 높이를 차지하지 않는다 */
+.lm__chip { cursor: default; padding: 11px 2px 0; gap: 2px; }
+.lm__chip .chipbox__tag { position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 2; font-size: 8px; padding: 2px 4px; }
+.lm__chip .chipbox__ring { width: 42px; height: 42px; }
+.lm__chip .chipbox__hs { width: 38px !important; height: 38px !important; }
+.lm__chip .chipbox__name { font-size: 10.5px; }
+.lm__chip .chipbox__stat { padding: 1px 6px; font-size: 9px; }
 .lm__chip[data-red] .chipbox__ring { opacity: .5; }
 .lm__chip .chipbox__stat[data-empty] { visibility: hidden; }
 .lm__ink { color: #7CF0A6 !important; font-weight: 800; }
@@ -142,8 +166,10 @@
 @media (max-width: 640px) {
   .lm { gap: 12px; }
   .lm__sc { font-size: 36px; }
-  .lm__half { gap: 8px; padding-inline: 4px; }
-  .lm__half .pitch__row > * { max-width: 88px; }
+  .lm__half .pitch__row > * { max-width: 84px; }
+  .lm__chip .chipbox__ring { width: 36px; height: 36px; }
+  .lm__chip .chipbox__hs { width: 32px !important; height: 32px !important; }
+  .lm__chip .chipbox__name { font-size: 10px; }
   .lm__switch {
     display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px;
     background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px var(--line);

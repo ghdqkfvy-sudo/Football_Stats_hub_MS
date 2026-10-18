@@ -15,13 +15,16 @@ export function PitchMarkings() {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
+    /* 놓인 상자(부모)의 레이아웃 크기 — 회전시킨 상자(오늘의 경기 가로 경기장)에서도
+       돌리기 전 크기라 비율이 뒤집히지 않는다 */
+    const box = el.parentElement ?? el;
     const fit = () => {
-      const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) setH(Math.round((68 * r.height / r.width) * 10) / 10);
+      const w = box.clientWidth, h = box.clientHeight;
+      if (w > 0 && h > 0) setH(Math.round((68 * h / w) * 10) / 10);
     };
     fit();
     const ro = new ResizeObserver(fit);
-    ro.observe(el);
+    ro.observe(box);
     return () => ro.disconnect();
   }, []);
   const W = 68;
