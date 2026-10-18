@@ -18,6 +18,7 @@ export function normName(s) {
 
 const lastOf = (n) => n.split(' ').slice(-1)[0];
 const firstOf = (n) => n.split(' ')[0];
+const tokenKey = (n) => n.split(' ').sort().join(' ');
 
 /**
  * FotMob 부상 선수 → ESPN 선수 id.
@@ -35,6 +36,9 @@ export function matchInjured(injured, athletes) {
     const n = normName(m?.name);
     if (!n) continue;
     let hit = rows.find((r) => r.n === n);
+    /* 이름 순서만 다른 경우 — FotMob 은 한국 이름을 "Kang-In Lee", ESPN 은 "Lee Kang-In" 으로 준다
+       (2026-10-18: 이강인 · 김민재 · 손흥민의 평점이 소속팀 화면에서 비어 있었다) */
+    if (!hit) hit = rows.find((r) => tokenKey(r.n) === tokenKey(n));
     if (!hit) {
       const sameLast = rows.filter((r) => lastOf(r.n) === lastOf(n));
       hit = sameLast.find((r) => firstOf(r.n)[0] === firstOf(n)[0]) ?? (sameLast.length === 1 ? sameLast[0] : undefined);

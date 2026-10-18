@@ -658,14 +658,16 @@ async function prevInjuries(slug) {
  * @returns { [espnEventId]: { fm, r: { [espnAthleteId]: rating } } }
  */
 const RATING_FETCH_MAX = 8;
+const RATING_VER = 2;
 async function fotmobMatchRatings(fm, teamJson, done, athletes, prev = {}) {
   const fixtures = finishedFixtures(teamJson);
   const out = {};
   let fetched = 0;
   for (const ev of done) {
     const key = String(ev.id);
-    if (prev[key]) { out[key] = prev[key]; continue; }
-    if (fetched >= RATING_FETCH_MAX) continue;
+    /* v2 — 이름 순서가 다른 선수(한국 이름)까지 맞춘 기록. 그 전 기록은 다시 받는다 */
+    if (prev[key]?.v >= RATING_VER) { out[key] = prev[key]; continue; }
+    if (fetched >= RATING_FETCH_MAX) { if (prev[key]) out[key] = prev[key]; continue; }   // 다음 회차에 다시 받을 때까지 옛 기록
     const fid = pairFixture(ev.date, fixtures);
     if (!fid) continue;
     fetched++;
@@ -674,11 +676,12 @@ async function fotmobMatchRatings(fm, teamJson, done, athletes, prev = {}) {
       if (rows.length) {
         const r = {};
         for (const [id, m] of matchInjured(rows, athletes)) r[id] = m.rating;
-        out[key] = { fm: fid, r };
+        out[key] = { v: RATING_VER, fm: fid, r };
       }
     } catch (e) {
       note(`FotMob 평점(${fid})`, `${String(e).split('\n')[0]} — 다음 회차에 다시`);
     }
+    if (!out[key] && prev[key]) out[key] = prev[key];
     await sleep(150);
   }
   return out;
