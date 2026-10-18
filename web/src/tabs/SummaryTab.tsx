@@ -19,7 +19,7 @@ import { MonthList } from '../components/MonthList';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { euroStage, pointsPerGame, seasonRecord } from '../lib/compare';
 import { Crest } from '../components/Crest';
-import { isTodayLive, useLives } from '../lib/live';
+import { isTodayLive, useLives, withLiveScore } from '../lib/live';
 
 /**
  * Summary — 앱에 들어오면 처음 보이는 화면.
@@ -44,7 +44,14 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   const lives = useLives(LIVE_SLUGS);
   const todays = Object.values(lives).filter((l) => isTodayLive(l) && (l.phase !== 'pre' || l.home.starters.length > 0));
   /* ── 모든 팀 일정 ─────────────────────────────────── */
-  const [feeds, setFeeds] = useState<Record<string, Match[]>>({});
+  const [rawFeeds, setFeeds] = useState<Record<string, Match[]>>({});
+  /* 오늘의 경기 스코어 · 시간을 일정 위에 덮는다 — 히어로가 오늘의 경기보다 늦지 않게 */
+  const feeds = useMemo(
+    () => Object.fromEntries(Object.entries(rawFeeds).map(([id, ms]) => [
+      id, withLiveScore(ms, isTodayLive(lives[id] ?? null) ? lives[id] : null, getTarget(id as TargetId).espnTeamId),
+    ])) as Record<string, Match[]>,
+    [rawFeeds, lives],
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
