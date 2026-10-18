@@ -1,11 +1,30 @@
+import { useLayoutEffect, useRef, useState } from 'react';
+
 /**
  * 실제 경기장 규격(105 × 68 m)을 세로로 눕힌 라인 마킹.
  * 골라인이 아래, 공격 방향이 위다. 좌표는 모두 미터 단위라
  * 페널티 박스·아크·코너 호의 비율이 실제와 같다.
+ *
+ * ⚠️ 그림 틀(viewBox)의 세로는 **놓인 상자의 실제 비율**로 맞춘다. 105 m 로 박아 두고 늘리면
+ * 상자가 그보다 길 때(칩 줄이 많은 오늘의 경기 · 넓은 화면) 센터 서클이 세로로 긴 타원이 됐다.
+ * 폭 68 m 는 그대로라 박스 · 서클 · 아크는 언제나 실제 비율이고, 경기장 길이만 상자를 따른다.
  */
 export function PitchMarkings() {
+  const ref = useRef<SVGSVGElement>(null);
+  const [H, setH] = useState(105);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const fit = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setH(Math.round((68 * r.height / r.width) * 10) / 10);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const W = 68;
-  const H = 105;
   const PA_W = 40.32;   // 페널티 에어리어 폭
   const PA_D = 16.5;    // 페널티 에어리어 깊이
   const GA_W = 18.32;   // 골 에어리어 폭
@@ -18,6 +37,7 @@ export function PitchMarkings() {
 
   return (
     <svg
+      ref={ref}
       className="pitch__svg"
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
