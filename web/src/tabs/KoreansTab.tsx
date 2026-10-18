@@ -31,6 +31,7 @@ const toRecent = (gm: KoreanGame): RecentLine => ({
   goals: gm.goals,
   assists: gm.assists,
   yellow: gm.yellow,
+  rating: gm.rating,
 });
 
 /** A매치 줄 — 예전 피드(national 없음)면 줄을 그리지 않는다 */
@@ -247,6 +248,7 @@ export function KoreansTab() {
               tint="league"
               compLabel={false}
               hot={lastMatchTag(p.recent)}
+              rating={p.rating}
               national={nationalOf(p)}
               photo={p.photo}
               photoKind={p.photoKind}

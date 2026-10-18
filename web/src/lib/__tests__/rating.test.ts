@@ -7,6 +7,8 @@ describe('평점 색 구간', () => {
     expect(ratingTier(6.96)).toBe('good');
     expect(ratingTier(6.94)).toBe('mid');
     expect(ratingTier(7.96)).toBe('top');
+    expect(ratingTier(8.96)).toBe('elite');
+    expect(ratingTier(9.4)).toBe('elite');
     expect(ratingTier(5.94)).toBe('low');
   });
 });

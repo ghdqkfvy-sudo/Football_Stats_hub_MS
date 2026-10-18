@@ -55,9 +55,9 @@ export function Pitch({
         </span>
       </div>
 
-      <div className="pitch__chem" tabIndex={0} aria-label={`팀 조직력 ${chem} — 설명 보기`}>
+      <div className="pitch__chem" tabIndex={0} aria-label={`전술 일관성 ${chem} — 설명 보기`}>
         {/* ⓘ — 설명 말풍선(chem__tip)이 있다는 표시. 마우스를 올리거나 초점을 주면 뜬다 */}
-        <span>팀 조직력 <em className="pitch__info" aria-hidden="true">i</em></span>
+        <span>전술 일관성 <em className="pitch__info" aria-hidden="true">i</em></span>
         <i>
           <u style={{ width: `${chem}%` }} />
         </i>

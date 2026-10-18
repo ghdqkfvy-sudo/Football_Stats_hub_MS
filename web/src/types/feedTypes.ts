@@ -156,6 +156,8 @@ export interface KoreanGame {
   goals: number;
   assists: number;
   yellow?: boolean;
+  /** FotMob 경기 평점 */
+  rating?: number;
 }
 
 export interface KoreanPlayer {
@@ -178,6 +180,8 @@ export interface KoreanPlayer {
   leagueLogo?: string;
   stats: KoreanStat[];
   recent: KoreanGame[];
+  /** FotMob 시즌 평균 평점 */
+  rating?: number;
   /** A매치 — 스냅샷이 대표팀 경기 라인업에서 모은다 (scripts/lib/national.mjs) */
   national?: KoreanNational;
 }

@@ -162,6 +162,7 @@ function FutureCard({
     goals: gm.goals,
     assists: gm.assists,
     yellow: gm.yellow,
+    rating: gm.rating,
   }));
 
   return (
@@ -184,6 +185,7 @@ function FutureCard({
       recent={recent}
       tag={CLAUSE_LABEL[p.kind]}
       hot={lastMatchTag(recent)}
+      rating={feed?.rating}
       compLabel={false}
       emptyNote={
         feed === undefined
