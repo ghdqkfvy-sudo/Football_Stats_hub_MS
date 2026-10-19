@@ -36,7 +36,7 @@ import {
   maskTsdbKey, pickTsdbKey, rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
-import { substitutionsFrom } from './lib/subs.mjs';
+import { redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -2277,6 +2277,11 @@ async function main() {
         }
         /* (3) 교체 기록 — 들어간 선수가 **누구 대신**인지(11번째 칸).
            앱은 이걸로 교체 선수가 실제로 선 자리를 정한다(나간 선수의 자리). */
+        /* (4) 퇴장 — 나간 시각이 비어 있으면 퇴장 분으로(안 그러면 90분 출전으로 센다) */
+        const sentOff = redCardMinutes(sum);
+        for (const x of entries) {
+          if (x[9] > 0 && x[4] == null && sentOff.has(x[0])) x[4] = sentOff.get(x[0]);
+        }
         const replaced = substitutionsFrom(sum, mine.roster);
         for (const x of entries) {
           if (x[2]) continue;

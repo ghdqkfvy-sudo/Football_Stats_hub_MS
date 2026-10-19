@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normName, parseSubText, substitutionsFrom } from './subs.mjs';
+import { normName, parseSubText, redCardMinutes, substitutionsFrom } from './subs.mjs';
 
 const R = (id, name, starter = true) => ({ athlete: { id, displayName: name }, starter });
 const ROSTER = [
@@ -51,4 +51,21 @@ test('substitutionsFrom: 로스터의 subbedInFor 가 있으면 그것을 쓴다
   const m = substitutionsFrom(sum, roster);
   assert.equal(m.get('4'), '3');
   assert.equal(m.size, 1);
+});
+
+test('redCardMinutes: 퇴장 사건의 분 — keyEvents · 스코어보드 details, 추가시간은 정규시간 끝', () => {
+  const sum = {
+    keyEvents: [
+      { type: { type: 'yellow-card', text: 'Yellow Card' }, clock: { displayValue: "30'" }, participants: [{ athlete: { id: '9' } }] },
+      { type: { type: 'red-card', text: 'Red Card' }, clock: { value: 4020, displayValue: "67'" }, participants: [{ athlete: { id: '286831' } }] },
+    ],
+    header: { competitions: [{ details: [
+      { type: { text: 'Yellow Red Card' }, redCard: true, clock: { displayValue: "90'+3'" }, athletesInvolved: [{ id: '7' }] },
+      { type: { text: 'Red Card' }, redCard: true, clock: { displayValue: "67'" }, athletesInvolved: [{ id: '286831' }] },
+    ] }] },
+  };
+  const m = redCardMinutes(sum);
+  assert.equal(m.get('286831'), 67);
+  assert.equal(m.get('7'), 90);
+  assert.equal(m.has('9'), false);
 });
