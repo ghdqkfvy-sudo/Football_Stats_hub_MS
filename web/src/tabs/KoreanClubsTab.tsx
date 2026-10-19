@@ -15,6 +15,10 @@ import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { PlayersTab } from './PlayersTab';
 import { LiveMatchView } from '../components/LiveMatch';
 import { isTodayLive, useLive } from '../lib/live';
+import { resultOf } from '../lib/league';
+import { useMedia } from '../lib/useMedia';
+import { useSquadPlayers } from '../lib/liveSquad';
+import { RatingBadge } from '../components/RatingBadge';
 
 /**
  * 대한민국 › 소속팀 — 코리안리거가 뛰는 클럽(뮌헨 · LAFC · 아틀레티코).
@@ -175,14 +179,17 @@ function useTable(lg: CompetitionKey | undefined, teamId: string): StandingTable
   return got && got.k === lg ? got.t : undefined;
 }
 
-/** 그 클럽 앞뒤 다섯 줄 */
-function aroundOf(t: StandingTable | null | undefined, teamId: string): StandingRow[] {
+/** 그 클럽 앞뒤 n 줄(기본 다섯) */
+function aroundOf(t: StandingTable | null | undefined, teamId: string, n = 5): StandingRow[] {
   if (!t) return [];
   const i = t.rows.findIndex((r) => r.team.id === teamId);
-  if (i < 0) return t.rows.slice(0, 5);
-  const from = Math.max(0, Math.min(i - 2, t.rows.length - 5));
-  return t.rows.slice(from, from + 5);
+  if (i < 0) return t.rows.slice(0, n);
+  const from = Math.max(0, Math.min(i - Math.floor(n / 2), t.rows.length - n));
+  return t.rows.slice(from, from + n);
 }
+
+/** 두 박스가 나란히 놓이는 폭 — kclubs.css 의 @media (min-width: 901px) 와 같다 */
+const SIDE_BY_SIDE = '(min-width: 901px)';
 
 /**
  * 클럽 요약 + 순위 — **리그 / 유럽대항전 전환**.
@@ -228,7 +235,17 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
   const played = row ? row.played : rec.played;
   const ko = showEuro && stage?.kind === 'ko' ? stage : null;
 
-  const around = useMemo(() => aroundOf(t, club.espnTeamId), [t, club.espnTeamId]);
+  /* 나란히 놓이면 왼쪽(최근 5경기 목록 · 코리안리거)과 높이를 맞춰 일곱 줄, 쌓이면(폰 포함) 다섯 줄 그대로 */
+  const wide = useMedia(SIDE_BY_SIDE);
+  const around = useMemo(() => aroundOf(t, club.espnTeamId, wide ? 7 : 5), [t, club.espnTeamId, wide]);
+  /* 넓은 화면 — 최근 5경기를 경기 목록으로(순위표 5줄과 높이가 맞는다). 폰 · 좁은 화면은 칩 한 줄 그대로 */
+  const recent = useMemo(
+    () => scoped
+      .filter((m) => !/friendly/.test(m.competition) && resultOf(m, club.espnTeamId) !== null)
+      .sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc))
+      .slice(0, 5),
+    [scoped, club.espnTeamId],
+  );
   const koGames = useMemo(() => {
     if (!ko || !rounds) return [];
     const r = rounds.find((x) => roundKo(x.label) === ko.round);
@@ -280,7 +297,7 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
             </>
           ) : <span className="kclub__none">예정된 경기 없음</span>}
         </div>
-        <div className="kclub__line">
+        <div className="kclub__line kclub__line--chips">
           <span className="eyebrow">최근 5경기</span>
           <span className="kclub__form">
             {rec.form.length
@@ -289,6 +306,16 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
           </span>
           <span className="kclub__formnote">오른쪽이 최근 · {showEuro ? `${curName}만` : '모든 대회'}</span>
         </div>
+        <div className="kclub__recent">
+          <div className="kclub__rh">
+            <span className="eyebrow">최근 5경기</span>
+            <span className="kclub__formnote">위가 최근 · {showEuro ? `${curName}만` : '모든 대회'}</span>
+          </div>
+          {recent.length ? (
+            <ol>{recent.map((m) => <RecentRow key={m.id} m={m} teamId={club.espnTeamId} />)}</ol>
+          ) : <span className="kclub__none">기록 없음</span>}
+        </div>
+        <KoreanLine club={club} matches={matches} />
       </div>
 
       <div className="kclub__table">
@@ -379,6 +406,54 @@ function KoGame({ m, teamId, leg }: { m: Match; teamId: string; leg: number }) {
           ? `${ours} : ${theirs}`
           : `${p.month}.${p.date} ${m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc)}`}
       </b>
+    </div>
+  );
+}
+
+/** 최근 경기 한 줄 — 결과 · 날짜 · 홈/원정 · 상대 · 대회 · 스코어(우리 쪽 먼저) */
+function RecentRow({ m, teamId }: { m: Match; teamId: string }) {
+  const home = m.home.id === teamId;
+  const opp = home ? m.away : m.home;
+  const r = resultOf(m, teamId)!;
+  const p = kstParts(m.kickoffUtc);
+  const [a, b] = home ? [m.homeScore, m.awayScore] : [m.awayScore, m.homeScore];
+  return (
+    <li>
+      <i className="fchip" data-r={r}>{r}</i>
+      <span className="kclub__rd num">{p.month}.{p.date}</span>
+      <i className="hachip" data-side={home ? 'H' : 'A'}>{home ? 'H' : 'A'}</i>
+      <Crest team={opp} size={16} />
+      <b>{opp.name}</b>
+      <CompCrest k={m.competition} size={12} />
+      <span className="kclub__rs num" data-r={r}>{a}<i>:</i>{b}</span>
+    </li>
+  );
+}
+
+/** 코리안리거 시즌 한 줄 — 출전 · 선발 · 분 · 골/도움 · 시즌 평점(FotMob). 넓은 화면에서만 */
+function KoreanLine({ club, matches }: { club: KoreanClub; matches: Match[] }) {
+  const pool = useSquadPlayers(club.espnTeamId, matches);
+  if (!pool.length) return null;
+  return (
+    <div className="kclub__kor">
+      {club.koreans.map((k) => {
+        const p = pool.find((x) => x.id === k.id);
+        return (
+          <div key={k.id} className="kclub__korrow">
+            <span className="kclub__korname"><KorFlag />{k.nameKo}</span>
+            {p ? (
+              <span className="kclub__korstat num">
+                <span><b>{p.apps}</b>경기</span>
+                <span>선발 <b>{p.starts}</b></span>
+                <span><b>{p.minutes}</b>분</span>
+                <span><b>{p.goals}</b>골 <b>{p.assists}</b>도움</span>
+                {p.inj && <em className="kclub__korinj" data-doubt={p.inj.doubtful || undefined}>{p.inj.ko}</em>}
+              </span>
+            ) : <span className="kclub__none">이번 시즌 출전 기록 없음</span>}
+            {p?.rating != null && <span className="kclub__korrtg"><small>시즌 평점</small><RatingBadge v={p.rating} /></span>}
+          </div>
+        );
+      })}
     </div>
   );
 }

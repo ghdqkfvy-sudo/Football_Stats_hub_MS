@@ -131,6 +131,43 @@
 .kclub__formnote { font-size: 10px; color: var(--text-lo); }
 .kclub__none { font-size: 12px; color: var(--text-lo); }
 
+/* 넓은 화면(두 박스 나란히) — 최근 5경기 목록 + 코리안리거 한 줄로 왼쪽 박스를 채운다(2026-10-19).
+   예전엔 칩 한 줄로 끝나 오른쪽 순위표(5줄)보다 아래가 텅 비어 보였다. 900px 이하(쌓임 · 폰)는 칩 줄 그대로 */
+.kclub__recent, .kclub__kor { display: none; }
+@media (min-width: 901px) {
+  .kclub__hero { display: flex; flex-direction: column; }
+  .kclub__line--chips { display: none; }
+  .kclub__recent { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .kclub__rh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .kclub__recent ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .kclub__recent li {
+    display: grid; grid-template-columns: 20px 36px 18px 16px minmax(0, 1fr) 14px 52px; align-items: center; gap: 8px;
+    padding: 5px 6px; border-radius: 8px; font-size: 12.5px; color: var(--text-mid);
+  }
+  .kclub__recent li:nth-child(odd) { background: rgba(255, 255, 255, .025); }
+  .kclub__recent li b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--text-hi); }
+  .kclub__rd { font-size: 11.5px; color: var(--text-lo); }
+  .kclub__rs { justify-self: end; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-hi); }
+  .kclub__rs i { font-style: normal; margin: 0 3px; color: var(--text-lo); }
+  .kclub__rs[data-r='L'] { color: var(--text-mid); }
+  /* 코리안리거 — 박스 맨 아래에 붙인다(남는 높이는 목록과 이 줄 사이로) */
+  .kclub__kor { display: grid; gap: 6px; margin-top: auto; padding-top: 10px; }
+  .kclub__korrow {
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px;
+    background: color-mix(in srgb, var(--brand) 14%, rgba(255, 255, 255, .03)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, var(--line));
+  }
+  .kclub__korname { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 13.5px; font-weight: 800; color: var(--text-hi); }
+  .kclub__korstat { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; font-size: 12px; color: var(--text-lo); }
+  .kclub__korstat b { font-weight: 800; color: var(--text-hi); }
+  .kclub__korinj { font-style: normal; font-weight: 700; color: #FF6B6B; }
+  .kclub__korinj[data-doubt] { color: #F5A524; }
+  .kclub__korrtg { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; flex: none; }
+  .kclub__korrtg small { font-size: 10.5px; font-weight: 700; color: var(--text-lo); }
+  /* 승무패 두 자리씩(MLS 10-10-11)도 한 줄에 */
+  .kclub__tr { grid-template-columns: 22px minmax(0, 1fr) 30px 68px 32px; }
+  .kclub__tr > span:nth-child(4) { white-space: nowrap; }
+}
+
 .kclub__th { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 10px; color: var(--text-lo); }
 .kclub__tr {
   display: grid; grid-template-columns: 22px minmax(0, 1fr) 30px 58px 32px; align-items: center; gap: 6px;
