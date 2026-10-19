@@ -107,3 +107,45 @@ export function substitutionsFrom(sum, roster) {
   }
   return out;
 }
+
+/** "67'" · "90'+3'" · "45+2'" → 분(추가시간은 그 정규시간 끝으로: 90'+3' → 90) */
+function minuteOf(clock) {
+  const d = String(clock?.displayValue ?? '');
+  const m = d.match(/\d+/);
+  if (m) return Number(m[0]);
+  const v = Number(clock?.value);
+  return Number.isFinite(v) && v > 0 ? Math.ceil(v / 60) : null;
+}
+
+const isRedEvent = (ev) => {
+  if (ev?.redCard === true) return true;
+  const ty = `${ev?.type?.type ?? ''} ${ev?.type?.text ?? ''}`.toLowerCase();
+  return /red[\s-]?card|redcard|second yellow|yellow[\s-]?red/.test(ty);
+};
+
+/**
+ * 퇴장 시각 (2026-10-19) — 요약 로스터는 퇴장 수(redCards)만 주고 나간 시각이 없어,
+ * 선발이 퇴장당하면 90분을 다 뛴 것으로 셌다(뮌헨 올리세 챔스).
+ * 사건 목록(keyEvents · commentary · plays)과 스코어보드 details 에서 퇴장 사건의 분을 찾는다.
+ * @returns Map<선수 id, 퇴장 분> — 한 선수가 두 번 나오면 이른 쪽
+ */
+export function redCardMinutes(sum) {
+  const out = new Map();
+  const details = sum?.header?.competitions?.[0]?.details;
+  const list = [...eventLists(sum), ...(Array.isArray(details) ? details : [])];
+  for (const ev of list) {
+    if (!isRedEvent(ev)) continue;
+    const min = minuteOf(ev?.clock ?? ev?.play?.clock);
+    if (min == null) continue;
+    const ids = [
+      ...(ev?.participants ?? ev?.play?.participants ?? []).map((p) => p?.athlete?.id),
+      ...(ev?.athletesInvolved ?? []).map((a) => a?.id),
+    ].map((x) => String(x ?? '')).filter(Boolean);
+    /* 퇴장 사건의 참가자는 보통 한 명 — 여럿이면 누군지 모르니 넘긴다 */
+    const uniq = [...new Set(ids)];
+    if (uniq.length !== 1) continue;
+    const id = uniq[0];
+    if (!out.has(id) || min < out.get(id)) out.set(id, min);
+  }
+  return out;
+}
