@@ -602,7 +602,7 @@ export default function App() {
             />
           )}
           {!summary && tab === 'today' && live && (
-            <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} />
+            <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={target.espnTeamId} matches={matches} />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
           {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}

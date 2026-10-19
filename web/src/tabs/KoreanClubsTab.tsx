@@ -123,7 +123,7 @@ function ClubToday({ club, matches }: { club: KoreanClub; matches: Match[] }) {
         {live.phase === 'live' ? <>LIVE {live.clock && <span className="num">{live.clock}</span>} · 오늘의 경기</> : '오늘의 경기'}
         {shown ? ' 접기' : ' 보기'}
       </button>
-      {shown && <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} />}
+      {shown && <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={club.espnTeamId} matches={matches} />}
     </div>
   );
 }

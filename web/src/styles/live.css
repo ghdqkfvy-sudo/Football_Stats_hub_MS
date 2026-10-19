@@ -73,6 +73,9 @@
 .lm__chip .chipbox__name { font-size: 10.5px; }
 .lm__chip .chipbox__stat { padding: 1px 6px; font-size: 9px; }
 .lm__chip[data-red] .chipbox__ring { opacity: .5; }
+/* 우리 팀 칩 — 스쿼드와 이어진 선수만 눌러서 선수 상세 */
+button.lm__chip { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; position: relative; }
+button.lm__chip:hover .chipbox__ring, button.lm__chip:focus-visible .chipbox__ring { box-shadow: 0 0 0 2px var(--pc); border-radius: 50%; }
 .lm__chip .chipbox__stat[data-empty] { visibility: hidden; }
 .lm__ink { color: #7CF0A6 !important; font-weight: 800; }
 .lm__cap {
