@@ -277,3 +277,5 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
    오른쪽 끝을 원 왼쪽 + 7px 에 묶어 폭이 달라도 걸침이 같다 */
 .lm__chip .chipbox__rtg { left: auto; right: calc(100% - 5px); bottom: -6px; height: 17px; min-width: 26px; padding: 0 4px; font-size: 9.5px; }
 .lm__chip .chipbox__name { margin-top: 4px; }
+/* 평점 없음 자리표시 — 등번호 반대편이 비어 칩이 한쪽으로 쏠려 보이지 않게(2026-10-19 밀리탕) */
+.lm__chip .lm__rtg0 { color: rgba(234, 241, 253, .55); background: rgba(20, 30, 46, .82); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 1px 5px rgba(0, 0, 0, .5); }
