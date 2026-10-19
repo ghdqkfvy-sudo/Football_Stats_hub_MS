@@ -72,6 +72,16 @@ describe('징계 — 대회별', () => {
     expect(d.badge).toBe('red');
   });
 
+  it('FotMob 이 다른 대회 경기까지 올려 두면 마지막 퇴장 대회 경기만 정지(챔스 퇴장 → 주말 리그는 뜀)', () => {
+    const recent = [g('L4', 'eng.1', '2026-10-10T15:00Z'), g('C1', 'uefa.champions', '2026-09-20T19:00Z', 0, 1)];
+    const fm = { utc: '2026-10-19T15:00Z', games: [{ utc: '2026-10-19T15:00Z', league: 'Premier League' }, { utc: '2026-10-22T19:00Z', league: 'Champions League' }] };
+    const d = discipline(recent, team, fm, NOW);
+    expect(d.sus).toMatchObject({ competition: 'uefa.champions', confirmed: true });
+    expect(d.sus?.match?.id).toBe('C2');
+    expect(d.all.some((x) => x.competition === 'eng.1')).toBe(false);
+    expect(d.badge).not.toBe('red');
+  });
+
   it('FotMob 이 두 경기에 올려 두면 2경기 정지 · 확인 범위 안의 다음 같은 대회 경기가 복귀', () => {
     const t = [...team, m('L6', 'eng.1', '2026-10-26T15:00Z', 'scheduled'), m('L7', 'eng.1', '2026-11-02T15:00Z', 'scheduled')];
     const d = discipline([], t, {
