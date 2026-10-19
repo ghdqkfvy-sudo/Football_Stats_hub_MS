@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LiveEvent, LiveMatch, LivePlayer, LiveSide } from '../types/feedTypes';
 import type { Match } from '../lib/types';
 import { onPitch, teamColor } from '../lib/live';
@@ -11,6 +11,9 @@ import { Headshot } from './Headshot';
 import { RatingBadge } from './RatingBadge';
 import { CardShape } from './InjuryMark';
 import { Crest } from './Crest';
+import { PlayerDetail } from './PlayerDetail';
+import { matchLivePlayer, useSquadPlayers } from '../lib/liveSquad';
+import type { PlayerSeason } from '../lib/squad';
 
 /**
  * 오늘의 경기 — 양 팀 포메이션(한 경기장 위아래) · 교체 · 벤치 · 경기 흐름 (2026-10-18).
@@ -25,8 +28,19 @@ import { Crest } from './Crest';
 type Sub = Extract<LiveEvent, { t: 'sub' }>;
 type Goal = Extract<LiveEvent, { t: 'goal' }>;
 
-export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match }) {
+type Find = (p: LivePlayer) => PlayerSeason | null;
+
+/**
+ * @param teamId · matches 우리 팀 ESPN id 와 일정 — 주면 우리 팀 칩을 눌러 선수 상세 카드를 연다
+ *   (스쿼드와 이어진 선수만. 상대 선수 · 못 이은 선수는 그냥 칩)
+ */
+export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatch; match?: Match; teamId?: string; matches?: Match[] }) {
   const ours = live.ours ?? 'home';
+  const pool = useSquadPlayers(live.ours ? teamId : undefined, matches);
+  const find = useMemo<Find | undefined>(() => (pool.length ? (p) => matchLivePlayer(p, pool) : undefined), [pool]);
+  const [detail, setDetail] = useState<PlayerSeason | null>(null);
+  const closeDetail = useCallback(() => setDetail(null), []);
+  const pickProps = { find, onPick: setDetail };
   const theirs = ours === 'home' ? 'away' : 'home';
   const [pick, setPick] = useState<'home' | 'away'>(ours);
   /* 넓은 화면은 경기장을 눕힌다(우리 팀 왼쪽 → 오른쪽 공격) — 세로로 두 팀을 쌓으면 화면 두 장 길이였다 */
@@ -49,13 +63,13 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
           <div className="lm__lines"><PitchMarkings /></div>
           {wide ? (
             <>
-              <Half side={live[ours]} subs={subsOf(live, ours)} wide />
+              <Half side={live[ours]} subs={subsOf(live, ours)} wide {...pickProps} />
               <Half side={live[theirs]} subs={subsOf(live, theirs)} top wide />
             </>
           ) : (
             <>
               <Half side={live[theirs]} subs={subsOf(live, theirs)} top />
-              <Half side={live[ours]} subs={subsOf(live, ours)} />
+              <Half side={live[ours]} subs={subsOf(live, ours)} {...pickProps} />
             </>
           )}
         </div>
@@ -81,6 +95,7 @@ export function LiveMatchView({ live, match }: { live: LiveMatch; match?: Match 
       </section>
 
       <Timeline live={live} crest={crest} colors={{ home: teamColor(live, 'home', match?.home.id), away: teamColor(live, 'away', match?.away.id) }} />
+      {find && <PlayerDetail p={detail} onClose={closeDetail} />}
     </div>
   );
 }
@@ -142,7 +157,6 @@ function TeamBar({ side, crest }: { side: LiveSide; crest: React.ReactNode }) {
     <div className="lm__bar">
       {crest}<b>{side.name}</b>
       {side.formation && <em className="num">{side.formation}</em>}
-      <TeamRating v={side.rating} />
     </div>
   );
 }
@@ -159,7 +173,9 @@ function rowsOf(starters: LivePlayer[]): LivePlayer[][] {
 }
 
 /** 경기장 반쪽 — top 이면 상대(골키퍼가 맨 위, 좌우를 뒤집어 우리 쪽에서 보는 방향) */
-function Half({ side, subs, top = false, wide = false }: { side: LiveSide; subs: Sub[]; top?: boolean; wide?: boolean }) {
+function Half({ side, subs, top = false, wide = false, find, onPick }: {
+  side: LiveSide; subs: Sub[]; top?: boolean; wide?: boolean; find?: Find; onPick?: (p: PlayerSeason) => void;
+}) {
   const rows = useMemo(() => rowsOf(side.starters), [side.starters]);
   const shown = rows.map((r, i) => ({ r: top ? [...r].reverse() : r, i }));
   /* 세로(폰): 상대는 골키퍼가 맨 위, 우리는 맨 아래. 가로(넓은 화면): 우리 골키퍼가 맨 왼쪽, 상대는 맨 오른쪽.
@@ -173,9 +189,11 @@ function Half({ side, subs, top = false, wide = false }: { side: LiveSide; subs:
         const lab = top ? [...labels].reverse() : labels;
         return (
           <div className="pitch__row" key={i}>
-            {r.map((p, j) => (
-              <Chip key={p.id} starter={p} now={onPitch(p, subs, side.bench).now} tag={lab[j] ?? ''} color={LINE_COLOR[kind]} />
-            ))}
+            {r.map((p, j) => {
+              const now = onPitch(p, subs, side.bench).now;
+              const ps = find?.(now);
+              return <Chip key={p.id} starter={p} now={now} tag={lab[j] ?? ''} color={LINE_COLOR[kind]} onOpen={ps && onPick ? () => onPick(ps) : undefined} />;
+            })}
           </div>
         );
       })}
@@ -184,7 +202,7 @@ function Half({ side, subs, top = false, wide = false }: { side: LiveSide; subs:
 }
 
 /** 포메이션 탭과 같은 칩 — 등번호 자리에는 이 경기 카드, 아래 알약에는 투입 분 · 골 · 도움 */
-function Chip({ starter, now: p, tag, color }: { starter: LivePlayer; now: LivePlayer; tag: string; color: string }) {
+function Chip({ starter, now: p, tag, color, onOpen }: { starter: LivePlayer; now: LivePlayer; tag: string; color: string; onOpen?: () => void }) {
   const red = p.cards.some((c) => c.kind !== 'y');
   const yellow = !red && p.cards.length > 0;
   const subbed = p !== starter;
@@ -195,8 +213,9 @@ function Chip({ starter, now: p, tag, color }: { starter: LivePlayer; now: LiveP
     ...p.cards.map((c) => `${c.kind === 'y' ? '경고' : '퇴장'}${c.min ? ` ${c.min}'` : ''}`),
   ].filter(Boolean).join(' · ');
   const stat = subbed || p.goals > 0 || p.assists > 0;
+  const Box = onOpen ? 'button' : 'div';
   return (
-    <div className="chipbox lm__chip" style={{ ['--pc' as string]: color }} data-red={red || undefined} title={title}>
+    <Box className="chipbox lm__chip" style={{ ['--pc' as string]: color }} data-red={red || undefined} title={onOpen ? `${title} · 눌러서 시즌 기록` : title} {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}>
       {tag && <span className="chipbox__tag">{tag}</span>}
       <span className="chipbox__ring">
         <Headshot id={`fm-${p.id}`} src={fotmobImage(p.id)} kind="espn" label={p.no != null ? String(p.no) : p.last.slice(0, 1)} size={38} className="chipbox__hs" />
@@ -213,7 +232,7 @@ function Chip({ starter, now: p, tag, color }: { starter: LivePlayer; now: LiveP
         {p.assists > 0 && <em className="a">A{p.assists}</em>}
         {!stat && <em>·</em>}
       </span>
-    </div>
+    </Box>
   );
 }
 
