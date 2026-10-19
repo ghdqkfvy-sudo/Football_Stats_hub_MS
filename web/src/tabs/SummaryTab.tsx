@@ -3,7 +3,7 @@ import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summar
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
-import { dayKey, monthKey, todayKey } from '../lib/kst';
+import { dayKey, kstParts, kstTime, monthKey, todayKey } from '../lib/kst';
 import {
   cycleIndex, matchesByDay, monthResults, nextUpBoardShared, shiftWeek, weekStartKey,
   type TeamFeed,
@@ -42,7 +42,10 @@ const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].filter((t) => t.kind !== 'natio
 
 export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
   const lives = useLives(LIVE_SLUGS);
-  const todays = Object.values(lives).filter((l) => isTodayLive(l) && (l.phase !== 'pre' || l.home.starters.length > 0));
+  /* 오늘 끝난 경기만 — 경기 중인 경기는 위 매치데이 히어로가 이미 보여 주고 누르면 오늘의 경기로 간다 */
+  const todays = Object.values(lives)
+    .filter((l) => isTodayLive(l) && l.phase === 'done')
+    .sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc));
   /* ── 모든 팀 일정 ─────────────────────────────────── */
   const [rawFeeds, setFeeds] = useState<Record<string, Match[]>>({});
   /* 오늘의 경기 스코어 · 시간을 일정 위에 덮는다 — 히어로가 오늘의 경기보다 늦지 않게 */
@@ -337,30 +340,6 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   return (
     <div className="page sum">
-      {/* ── 0. 오늘의 경기 — 경기 중 · 오늘 끝난 경기 · 라인업 발표된 경기. 누르면 그 팀 오늘의 경기로 ── */}
-      {todays.length > 0 && (
-        <section className="sum-today" aria-label="오늘의 경기">
-          {todays.map((l) => {
-            const t = targetOf(l.slug);
-            const m = boardMatch(l.slug, l.espnId);
-            const state = l.phase === 'live' ? (l.clock ?? 'LIVE') : l.phase === 'done' ? '종료' : '라인업';
-            return (
-              <button key={l.slug} className="sum-today__row" data-phase={l.phase} onClick={() => onOpenTeam(l.slug as TargetId, { matchId: l.espnId, today: true })}>
-                <span className="sum-today__st">{l.phase === 'live' && <i />}{state}</span>
-                <span className="sum-today__fx">
-                  {m ? <Crest team={m.home} size={20} /> : null}
-                  <b><span className="m-full">{l.home.name}</span><span className="m-short">{m?.home.shortName ?? l.home.name}</span></b>
-                  <em className="num">{l.phase === 'pre' ? 'vs' : `${l.score[0]} : ${l.score[1]}`}</em>
-                  <b><span className="m-full">{l.away.name}</span><span className="m-short">{m?.away.shortName ?? l.away.name}</span></b>
-                  {m ? <Crest team={m.away} size={20} /> : null}
-                </span>
-                <span className="sum-today__go">{t.name} 오늘의 경기 →</span>
-              </button>
-            );
-          })}
-        </section>
-      )}
-
       {/* ── 1. 매치데이 히어로 ── */}
       <section id="sum-next">
         <div className="sec__head">
@@ -419,6 +398,51 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
           </div>
         )}
       </section>
+
+      {/* ── 1-1. 오늘의 경기 — 오늘 끝난 우리 팀 경기. 누르면 그 팀 오늘의 경기(라인업 · 평점 · 교체) ── */}
+      {todays.length > 0 && (
+        <section className="sum-today">
+          <div className="sec__head">
+            <h2 className="sec__title">오늘의 경기</h2>
+            <span className="sec__note">오늘 끝난 경기 · 누르면 라인업 · 평점 · 교체 기록</span>
+          </div>
+          <div className="sum-today__list">
+            {todays.map((l) => {
+              const t = targetOf(l.slug);
+              const m = boardMatch(l.slug, l.espnId);
+              const kp = kstParts(l.kickoffUtc);
+              const side = (k: 'home' | 'away') => {
+                const team = m?.[k];
+                const ours = l.ours === k;
+                return (
+                  <span className="sum-today__tm" data-side={k} data-ours={ours || undefined}>
+                    {team ? <Crest team={team} size={26} /> : null}
+                    <b title={l[k].name}>{team?.shortName ?? l[k].name}</b>
+                  </span>
+                );
+              };
+              return (
+                <button key={l.slug} className="sum-today__card" onClick={() => onOpenTeam(l.slug as TargetId, { matchId: l.espnId, today: true })}>
+                  <span className="sum-today__top">
+                    <span className="sum-today__club">
+                      <Crest team={{ id: t.espnTeamId, name: t.name, shortName: t.name, abbr: t.abbr, logo: t.crest }} size={16} />
+                      {t.name}
+                    </span>
+                    {l.league && <span className="sum-today__lg">{l.league}</span>}
+                    <span className="sum-today__when num">종료 · {kp.month}.{kp.date} {kstTime(l.kickoffUtc)}</span>
+                  </span>
+                  <span className="sum-today__fx">
+                    {side('home')}
+                    <em className="sum-today__sc num">{l.score[0]}<i>:</i>{l.score[1]}</em>
+                    {side('away')}
+                  </span>
+                  <span className="sum-today__go">라인업 · 평점 · 교체 보기 <i aria-hidden="true">→</i></span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── 2. 주간 캘린더 ── */}
       <section id="sum-week">

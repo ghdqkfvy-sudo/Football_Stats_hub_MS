@@ -204,46 +204,38 @@
 .kclub__today { display: grid; gap: 12px; margin: 12px 0; }
 .lm__key { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px 10px; word-break: keep-all; }
 
-/* Summary — 오늘의 경기 줄 (경기 중 · 오늘 끝난 경기 · 라인업 발표). 누르면 그 팀 오늘의 경기 */
-.sum-today { display: grid; gap: 8px; margin-bottom: 14px; }
-.sum-today__row {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
-  width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; cursor: pointer; text-align: left;
-  font: inherit; color: var(--text-hi);
-  background: linear-gradient(90deg, rgba(224, 53, 59, .22), rgba(224, 53, 59, .05) 60%), color-mix(in srgb, var(--ink-900) 84%, transparent);
-  box-shadow: inset 0 0 0 1px rgba(224, 53, 59, .45);
-}
-.sum-today__row[data-phase='done'], .sum-today__row[data-phase='pre'] {
+/* Summary — 오늘의 경기 (오늘 끝난 경기). 누르면 그 팀 오늘의 경기 */
+.sum-today { margin-top: 4px; }
+.sum-today__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.sum-today__card {
+  display: grid; gap: 10px; width: 100%; padding: 12px 14px 10px; border: 0; border-radius: 16px; cursor: pointer;
+  font: inherit; color: var(--text-hi); text-align: left;
   background: color-mix(in srgb, var(--ink-900) 84%, transparent); box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow .15s, transform .15s;
 }
-.sum-today__st {
-  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
-  font-size: 12px; font-weight: 800; color: #fff; background: #E0353B; white-space: nowrap;
+.sum-today__card:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent); transform: translateY(-1px); }
+.sum-today__top { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11.5px; color: var(--text-lo); }
+.sum-today__club { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--text-hi); }
+.sum-today__lg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-today__when { margin-left: auto; flex: none; font-weight: 700; color: var(--text-mid); }
+/* 스코어를 가운데에 고정 — 홈 이름은 오른쪽 정렬, 원정은 왼쪽 정렬 */
+.sum-today__fx { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.sum-today__tm { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; }
+.sum-today__tm[data-side='home'] { flex-direction: row-reverse; text-align: right; }
+.sum-today__tm b { min-width: 0; font-weight: 700; color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-today__tm[data-ours] b { color: var(--text-hi); font-weight: 800; }
+.sum-today__sc {
+  display: inline-flex; align-items: center; gap: 6px; font-style: normal;
+  font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text-hi);
 }
-.sum-today__st i { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: lm-blink 1.2s infinite; }
-.sum-today__row[data-phase='done'] .sum-today__st, .sum-today__row[data-phase='pre'] .sum-today__st { color: var(--text-hi); background: rgba(255, 255, 255, .1); }
-.sum-today__fx { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; font-size: 13.5px; }
-.sum-today__fx b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-.sum-today__fx em { font-style: normal; flex: none; font-family: var(--font-display); font-size: 20px; font-weight: 700; padding: 0 4px; }
-.sum-today__go { font-size: 12px; font-weight: 700; color: var(--text-mid); white-space: nowrap; }
+.sum-today__sc i { font-style: normal; font-size: 18px; color: var(--text-lo); transform: translateY(-1px); }
+.sum-today__go {
+  display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line);
+  font-size: 11.5px; font-weight: 700; color: var(--text-mid);
+}
+.sum-today__go i { font-style: normal; color: var(--accent); }
 @media (max-width: 640px) {
-  .sum-today__row { grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; padding: 10px 12px; }
-  .sum-today__go { grid-column: 1 / -1; justify-self: end; font-size: 11.5px; }
-  .sum-today__fx { font-size: 12.5px; gap: 6px; justify-content: flex-start; }
-  .sum-today__fx em { font-size: 17px; }
+  .sum-today__list { grid-template-columns: 1fr; }
+  .sum-today__tm { font-size: 13px; gap: 6px; }
+  .sum-today__sc { font-size: 22px; }
 }
-
-/* 팀 평점 — 라벨 + 평점 배지를 한 알약으로 */
-.lm__trate {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 999px;
-  background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px var(--line);
-}
-.lm__trate small { font-size: 10.5px; font-weight: 700; color: var(--text-mid); letter-spacing: .02em; }
-.lm__trate .rtg { height: 20px; min-width: 32px; font-size: 12px; border-radius: 999px; }
-
-/* 칩 배지는 사진 밖으로 — 등번호 · 평점이 얼굴(링 아래쪽 절반)을 가렸다(2026-10-18).
-   링 바깥 모서리에 걸치게 내리고 조금 작게 */
-.lm__chip .chipbox__no { right: -12px; bottom: -6px; width: 17px; height: 17px; font-size: 9px; }
-.lm__chip .chipbox__no--card { right: -11px; bottom: -6px; }
-.lm__chip .chipbox__rtg { left: -24px; bottom: -6px; height: 17px; min-width: 26px; padding: 0 4px; font-size: 9.5px; }
-.lm__chip .chipbox__name { margin-top: 4px; }
