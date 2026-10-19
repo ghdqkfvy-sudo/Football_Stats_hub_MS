@@ -271,6 +271,9 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 /* 칩 배지는 사진 밖으로 — 등번호 · 평점이 얼굴(링 아래쪽 절반)을 가렸다(2026-10-18).
    링 바깥 모서리에 걸치게 내리고 조금 작게 */
 .lm__chip .chipbox__no { right: -12px; bottom: -6px; width: 17px; height: 17px; font-size: 9px; }
-.lm__chip .chipbox__no--card { right: -11px; bottom: -6px; }
-.lm__chip .chipbox__rtg { left: -24px; bottom: -6px; height: 17px; min-width: 26px; padding: 0 4px; font-size: 9.5px; }
+.lm__chip .chipbox__no--card { right: -12px; bottom: -6px; }
+/* 평점은 등번호와 거울처럼 — 사진 원에 7px 걸치고 같은 높이 · 같은 바닥선(2026-10-19).
+   예전 left: -24px 는 평점 폭(26px~)에 따라 4px 만 걸쳐 등번호보다 떨어져 보였다.
+   오른쪽 끝을 원 왼쪽 + 7px 에 묶어 폭이 달라도 걸침이 같다 */
+.lm__chip .chipbox__rtg { left: auto; right: calc(100% - 5px); bottom: -6px; height: 17px; min-width: 26px; padding: 0 4px; font-size: 9.5px; }
 .lm__chip .chipbox__name { margin-top: 4px; }
