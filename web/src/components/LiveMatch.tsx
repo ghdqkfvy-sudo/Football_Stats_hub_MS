@@ -30,6 +30,13 @@ type Goal = Extract<LiveEvent, { t: 'goal' }>;
 
 type Find = (p: LivePlayer) => PlayerSeason | null;
 
+const PIN = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+    <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
+    <circle cx="12" cy="10" r="2.4" />
+  </svg>
+);
+
 /**
  * @param teamId · matches 우리 팀 ESPN id 와 일정 — 주면 우리 팀 칩을 눌러 선수 상세 카드를 연다
  *   (스쿼드와 이어진 선수만. 상대 선수 · 못 이은 선수는 그냥 칩)
@@ -50,7 +57,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
 
   return (
     <div className="lm">
-      <LiveHead live={live} crest={crest} />
+      <LiveHead live={live} crest={crest} venue={live.venue ?? match?.venue} />
       {live.lineupType === 'predicted' && <p className="lm__note">아직 공식 라인업 발표 전 — FotMob 예상 라인업입니다.</p>}
 
       <section className="lm__pitch">
@@ -119,7 +126,7 @@ function TeamCrest({ live, match, k, size }: { live: LiveMatch; match?: Match; k
 }
 
 /** 머리 — 상태 · 스코어 · 득점자 · 갱신 시각 */
-function LiveHead({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away', s: number) => React.ReactNode }) {
+function LiveHead({ live, crest, venue }: { live: LiveMatch; crest: (k: 'home' | 'away', s: number) => React.ReactNode; venue?: string | null }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
   const ago = Math.max(0, Math.round((now - Date.parse(live.updatedAt)) / 60_000));
@@ -144,6 +151,7 @@ function LiveHead({ live, crest }: { live: LiveMatch; crest: (k: 'home' | 'away'
         </div>
         <div className="lm__team">{crest('away', 40)}<b>{live.away.name}</b><TeamRating v={live.away.rating} /></div>
       </div>
+      {venue && <div className="lm__venue">{PIN}{venue}</div>}
       {goals.length > 0 && (
         <div className="lm__goals"><div>{scorers('home')}</div><i aria-hidden="true">⚽</i><div>{scorers('away')}</div></div>
       )}

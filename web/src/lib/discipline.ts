@@ -99,14 +99,21 @@ export function discipline(
     .map(near).filter((m): m is Match => !!m)
     .sort(byKick);
   if (fmGames.length) {
-    const first = fmGames[0];
+    /*
+     * 어느 대회 징계인가 — FotMob 은 대회를 가리지 않고 앞으로의 결장 목록 전부에 올린다
+     * (2026-10-19 비니시우스: 라리가 퇴장인데 챔스 경기에도 suspension). 그래서 "첫 경기의 대회" 가 아니라
+     * 우리 카드 기록의 **마지막 퇴장 대회**를 따른다. 그 대회 경기가 FotMob 목록에 없거나 퇴장 기록이 없으면 첫 경기 대회.
+     */
+    const lastRed = [...recent].sort(byKick).reverse().find((x) => x.red > 0);
+    const byRed = lastRed ? fmGames.find((m) => m.competition === lastRed.competition) : undefined;
+    const first = byRed ?? fmGames[0];
     const missed = fmGames.filter((m) => m.competition === first.competition);
     const last = missed[missed.length - 1];
     /* 복귀 경기 — 마지막 정지 경기 뒤 같은 대회 첫 경기. 그 경기가 FotMob 확인 범위 안일 때만 "정해졌다" */
     const after = upcoming.find((m) => m.competition === first.competition && m.kickoffUtc > last.kickoffUtc);
     const limit = fotmob?.checkedUntil ? Date.parse(fotmob.checkedUntil) + 12 * 3600_000 : -Infinity;
     const back = after && Date.parse(after.kickoffUtc) <= limit ? after : undefined;
-    byComp.set(first.competition, { competition: first.competition, reason: 'fotmob', confirmed: true, match: first, missed, back, ret: fotmob?.ret ?? null });
+    byComp.set(first.competition, { competition: first.competition, reason: byRed ? 'red' : 'fotmob', confirmed: true, match: first, missed, back, ret: fotmob?.ret ?? null });
   }
 
   /* 2) 우리 계산 — 대회마다, 그 선수의 마지막 경기 뒤로 팀이 그 대회를 아직 안 치렀을 때만 */
