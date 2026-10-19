@@ -228,7 +228,10 @@ function Chip({ starter, now: p, tag, color, onOpen }: { starter: LivePlayer; no
         {red || yellow
           ? <span className="chipbox__no chipbox__no--card" data-kind={red ? 'red' : 'yellow'}><CardShape color={red ? 'red' : 'yellow'} /></span>
           : <span className="chipbox__no num">{p.no ?? ''}</span>}
-        <RatingBadge v={p.rating ?? undefined} cls="chipbox__rtg" />
+        {/* 평점이 없으면(FotMob 이 비움 — 짧게 뛴 교체 선수 · 킥오프 전) 흐린 "–" 자리표시. 지어내지 않는다 */}
+        {p.rating != null
+          ? <RatingBadge v={p.rating} cls="chipbox__rtg" />
+          : <span className="rtg chipbox__rtg lm__rtg0" title="평점 없음 (FotMob)">–</span>}
       </span>
       <span className="chipbox__name">{p.cap && <em className="lm__cap">C</em>}{p.last}</span>
       {/* 알약은 늘 그린다(비면 숨김) — 줄마다 칩 높이가 같아야 배치가 흔들리지 않는다 */}
