@@ -340,6 +340,51 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   return (
     <div className="page sum">
+      {/* ── 0. 오늘의 경기 — 오늘 끝난 우리 팀 경기. 누르면 그 팀 오늘의 경기(라인업 · 평점 · 교체) ── */}
+      {todays.length > 0 && (
+        <section className="sum-today">
+          <div className="sec__head">
+            <h2 className="sec__title">오늘의 경기</h2>
+            <span className="sec__note">오늘 끝난 경기 · 누르면 라인업 · 평점 · 교체 기록</span>
+          </div>
+          <div className="sum-today__list">
+            {todays.map((l) => {
+              const t = targetOf(l.slug);
+              const m = boardMatch(l.slug, l.espnId);
+              const kp = kstParts(l.kickoffUtc);
+              const side = (k: 'home' | 'away') => {
+                const team = m?.[k];
+                const ours = l.ours === k;
+                return (
+                  <span className="sum-today__tm" data-side={k} data-ours={ours || undefined}>
+                    {team ? <Crest team={team} size={26} /> : null}
+                    <b title={l[k].name}>{team?.shortName ?? l[k].name}</b>
+                  </span>
+                );
+              };
+              return (
+                <button key={l.slug} className="sum-today__card" onClick={() => onOpenTeam(l.slug as TargetId, { matchId: l.espnId, today: true })}>
+                  <span className="sum-today__top">
+                    <span className="sum-today__club">
+                      <Crest team={{ id: t.espnTeamId, name: t.name, shortName: t.name, abbr: t.abbr, logo: t.crest }} size={16} />
+                      {t.name}
+                    </span>
+                    {l.league && <span className="sum-today__lg">{l.league}</span>}
+                    <span className="sum-today__when num">{kp.month}.{kp.date} · {kstTime(l.kickoffUtc)} 킥오프</span>
+                  </span>
+                  <span className="sum-today__fx">
+                    {side('home')}
+                    <em className="sum-today__sc num">{l.score[0]}<i>:</i>{l.score[1]}</em>
+                    {side('away')}
+                  </span>
+                  <span className="sum-today__go">라인업 · 평점 · 교체 보기 <i aria-hidden="true">→</i></span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── 1. 매치데이 히어로 ── */}
       <section id="sum-next">
         <div className="sec__head">
@@ -398,51 +443,6 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
           </div>
         )}
       </section>
-
-      {/* ── 1-1. 오늘의 경기 — 오늘 끝난 우리 팀 경기. 누르면 그 팀 오늘의 경기(라인업 · 평점 · 교체) ── */}
-      {todays.length > 0 && (
-        <section className="sum-today">
-          <div className="sec__head">
-            <h2 className="sec__title">오늘의 경기</h2>
-            <span className="sec__note">오늘 끝난 경기 · 누르면 라인업 · 평점 · 교체 기록</span>
-          </div>
-          <div className="sum-today__list">
-            {todays.map((l) => {
-              const t = targetOf(l.slug);
-              const m = boardMatch(l.slug, l.espnId);
-              const kp = kstParts(l.kickoffUtc);
-              const side = (k: 'home' | 'away') => {
-                const team = m?.[k];
-                const ours = l.ours === k;
-                return (
-                  <span className="sum-today__tm" data-side={k} data-ours={ours || undefined}>
-                    {team ? <Crest team={team} size={26} /> : null}
-                    <b title={l[k].name}>{team?.shortName ?? l[k].name}</b>
-                  </span>
-                );
-              };
-              return (
-                <button key={l.slug} className="sum-today__card" onClick={() => onOpenTeam(l.slug as TargetId, { matchId: l.espnId, today: true })}>
-                  <span className="sum-today__top">
-                    <span className="sum-today__club">
-                      <Crest team={{ id: t.espnTeamId, name: t.name, shortName: t.name, abbr: t.abbr, logo: t.crest }} size={16} />
-                      {t.name}
-                    </span>
-                    {l.league && <span className="sum-today__lg">{l.league}</span>}
-                    <span className="sum-today__when num">{kp.month}.{kp.date} · {kstTime(l.kickoffUtc)} 킥오프</span>
-                  </span>
-                  <span className="sum-today__fx">
-                    {side('home')}
-                    <em className="sum-today__sc num">{l.score[0]}<i>:</i>{l.score[1]}</em>
-                    {side('away')}
-                  </span>
-                  <span className="sum-today__go">라인업 · 평점 · 교체 보기 <i aria-hidden="true">→</i></span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
       {/* ── 2. 주간 캘린더 ── */}
       <section id="sum-week">

@@ -20,7 +20,7 @@ const MD = {
         starters: [{ id: 846005, name: 'Dominik Szoboszlai', lastName: 'Szoboszlai', shirtNumber: '8', isCaptain: true, verticalLayout: { x: 0.3, y: 0.485 },
           performance: { rating: 6.63, events: [{ type: 'yellowCard' }], substitutionEvents: [{ time: 32, type: 'subOut', reason: 'injury' }] } }],
         subs: [{ id: 1436258, name: 'Trey Nyoni', shirtNumber: '42', performance: { rating: 7.1, events: [{ type: 'goal' }], substitutionEvents: [{ time: 32, type: 'subIn' }] } },
-          { id: 1, name: 'Bench Guy', shirtNumber: '30', performance: {} }] },
+          { id: 1, name: 'Bench Guy', shirtNumber: '30', usualPlayingPositionId: 0, performance: {} }] },
     },
     matchFacts: { events: { events: [
       { type: 'Card', time: 31, isHome: false, card: 'Yellow', player: { id: 846005, name: 'Dominik Szoboszlai' } },
@@ -50,6 +50,8 @@ test('liveSnapshot: 스코어 · 우리 팀 쪽 · 선수(좌표 · 평점 · �
   const ny = s.away.bench[0];
   assert.deepEqual([ny.in, ny.goals, ny.rating], [32, 1, 7.1]);
   assert.equal(s.away.bench[1].rating, null);
+  assert.equal(s.away.bench[1].pos, 'G');
+  assert.equal(s.away.bench[0].pos, undefined);
   assert.equal(s.home.coach, 'Keith Andrews');
   assert.deepEqual(s.colors, { home: ['#C00808', '#C00808'], away: ['#ffffff', '#00A398'] });
 });

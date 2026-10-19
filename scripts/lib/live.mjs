@@ -73,6 +73,9 @@ export function phaseOf(md) {
   return { phase: 'pre', clock: null };
 }
 
+/** FotMob usualPlayingPositionId — 0 골키퍼 · 1 수비 · 2 미드필더 · 3 공격 */
+const POS = ['G', 'D', 'M', 'F'];
+
 /** 선수 한 명 — 칩 · 벤치 줄에 필요한 것만 */
 function player(p, cardsById) {
   const perf = p?.performance ?? {};
@@ -88,6 +91,7 @@ function player(p, cardsById) {
     name: String(p?.name ?? ''),
     last: String(p?.lastName || String(p?.name ?? '').split(' ').slice(-1)[0] || ''),
     no: num(p?.shirtNumber),
+    ...(POS[num(p?.usualPlayingPositionId) ?? -1] ? { pos: POS[num(p.usualPlayingPositionId)] } : {}),
     ...(lay && num(lay.x) != null && num(lay.y) != null ? { x: num(lay.x), y: num(lay.y) } : {}),
     rating: rating(perf.rating),
     ...(p?.isCaptain ? { cap: true } : {}),

@@ -89,7 +89,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
         </div>
         <div className="lm__teams">
           {(['home', 'away'] as const).map((k) => (
-            <BenchCol key={k} side={live[k]} subs={subsOf(live, k)} crest={crest(k, 22)} active={pick === k} />
+            <BenchCol key={k} side={live[k]} subs={subsOf(live, k)} crest={crest(k, 22)} active={pick === k} {...(k === ours ? pickProps : {})} />
           ))}
         </div>
       </section>
@@ -102,6 +102,10 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
 
 const subsOf = (live: LiveMatch, side: 'home' | 'away') =>
   live.events.filter((e): e is Sub => e.t === 'sub' && e.side === side);
+
+const POS_ORDER = ['G', 'D', 'M', 'F', ''];
+const POS_LABEL = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' } as const;
+const POS_LINE = { G: 'GK', D: 'DEF', M: 'MID', F: 'FW' } as const;
 
 const lastName = (n: string) => n.split(' ').slice(-1)[0] ?? n;
 
@@ -237,10 +241,16 @@ function Chip({ starter, now: p, tag, color, onOpen }: { starter: LivePlayer; no
 }
 
 /** 팀별 교체 · 벤치 대기 */
-function BenchCol({ side, subs, crest, active }: { side: LiveSide; subs: Sub[]; crest: React.ReactNode; active: boolean }) {
+function BenchCol({ side, subs, crest, active, find, onPick }: {
+  side: LiveSide; subs: Sub[]; crest: React.ReactNode; active: boolean; find?: Find; onPick?: (p: PlayerSeason) => void;
+}) {
   const byId = new Map([...side.starters, ...side.bench].map((p) => [p.id, p]));
   const usedIds = new Set(subs.map((s) => s.inId));
-  const waiting = side.bench.filter((p) => !usedIds.has(p.id) && p.in == null);
+  /* 벤치 대기 — 포지션(GK → FW) · 등번호 순. 포지션은 FotMob 값, 없으면(예전 파일) 이어진 우리 스쿼드 값 */
+  const waiting = side.bench
+    .filter((p) => !usedIds.has(p.id) && p.in == null)
+    .map((p) => { const ps = find?.(p) ?? null; return { p, ps, pos: p.pos ?? ps?.pos }; })
+    .sort((a, b) => POS_ORDER.indexOf(a.pos ?? '') - POS_ORDER.indexOf(b.pos ?? '') || (a.p.no ?? 99) - (b.p.no ?? 99));
   const face = (p: LivePlayer | undefined, name: string) => (
     <Headshot id={`fm-${p?.id ?? name}`} src={p ? fotmobImage(p.id) : undefined} kind="espn" label={p?.no != null ? String(p.no) : name.slice(0, 1)} size={26} />
   );
@@ -284,12 +294,22 @@ function BenchCol({ side, subs, crest, active }: { side: LiveSide; subs: Sub[]; 
       <h4 className="lm__sh">벤치 대기 <em className="num">{waiting.length}</em></h4>
       {waiting.length === 0 ? <p className="lm__none">모두 투입됐습니다.</p> : (
         <ul className="lm__wait">
-          {waiting.map((p) => (
-            <li key={p.id}>
-              <span className="lm__wno num">{p.no ?? ''}</span>
-              <span>{p.name}</span>
-            </li>
-          ))}
+          {waiting.map(({ p, ps, pos }) => {
+            const body = (
+              <>
+                <span className="lm__wpos" data-empty={!pos || undefined} style={pos ? { ['--pc' as string]: LINE_COLOR[POS_LINE[pos]] } : undefined}>{pos ? POS_LABEL[pos] : '—'}</span>
+                <span className="lm__wno num">{p.no ?? ''}</span>
+                <span className="lm__wnm">{p.name}</span>
+              </>
+            );
+            return (
+              <li key={p.id}>
+                {ps && onPick
+                  ? <button type="button" className="lm__wbtn" onClick={() => onPick(ps)} title={`${p.name} · 눌러서 시즌 기록`}>{body}<i aria-hidden="true">›</i></button>
+                  : <div className="lm__wbtn">{body}</div>}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
