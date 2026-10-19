@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { KOREAN_CLUBS, comp, mobileName, themeVarsOf, type KoreanClub, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingRow, StandingTable } from '../lib/types';
 import { loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
@@ -190,6 +190,8 @@ function aroundOf(t: StandingTable | null | undefined, teamId: string, n = 5): S
 
 /** 두 박스가 나란히 놓이는 폭 — kclubs.css 의 @media (min-width: 901px) 와 같다 */
 const SIDE_BY_SIDE = '(min-width: 901px)';
+/** 순위 한 줄의 가장 낮은 높이(px) — 이보다 좁아지면 한 줄을 덜 뽑는다 */
+const ROW_MIN = 36;
 
 /**
  * 클럽 요약 + 순위 — **리그 / 유럽대항전 전환**.
@@ -235,9 +237,36 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
   const played = row ? row.played : rec.played;
   const ko = showEuro && stage?.kind === 'ko' ? stage : null;
 
-  /* 나란히 놓이면 왼쪽(최근 5경기 목록 · 코리안리거)과 높이를 맞춰 일곱 줄, 쌓이면(폰 포함) 다섯 줄 그대로 */
+  /*
+   * 나란히 놓이면 순위표를 왼쪽 박스 높이에 맞춘다 — 들어가는 만큼 줄을 뽑고, 남는 몇 px 는 줄 높이로 나눠 채운다.
+   * (일곱 줄 고정은 팀마다 왼쪽 높이가 달라 순위표 아래가 남았다.) 쌓이면(폰 포함) 다섯 줄 그대로.
+   */
   const wide = useMedia(SIDE_BY_SIDE);
-  const around = useMemo(() => aroundOf(t, club.espnTeamId, wide ? 7 : 5), [t, club.espnTeamId, wide]);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{ n: number; h: number } | null>(null);
+  const total = t?.rows.length ?? 0;
+  useLayoutEffect(() => {
+    const hero = heroRef.current, table = tableRef.current;
+    if (!wide || !hero || !table) { setFit(null); return; }
+    const measure = () => {
+      const rows = rowsRef.current;
+      if (!rows) { setFit(null); return; }
+      const h = hero.offsetHeight;
+      const cs = getComputedStyle(table);
+      let after = 0;
+      for (let e = rows.nextElementSibling as HTMLElement | null; e; e = e.nextElementSibling as HTMLElement | null) after += e.offsetHeight;
+      const room = h - parseFloat(cs.borderTopWidth) - rows.offsetTop - after - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth);
+      const n = Math.max(5, Math.min(total || 5, Math.floor(room / ROW_MIN)));
+      setFit((f) => (f && f.n === n && f.h === h ? f : { n, h }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(hero);
+    return () => ro.disconnect();
+  }, [wide, total, view, t]);
+  const around = useMemo(() => aroundOf(t, club.espnTeamId, fit?.n ?? 5), [t, club.espnTeamId, fit?.n]);
   /* 넓은 화면 — 최근 5경기를 경기 목록으로(순위표 5줄과 높이가 맞는다). 폰 · 좁은 화면은 칩 한 줄 그대로 */
   const recent = useMemo(
     () => scoped
@@ -258,7 +287,7 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
 
   return (
     <div className="kclub__top">
-      <div className="kclub__hero">
+      <div className="kclub__hero" ref={heroRef}>
         <div className="kclub__id">
           <Crest
             team={{ id: club.espnTeamId, name: club.name, shortName: club.name, abbr: club.abbr, logo: club.crest }}
@@ -318,7 +347,7 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
         <KoreanLine club={club} matches={matches} />
       </div>
 
-      <div className="kclub__table">
+      <div className="kclub__table" ref={tableRef} data-fit={fit ? true : undefined} style={fit ? { height: fit.h } : undefined}>
         {euro && (
           <div className="kclub__seg" role="tablist" aria-label="순위 대회 고르기">
             <button role="tab" aria-selected={!showEuro} data-on={!showEuro || undefined} onClick={() => setView('league')}>
@@ -355,7 +384,9 @@ function ClubTop({ club, matches }: { club: KoreanClub; matches: Match[] }) {
               <div className="skel" style={{ height: 200 }} />
             ) : around.length ? (
               <>
-                {around.map((r) => <TableRow key={r.team.id} r={r} me={r.team.id === club.espnTeamId} />)}
+                <div className="kclub__rows" ref={rowsRef}>
+                  {around.map((r) => <TableRow key={r.team.id} r={r} me={r.team.id === club.espnTeamId} />)}
+                </div>
                 {showEuro && stage?.kind === 'league' && stage.phaseOver && <p className="kclub__konote">{stage.text}</p>}
               </>
             ) : (

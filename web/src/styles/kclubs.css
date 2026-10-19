@@ -163,6 +163,12 @@
   .kclub__korinj[data-doubt] { color: #F5A524; }
   .kclub__korrtg { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; flex: none; }
   .kclub__korrtg small { font-size: 10.5px; font-weight: 700; color: var(--text-lo); }
+  /* 순위표 — 왼쪽 박스 높이(JS 가 잰 값)에 맞춰 줄을 고르게 늘린다. 왼쪽은 제 내용 높이 그대로 */
+  .kclub__top { align-items: start; }
+  .kclub__table { position: relative; box-sizing: border-box; }
+  .kclub__table[data-fit] { display: flex; flex-direction: column; overflow: hidden; }
+  .kclub__table[data-fit] .kclub__rows { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .kclub__table[data-fit] .kclub__rows > .kclub__tr { flex: 1 1 0; padding-block: 0; }
   /* 승무패 두 자리씩(MLS 10-10-11)도 한 줄에 */
   .kclub__tr { grid-template-columns: 22px minmax(0, 1fr) 30px 68px 32px; }
   .kclub__tr > span:nth-child(4) { white-space: nowrap; }
