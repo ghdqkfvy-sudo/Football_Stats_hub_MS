@@ -218,7 +218,7 @@ export interface LivePlayer {
   no: number | null;
   /** 주 포지션(FotMob usualPlayingPositionId) — 2026-10-19 부터. 벤치 줄에 쓴다 */
   pos?: 'G' | 'D' | 'M' | 'F';
-  /** 경기장 좌표 — x 는 왼쪽→오른쪽(0~1), y 는 우리 골문→상대 골문(0~1). 선발만 */
+  /** 경기장 좌표 — x 는 FotMob 그대로 0 = 오른쪽 · 1 = 왼쪽(공격 방향 기준), y 는 우리 골문→상대 골문(0~1). 선발만 */
   x?: number;
   y?: number;
   rating: number | null;

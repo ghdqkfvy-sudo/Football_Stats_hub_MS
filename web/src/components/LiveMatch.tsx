@@ -173,7 +173,9 @@ function rowsOf(starters: LivePlayer[]): LivePlayer[][] {
     const k = Math.round(p.y * 20) / 20;
     rows.set(k, [...(rows.get(k) ?? []), p]);
   }
-  return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r.sort((a, b) => a.x! - b.x!));
+  /* ⚠️ FotMob 의 x 는 0 = 오른쪽(오른쪽 풀백 발베르데 0.125 · 왼쪽 풀백 쿠쿠렐라 0.875, 2026-10-19).
+     예전엔 0 = 왼쪽으로 읽어 좌우가 뒤집혔다 — 큰 x 부터 놓아 왼쪽→오른쪽으로 맞춘다 */
+  return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r.sort((a, b) => b.x! - a.x!));
 }
 
 /** 경기장 반쪽 — top 이면 상대(골키퍼가 맨 위, 좌우를 뒤집어 우리 쪽에서 보는 방향) */
@@ -269,21 +271,28 @@ function BenchCol({ side, subs, crest, active, find, onPick }: {
         <ul className="lm__subs">
           {[...subs].sort((a, b) => a.min - b.min).map((s, i) => {
             const pin = byId.get(s.inId), pout = byId.get(s.outId);
+            /* 들어온 · 나간 선수 줄을 각각 눌러 그 선수 상세 — 우리 스쿼드와 이어진 선수만 */
+            const row = (cls: string, lp: LivePlayer | undefined, name: string, body: React.ReactNode) => {
+              const ps = lp ? find?.(lp) : null;
+              return ps && onPick
+                ? <button type="button" className={`${cls} lm__swbtn`} onClick={() => onPick(ps)} title={`${name} · 눌러서 시즌 기록`}>{body}<i className="lm__go" aria-hidden="true">›</i></button>
+                : <div className={cls}>{body}</div>;
+            };
             return (
               <li key={i}>
                 <span className="lm__mint num">{s.min}{s.plus ? `+${s.plus}` : ''}&apos;</span>
                 <div className="lm__swap">
-                  <div className="lm__up">
+                  {row('lm__up', pin, s.in, <>
                     <i aria-label="투입">↑</i>{face(pin, s.in)}
                     <b>{s.in}</b>{pin?.no != null && <em className="num">#{pin.no}</em>}
                     <RatingBadge v={pin?.rating ?? undefined} cls="rtg--sm" />
-                  </div>
-                  <div className="lm__down">
+                  </>)}
+                  {row('lm__down', pout, s.out, <>
                     <i aria-label="교체 아웃">↓</i>{face(pout, s.out)}
                     <span>{s.out}</span>{pout?.no != null && <em className="num">#{pout.no}</em>}
                     {s.injury && <b className="lm__inj">부상</b>}
                     <RatingBadge v={pout?.rating ?? undefined} cls="rtg--sm" />
-                  </div>
+                  </>)}
                 </div>
               </li>
             );
