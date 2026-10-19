@@ -400,8 +400,9 @@ function evBody(e: Exclude<LiveEvent, { t: 'half' }>) {
   }
   return (
     <>
-      <span className="lm__evm lm__up"><i className="lm__ico" aria-hidden="true">↑</i><b><Nm n={e.in} /></b>{e.injury && <em className="lm__inj">부상</em>}</span>
-      <span className="lm__evs lm__down"><i className="lm__ico" aria-hidden="true">↓</i><Nm n={e.out} /></span>
+      {/* 부상은 나간 선수 쪽 — 예전엔 들어간 선수 옆에 붙어 교체 목록과 반대로 읽혔다(2026-10-19 토트넘) */}
+      <span className="lm__evm lm__up"><i className="lm__ico" aria-hidden="true">↑</i><b><Nm n={e.in} /></b></span>
+      <span className="lm__evs lm__down"><i className="lm__ico" aria-hidden="true">↓</i><Nm n={e.out} />{e.injury && <em className="lm__inj">부상</em>}</span>
     </>
   );
 }
