@@ -43,7 +43,8 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
   const pickProps = { find, onPick: setDetail };
   const theirs = ours === 'home' ? 'away' : 'home';
   const [pick, setPick] = useState<'home' | 'away'>(ours);
-  /* 넓은 화면은 경기장을 눕힌다(우리 팀 왼쪽 → 오른쪽 공격) — 세로로 두 팀을 쌓으면 화면 두 장 길이였다 */
+  /* 넓은 화면은 경기장을 눕힌다 — 세로로 두 팀을 쌓으면 화면 두 장 길이였다.
+     좌우는 스코어보드와 같게 홈 왼쪽 · 원정 오른쪽(예전엔 우리 팀 왼쪽이라 원정 경기면 스코어보드와 반대였다) */
   const wide = !useIsMobile();
   const crest = (k: 'home' | 'away', size: number) => <TeamCrest live={live} match={match} k={k} size={size} />;
 
@@ -55,16 +56,16 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
       <section className="lm__pitch">
         {wide ? (
           <div className="lm__bars">
-            <TeamBar side={live[ours]} crest={crest(ours, 18)} />
-            <TeamBar side={live[theirs]} crest={crest(theirs, 18)} />
+            <TeamBar side={live.home} crest={crest('home', 18)} />
+            <TeamBar side={live.away} crest={crest('away', 18)} />
           </div>
         ) : <TeamBar side={live[theirs]} crest={crest(theirs, 18)} />}
         <div className="lm__field" data-wide={wide || undefined}>
           <div className="lm__lines"><PitchMarkings /></div>
           {wide ? (
             <>
-              <Half side={live[ours]} subs={subsOf(live, ours)} wide {...pickProps} />
-              <Half side={live[theirs]} subs={subsOf(live, theirs)} top wide />
+              <Half side={live.home} subs={subsOf(live, 'home')} wide {...(ours === 'home' ? pickProps : {})} />
+              <Half side={live.away} subs={subsOf(live, 'away')} top wide {...(ours === 'away' ? pickProps : {})} />
             </>
           ) : (
             <>
