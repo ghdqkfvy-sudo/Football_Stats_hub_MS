@@ -121,11 +121,21 @@ button.lm__chip:hover .chipbox__ring, button.lm__chip:focus-visible .chipbox__ri
 .lm__swap .rtg { margin-left: auto; flex: none; }
 .lm__inj { font-style: normal; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; color: #fff; background: #C81E25; flex: none; }
 .lm__wait { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.lm__wait li {
-  display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 8px; border-radius: 10px;
-  font-size: 12.5px; color: var(--text-mid); background: rgba(255, 255, 255, .025);
+.lm__wait li { min-width: 0; }
+/* 벤치 대기 한 줄 — [포지션 네모 태그] [등번호 동그라미] 이름. 모양 · 색이 달라 둘이 섞여 보이지 않는다 */
+.lm__wbtn {
+  display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; padding: 6px 8px; border: 0; border-radius: 10px;
+  font: inherit; font-size: 12.5px; color: var(--text-mid); text-align: left; background: rgba(255, 255, 255, .025);
 }
-.lm__wait li > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.lm__wbtn { cursor: pointer; }
+button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); background: rgba(255, 255, 255, .07); }
+.lm__wbtn > i { margin-left: auto; flex: none; font-style: normal; color: var(--text-lo); }
+.lm__wnm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lm__wpos {
+  flex: none; width: 24px; padding: 2.5px 0; border-radius: 4px; text-align: center;
+  font-size: 9px; font-weight: 800; letter-spacing: .03em; line-height: 1; color: #06210F; background: var(--pc);
+}
+.lm__wpos[data-empty] { color: var(--text-lo); background: rgba(255, 255, 255, .08); }
 .lm__wno {
   display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
   font-size: 10.5px; font-weight: 800; color: var(--text-hi); background: rgba(255, 255, 255, .1);
@@ -168,6 +178,8 @@ button.lm__chip:hover .chipbox__ring, button.lm__chip:focus-visible .chipbox__ri
 .lm__mark--ft span { color: var(--text-hi); }
 
 @media (max-width: 640px) {
+  /* 벤치 대기 — 포지션 태그까지 넣으면 두 칸에서 이름이 잘린다 */
+  .lm__wait { grid-template-columns: 1fr; gap: 4px; }
   .lm { gap: 12px; }
   .lm__sc { font-size: 36px; }
   .lm__half .pitch__row > * { max-width: 84px; }
