@@ -254,3 +254,18 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
   .sum-today__tm { font-size: 13px; gap: 6px; }
   .sum-today__sc { font-size: 22px; }
 }
+
+/* 팀 평점 — 라벨 + 평점 배지를 한 알약으로 */
+.lm__trate {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 999px;
+  background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px var(--line);
+}
+.lm__trate small { font-size: 10.5px; font-weight: 700; color: var(--text-mid); letter-spacing: .02em; }
+.lm__trate .rtg { height: 20px; min-width: 32px; font-size: 12px; border-radius: 999px; }
+
+/* 칩 배지는 사진 밖으로 — 등번호 · 평점이 얼굴(링 아래쪽 절반)을 가렸다(2026-10-18).
+   링 바깥 모서리에 걸치게 내리고 조금 작게 */
+.lm__chip .chipbox__no { right: -12px; bottom: -6px; width: 17px; height: 17px; font-size: 9px; }
+.lm__chip .chipbox__no--card { right: -11px; bottom: -6px; }
+.lm__chip .chipbox__rtg { left: -24px; bottom: -6px; height: 17px; min-width: 26px; padding: 0 4px; font-size: 9.5px; }
+.lm__chip .chipbox__name { margin-top: 4px; }

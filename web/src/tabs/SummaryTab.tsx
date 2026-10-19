@@ -370,7 +370,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
                       {t.name}
                     </span>
                     {l.league && <span className="sum-today__lg">{l.league}</span>}
-                    <span className="sum-today__when num">{kp.month}.{kp.date} · {kstTime(l.kickoffUtc)} 킥오프</span>
+                    <span className="sum-today__when num">{kp.month}.{kp.date} · {kstTime(l.kickoffUtc)}</span>
                   </span>
                   <span className="sum-today__fx">
                     {side('home')}
