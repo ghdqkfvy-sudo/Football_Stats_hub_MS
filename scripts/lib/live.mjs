@@ -11,8 +11,13 @@
  * 경기 중 수집 워크플로(live-match.yml)가 1분마다 이 함수로 파일을 다시 쓴다. 네트워크 없는 순수 함수만 둔다.
  */
 
-/** 오늘의 경기를 받는 팀 — snapshot.mjs TEAMS 의 fm 과 같은 값(대표팀은 FotMob 라인업을 쓰지 않는다) */
+/**
+ * 오늘의 경기를 받는 팀 — 클럽은 snapshot.mjs TEAMS 의 fm 과 같은 값.
+ * 대표팀(korea)은 2026-10-20 점검(scripts/probe-korea-fotmob.mjs)으로 찾은 7804 — 성인 대표팀,
+ * 경기 상세에 선발 · 좌표 · 평점 · 교체가 다 있다(U23 300702 · 여자 244164 와 다르다).
+ */
 export const LIVE_TEAMS = {
+  korea: { espn: '451', fm: 7804 },
   'real-madrid': { espn: '86', fm: 8633 },
   chelsea: { espn: '363', fm: 8455 },
   'man-united': { espn: '360', fm: 10260 },

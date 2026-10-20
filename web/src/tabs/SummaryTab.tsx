@@ -38,7 +38,8 @@ const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
 const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
 /** 오늘의 경기 파일을 받는 팀 — 클럽 전부(대표팀은 라이브 수집이 없다) */
-const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].filter((t) => t.kind !== 'national').map((t) => t.id);
+/* 대표팀(korea)도 — 라이브 파일이 있을 때만 잡힌다(2026-10-20 대표팀 라이브 수집) */
+const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].map((t) => t.id);
 
 export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
   const lives = useLives(LIVE_SLUGS);
