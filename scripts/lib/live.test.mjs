@@ -64,11 +64,14 @@ test('eventsOf: 골 · 카드(경고/퇴장) · 교체(들어온/나간 · 부�
   assert.deepEqual(events[2].score, [1, 0]);
 });
 
-test('liveCandidates · fixtureNear: 킥오프 75분 전 ~ 150분 뒤, 끝난 경기 제외', () => {
+test('liveCandidates · fixtureNear: 킥오프 150분 전 ~ 150분 뒤, 끝난 경기 제외', () => {
   const now = Date.parse('2026-10-18T13:00:00Z');
   const ev = (id, date, done = false) => ({ id, date, competitions: [{ status: { type: { completed: done } } }] });
-  const got = liveCandidates([ev('a', '2026-10-18T14:00Z'), ev('b', '2026-10-18T14:30Z'), ev('c', '2026-10-18T11:00Z'), ev('d', '2026-10-18T12:00Z', true)], now);
-  assert.deepEqual(got.map((x) => x.id), ['a', 'c']);
+  const got = liveCandidates([
+    ev('a', '2026-10-18T14:00Z'), ev('b', '2026-10-18T15:30Z'), ev('e', '2026-10-18T15:31Z'),
+    ev('c', '2026-10-18T10:30Z'), ev('f', '2026-10-18T10:29Z'), ev('d', '2026-10-18T12:00Z', true),
+  ], now);
+  assert.deepEqual(got.map((x) => x.id), ['a', 'b', 'c']);
   const team = { fixtures: { allFixtures: { fixtures: [{ id: 9, status: { utcTime: '2026-10-18T14:00:00Z' } }, { id: 8, status: { utcTime: '2026-10-11T14:00:00Z', finished: true } }] } } };
   assert.equal(fixtureNear(team, '2026-10-18T14:00Z'), '9');
   assert.equal(fixtureNear(team, '2026-10-25T14:00Z'), null);

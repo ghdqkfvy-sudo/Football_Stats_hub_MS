@@ -2,7 +2,8 @@ name: 오늘의 경기 (라이브)
 run-name: 라이브 ${{ inputs.slug }} ${{ inputs.espn }}
 
 # 대상 팀 경기가 있는 동안만 켜지는 수집 (2026-10-18).
-# 팀 일정 수집(snapshot.yml)이 킥오프 75분 전 ~ 150분 뒤의 경기를 찾으면 이 워크플로를 띄운다.
+# 팀 일정 수집(snapshot.yml)이 킥오프 150분 전 ~ 150분 뒤의 경기를 찾으면 이 워크플로를 띄운다.
+# 일찍 뜨면 킥오프 75분 전(라인업 발표 무렵)까지 그냥 기다린다 — 감지 회차가 밀려도 킥오프를 놓치지 않게(2026-10-20).
 # 안에서 1분마다(킥오프 전에는 2분) FotMob 경기 상세를 받아 live-{slug}.json 을 고치고,
 # 5분마다 커밋 + Pages 배포(배포는 시간당 10번 안쪽으로). 경기가 끝나면 마지막 값을 올리고 끝낸다.
 on:
@@ -30,7 +31,8 @@ concurrency:
 jobs:
   live:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    # 최장: 킥오프 150분 전에 떠서(대기 75분) → 킥오프 180분 뒤까지 = 330분. 잡 한도 360분 안쪽
+    timeout-minutes: 345
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +54,13 @@ jobs:
           stop=$((ko + 180*60))           # 킥오프 3시간 뒤에는 무조건 끝낸다(연장 · 승부차기 포함)
           last=0
           fails=0
+
+          # 킥오프 75분 전까지는 받지 않고 기다린다(일찍 띄운 경우)
+          wake=$((ko - 75*60))
+          if [ "$(date -u +%s)" -lt "$wake" ]; then
+            echo "킥오프 75분 전($(date -u -d @"$wake" +%H:%MZ))까지 기다린다"
+            while [ "$(date -u +%s)" -lt "$wake" ]; do sleep 60; done
+          fi
 
           publish() {
             git add "$FILE"
