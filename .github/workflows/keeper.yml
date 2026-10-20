@@ -1,0 +1,85 @@
+name: 수집 지킴이
+run-name: 수집 지킴이
+
+# GitHub 예약 실행(cron)에만 기대지 않고 수집을 제때 돌린다 (2026-10-20).
+#
+# 왜: 팀 일정·뉴스는 20분마다, 리그·스쿼드는 1시간마다로 걸어 두었지만 실제 예약 실행은
+# 2~8시간에 한 번꼴이었다(GitHub 가 붐빌 때 예약을 미루거나 건너뛴다). 라이브 감지도 팀 일정 수집
+# 안에 있어서 토트넘 경기(10-19 19:00 킥오프)는 20:11 에야 떴다. 또 리그·스쿼드 한 회차가 실행기를
+# 못 받고 22시간 대기열에 갇혀, 뒤 회차가 전부 밀려 취소됐다(10-19 15:31 ~ 10-20 14:04).
+#
+# 어떻게: 이 잡 하나가 5시간 반 동안 깨어 있으면서
+#   · 20분마다 팀 일정·뉴스, 1시간마다 리그·스쿼드를 직접 띄운다(workflow_dispatch 는 예약처럼 밀리지 않는다).
+#     이미 돌거나 기다리는 회차가 있으면 띄우지 않는다.
+#   · 30분 넘게 대기열(queued)에 갇힌 회차를 찾아 취소한다(실행 시간 제한은 돌기 시작해야 걸린다).
+#   · 끝날 때 자기 자신을 다시 띄워 이어 간다. 사슬이 끊겨도 아래 예약 실행이 다시 살린다.
+# 공개 저장소라 Actions 사용 시간은 들지 않는다. 각 수집의 예약 실행도 그대로 둔다(겹치면 그쪽 concurrency 가 기다리게 한다).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 */2 * * *'
+
+permissions:
+  actions: write
+  contents: read
+
+# 한 번에 하나만 — 예약 실행이 끼어들면 지금 것이 끝날 때까지 기다렸다가 이어 받는다
+concurrency:
+  group: keeper
+  cancel-in-progress: false
+
+jobs:
+  keep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - name: 수집 띄우기 · 갇힌 회차 풀기 (5시간 반)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          end=$(( $(date -u +%s) + 330*60 ))
+          next_fast=0
+          next_slow=0
+
+          # 그 워크플로에 아직 안 끝난 회차가 있나
+          busy() {
+            gh run list --workflow "$1" --limit 10 --json status \
+              --jq '[.[] | select(.status != "completed")] | length' 2>/dev/null || echo 1
+          }
+          kick() {
+            if [ "$(busy "$1")" = 0 ]; then
+              gh workflow run "$1" --ref main && echo "$(date -u +%H:%MZ) $2 띄움" || echo "::warning::$2 띄우기 실패"
+            else
+              echo "$(date -u +%H:%MZ) $2 이미 도는 중"
+            fi
+          }
+          # 30분 넘게 실행기를 못 받은(queued) 회차 — 그대로 두면 같은 concurrency 의 뒤 회차가 전부 막힌다
+          unstick() {
+            for wf in snapshot.yml snapshot-leagues.yml deploy-pages.yml live-match.yml smoke.yml ci.yml; do
+              gh run list --workflow "$wf" --status queued --limit 20 --json databaseId,createdAt \
+                --jq '.[] | "\(.databaseId) \(.createdAt)"' 2>/dev/null | while read -r id at; do
+                age=$(( $(date -u +%s) - $(date -u -d "$at" +%s) ))
+                if [ "$age" -ge 1800 ]; then
+                  echo "::warning::${wf} 회차 ${id} 가 $((age / 60))분째 대기열 — 취소"
+                  gh run cancel "$id" || true
+                fi
+              done
+            done
+          }
+
+          while [ "$(date -u +%s)" -lt "$end" ]; do
+            now=$(date -u +%s)
+            unstick
+            if [ "$now" -ge "$next_fast" ]; then kick snapshot.yml '팀 일정·뉴스'; next_fast=$((now + 20*60)); fi
+            if [ "$now" -ge "$next_slow" ]; then kick snapshot-leagues.yml '리그·스쿼드'; next_slow=$((now + 60*60)); fi
+            sleep 120
+          done
+
+      # 손으로 취소하면(cancelled) 사슬을 멈춘다 — 다시 켜려면 수동 실행 또는 다음 예약 실행
+      - name: 다음 지킴이 띄우기
+        if: success() || failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run keeper.yml --ref main

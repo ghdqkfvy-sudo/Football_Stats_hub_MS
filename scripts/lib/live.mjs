@@ -24,8 +24,13 @@ export const LIVE_TEAMS = {
   lafc: { espn: '18966', fm: 867280 },
 };
 
-/** 라이브 수집을 켜 둘 구간 — 킥오프 75분 전(라인업 발표 무렵)부터 킥오프 뒤 150분까지 */
-export const LIVE_BEFORE_MS = 75 * 60_000;
+/**
+ * 라이브 수집을 **띄우는** 구간 — 킥오프 150분 전부터 킥오프 뒤 150분까지.
+ * 띄운 워크플로는 킥오프 75분 전(라인업 발표 무렵)까지 기다렸다가 받기 시작한다(live-match.yml).
+ * ⚠️ 예전엔 75분 전부터였는데, GitHub 예약 실행이 몇 시간씩 밀려 감지 회차가 늦으면
+ * 킥오프를 지나서야 떴다(2026-10-19 토트넘: 19:00 킥오프 → 20:11 시작, 전반을 놓쳤다). 미리 띄워 둔다.
+ */
+export const LIVE_BEFORE_MS = 150 * 60_000;
 export const LIVE_AFTER_MS = 150 * 60_000;
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -33,7 +38,7 @@ const rating = (v) => { const n = num(v); return n && n > 0 ? Math.round(n * 10)
 
 /**
  * ESPN 일정(schedule-{slug}.json 의 events) → 지금 라이브 수집을 켜야 할 경기들.
- * 끝난 경기는 빼고, 킥오프가 [지금-150분, 지금+75분] 안인 것만.
+ * 끝난 경기는 빼고, 킥오프가 [지금-150분, 지금+150분] 안인 것만.
  */
 export function liveCandidates(events, now = Date.now()) {
   return (events ?? [])
