@@ -13,6 +13,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  # 멈춘 Pages 배포 찾기(github-pages 환경의 배포 목록)
+  deployments: read
 
 concurrency:
   group: pages
@@ -69,5 +71,28 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # 멈춘 Pages 배포 정리 (2026-10-20) — 한 배포가 GitHub 쪽에서 updating_pages 로 멈추면
+      # deploy-pages 가 10분 뒤 취소를 걸어도 서버에 "진행 중" 으로 남아, 뒤 배포가 전부
+      # "in progress deployment … Please cancel <sha> first" 로 실패했다.
+      # 이 잡은 concurrency(pages) 로 하나씩만 도니, 지금 진행 중인 Pages 배포는 전부 멈춘 것이다.
+      - name: 멈춘 Pages 배포 정리
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # 후보: github-pages 환경의 최근 배포 + main 최근 커밋(Pages 배포 id 는 그 커밋 sha)
+          cands=$( { gh api "repos/$GH_REPO/deployments?environment=github-pages&per_page=10" --jq '.[].sha' || true;
+                     gh api "repos/$GH_REPO/commits?sha=main&per_page=15" --jq '.[].sha' || true; } | awk 'NF && !seen[$0]++')
+          for sha in $cands; do
+            st=$(gh api "repos/$GH_REPO/pages/deployments/$sha" --jq '.status' 2>/dev/null || true)
+            case "$st" in
+              ''|succeed|deployment_cancelled|deployment_failed|deployment_content_failed|deployment_attempt_error|deployment_lost) ;;
+              *)
+                echo "::warning::멈춘 Pages 배포 ${sha} (${st}) — 취소"
+                gh api -X POST "repos/$GH_REPO/pages/deployments/$sha/cancel" || true
+                ;;
+            esac
+          done
+
       - id: deployment
         uses: actions/deploy-pages@v4
