@@ -6,7 +6,7 @@ import './styles/mobile.css';
 import './styles/motion.css';
 /* 스크롤 막대(MiniBar)의 데스크톱 모양 — mobile.css 의 폰 모양 위에 얹는다 */
 import './styles/topbar.css';
-import { OUR_TEAM_IDS, TARGETS, getTarget, isKoreanClub, subtitleParts, themeVarsOf, type TargetId } from './config/targets';
+import { KOREAN_CLUBS, OUR_TEAM_IDS, TARGETS, getTarget, isKoreanClub, subtitleParts, themeVarsOf, type TargetId } from './config/targets';
 import type { Match } from './lib/types';
 import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
 import { invalidateFeeds } from './lib/feed';
@@ -16,6 +16,7 @@ import { StandingsTab } from './tabs/StandingsTab';
 import { PlayersTab } from './tabs/PlayersTab';
 import { KoreansTab } from './tabs/KoreansTab';
 import { KoreanClubsTab } from './tabs/KoreanClubsTab';
+import { KoreaTodayTab } from './tabs/KoreaTodayTab';
 import { NewsTab } from './tabs/NewsTab';
 import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
@@ -31,7 +32,7 @@ import { BgArt } from './components/BgArt';
 import { RefreshSheet } from './components/RefreshSheet';
 import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
-import { isTodayLive, useLive, withLiveScore } from './lib/live';
+import { isTodayLive, showToday, useLive, useLives, withLiveScore } from './lib/live';
 import { LiveMatchView } from './components/LiveMatch';
 import bgSummary from './assets/bg-summary.webp';
 
@@ -51,11 +52,15 @@ const TODAY_TAB: { id: TabId; label: string; short?: string } = { id: 'today', l
 
 const NATIONAL_TABS: { id: TabId; label: string; short?: string }[] = [
   { id: 'koreans', label: '코리안리거' },
-  { id: 'schedule', label: '경기 일정' },
+  { id: 'schedule', label: '경기 일정', short: '일정' },
   /* 코리안리거 소속팀(뮌헨·아틀레티코·LAFC) — 클럽 탭의 선수 스탯을 그대로 */
   { id: 'clubs', label: '소속팀' },
   { id: 'news', label: '뉴스' },
 ];
+
+/** 대한민국 › 오늘의 경기에 모으는 팀 — 대표팀 + 코리안리거 소속팀(live-{slug}.json) */
+const KOREA_TODAY = ['korea', ...KOREAN_CLUBS.map((c) => c.id)];
+const NO_SLUGS: string[] = [];
 
 /* 시즌은 오늘 날짜(KST)에서 계산한다 — 박아 두면 해가 바뀌는 순간 과거를 가리킨다 */
 const SEASONS = seasonOptions();
@@ -132,15 +137,21 @@ export default function App() {
   /* 조항 선수가 한 명도 없는 팀(리버풀)에는 Future 탭을 두지 않는다 —
      눌러 봐야 "등록되어 있지 않습니다" 뿐이다 */
   /* 오늘의 경기 — 경기 날(킥오프 2시간 전 ~ 18시간 뒤)에만 일정 옆에 탭이 생긴다 */
-  const live = useLive(target.kind === 'club' ? target.id : null);
+  const live = useLive(target.id);
   const todayOn = isTodayLive(live);
+  /* 대한민국 — 대표팀 · 소속팀 오늘 경기를 한 탭에 모은다(2026-10-20, 소속팀 탭 안에 펼치던 것을 뺐다) */
+  const korLives = useLives(target.kind === 'national' ? KOREA_TODAY : NO_SLUGS);
+  const korToday = useMemo(() => Object.values(korLives).filter((l) => showToday(l)), [korLives]);
+  const korOn = korToday.length > 0;
+  /** 대한민국 › 오늘의 경기에서 고른 팀 */
+  const [todayPick, setTodayPick] = useState<TargetId | null>(null);
   const tabs = useMemo(
     () => (target.kind === 'club'
       ? CLUB_TABS
         .filter((t) => t.id !== 'future' || futureFor(target.espnTeamId).length > 0)
         .flatMap((t) => (t.id === 'schedule' && todayOn ? [t, TODAY_TAB] : [t]))
-      : NATIONAL_TABS),
-    [target.kind, target.espnTeamId, todayOn],
+      : NATIONAL_TABS.flatMap((t) => (t.id === 'schedule' && korOn ? [t, TODAY_TAB] : [t]))),
+    [target.kind, target.espnTeamId, todayOn, korOn],
   );
   /* 고른 탭이 이 팀에 없으면(클럽 → 대한민국) 첫 탭을 보여 준다 — 상태를 고치는
      이펙트 대신 계산으로. 클럽으로 돌아오면 고른 탭이 그대로 살아 있다. */
@@ -159,10 +170,10 @@ export default function App() {
 
   /** 팀을 고르면 그 팀 화면으로 넘어간다. focus 가 있으면 일정 탭의 그 경기로 */
   const openTeam = useCallback((id: TargetId, focus?: { matchId: string; today?: boolean }) => {
-    /* 코리안리거 소속팀은 팀 탭이 없다 — 대한민국 › 소속팀 의 그 클럽으로(오늘의 경기는 그 화면 안에 펼친다) */
+    /* 코리안리거 소속팀은 팀 탭이 없다 — 대한민국 › 소속팀 의 그 클럽으로.
+       오늘의 경기면 대한민국 › 오늘의 경기 의 그 경기로 */
     if (isKoreanClub(id)) {
-      setClubPick(id);
-      setTab('clubs');
+      if (focus?.today) { setTodayPick(id); setTab('today'); } else { setClubPick(id); setTab('clubs'); }
       setMotion('rise');
       setTargetId('korea');
       setView('team');
@@ -170,6 +181,7 @@ export default function App() {
       return;
     }
     if (focus?.today) {
+      if (getTarget(id).kind === 'national') setTodayPick(id);
       /* 오늘의 경기 탭은 그 팀 라이브 파일을 받은 뒤에 생긴다 — 고른 탭으로 남겨 두면 생기는 대로 열린다 */
       setTab('today');
     } else if (focus) {
@@ -598,16 +610,19 @@ export default function App() {
               focusMatchId={focusMatch?.team === target.id ? focusMatch.id : null}
               onFocused={clearFocusMatch}
               live={todayOn ? live : null}
-              onToday={() => goTab('today')}
+              onToday={() => { if (target.kind === 'national') setTodayPick(target.id); goTab('today'); }}
             />
           )}
-          {!summary && tab === 'today' && live && (
+          {!summary && tab === 'today' && target.kind === 'national' && (
+            <KoreaTodayTab lives={korToday} pick={todayPick} onPick={setTodayPick} />
+          )}
+          {!summary && tab === 'today' && target.kind === 'club' && live && (
             <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={target.espnTeamId} matches={matches} />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
           {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}
           {!summary && tab === 'koreans' && <KoreansTab />}
-          {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} />}
+          {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} onToday={(id) => { setTodayPick(id); goTab('today'); }} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
           {!summary && tab === 'future' && <FutureTab target={target} />}
           </div>

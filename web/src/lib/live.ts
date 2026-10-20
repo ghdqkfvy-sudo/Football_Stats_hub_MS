@@ -122,3 +122,18 @@ export function teamColor(live: LiveMatch, k: 'home' | 'away', espnId?: string):
   const t = espnId ? tintOf(espnId)[0] : null;
   return t && lum(t) != null && lum(t)! > 0.12 && lum(t)! < 0.85 ? t : 'var(--accent)';
 }
+
+/**
+ * 오늘의 경기로 보여 줄 것 — 경기 날(isTodayLive)이고, 킥오프 전이면 라인업이 나온 것만
+ * (예상 라인업도 없으면 그릴 게 없다). 대한민국 › 오늘의 경기 · 소속팀 링크가 같은 기준을 쓴다.
+ */
+export function showToday(l: LiveMatch | null | undefined, now = Date.now()): l is LiveMatch {
+  return !!l && isTodayLive(l, now) && !(l.phase === 'pre' && !l.home.starters.length);
+}
+
+/** 여러 오늘의 경기 순서 — 진행 중 → 킥오프 전(빠른 순) → 끝남(늦게 끝난 순) */
+export function orderToday(lives: LiveMatch[]): LiveMatch[] {
+  const rank = (l: LiveMatch) => (l.phase === 'live' ? 0 : l.phase === 'pre' ? 1 : 2);
+  return [...lives].sort((a, b) => rank(a) - rank(b)
+    || (a.phase === 'done' ? b.kickoffUtc.localeCompare(a.kickoffUtc) : a.kickoffUtc.localeCompare(b.kickoffUtc)));
+}

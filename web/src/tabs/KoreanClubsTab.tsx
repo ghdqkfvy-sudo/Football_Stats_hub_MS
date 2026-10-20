@@ -13,8 +13,7 @@ import { CompCrest } from '../components/CompCrest';
 import { KorFlag } from '../components/KorFlag';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { PlayersTab } from './PlayersTab';
-import { LiveMatchView } from '../components/LiveMatch';
-import { isTodayLive, useLive } from '../lib/live';
+import { showToday, useLive } from '../lib/live';
 import { resultOf } from '../lib/league';
 import { useMedia } from '../lib/useMedia';
 import { useSquadPlayers } from '../lib/liveSquad';
@@ -32,7 +31,7 @@ import { RatingBadge } from '../components/RatingBadge';
  *
  * 화면 색은 고른 클럽의 팀 컬러다(그 안의 카드·게이지가 클럽 탭과 같아 보이게).
  */
-export function KoreanClubsTab({ pick, onPick }: { pick: TargetId | null; onPick: (id: TargetId) => void }) {
+export function KoreanClubsTab({ pick, onPick, onToday }: { pick: TargetId | null; onPick: (id: TargetId) => void; onToday?: (id: TargetId) => void }) {
   /* 세 클럽 일정을 다 받는다 — 처음 고를 클럽(다음 경기가 가장 빠른 클럽)을 정하려면 필요하다 */
   const [feeds, setFeeds] = useState<Record<string, Match[]>>({});
   useEffect(() => {
@@ -103,37 +102,31 @@ export function KoreanClubsTab({ pick, onPick }: { pick: TargetId | null; onPick
       </section>
 
       <Swap k={`${club.id}:${matches ? 1 : 0}`} dir={dir}>
-        <ClubPanel club={club} matches={matches} loaded={loaded} />
+        <ClubPanel club={club} matches={matches} loaded={loaded} onToday={onToday} />
       </Swap>
     </div>
   );
 }
 
 /**
- * 소속팀 화면의 오늘의 경기 — 클럽 탭이 없어서(대한민국 › 소속팀) 버튼으로 같은 화면을 펼친다.
- * 경기 중이면 처음부터 펼쳐 둔다.
+ * 소속팀 화면의 오늘의 경기 링크 — 경기 화면은 대한민국 › 오늘의 경기 로 옮겼다(2026-10-20, 이 화면이 너무 복잡해졌다).
+ * 그 클럽이 오늘 경기를 하면 한 줄 버튼만 둔다.
  */
-function ClubToday({ club, matches }: { club: KoreanClub; matches: Match[] }) {
+function ClubToday({ club, onToday }: { club: KoreanClub; onToday?: (id: TargetId) => void }) {
   const live = useLive(club.id);
-  const [open, setOpen] = useState<boolean | null>(null);
-  if (!live || !isTodayLive(live)) return null;
-  if (live.phase === 'pre' && !live.home.starters.length) return null;
-  /* 경기 중이거나 오늘 끝났으면 펼친 채로 — Summary 의 오늘의 경기에서 넘어오면 바로 보이게 */
-  const shown = open ?? live.phase !== 'pre';
+  if (!showToday(live) || !onToday) return null;
   return (
     <div className="kclub__today">
-      <button className="hero__live" data-phase={live.phase} onClick={() => setOpen(!shown)} aria-expanded={shown}>
+      <button className="hero__live" data-phase={live.phase} onClick={() => onToday(club.id)}>
         <i aria-hidden="true" />
-        {live.phase === 'live' ? <>LIVE {live.clock && <span className="num">{live.clock}</span>} · 오늘의 경기</> : '오늘의 경기'}
-        {shown ? ' 접기' : ' 보기'}
+        {live.phase === 'live' ? <>LIVE {live.clock && <span className="num">{live.clock}</span>} · 오늘의 경기 보기 →</> : '오늘의 경기 보기 →'}
       </button>
-      {shown && <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={club.espnTeamId} matches={matches} />}
     </div>
   );
 }
 
 /** 고른 클럽 한 곳 — 팀 컬러·대회 색을 그 클럽 것으로 갈아 끼운다 */
-function ClubPanel({ club, matches, loaded }: { club: KoreanClub; matches: Match[] | undefined; loaded: boolean }) {
+function ClubPanel({ club, matches, loaded, onToday }: { club: KoreanClub; matches: Match[] | undefined; loaded: boolean; onToday?: (id: TargetId) => void }) {
   const scope = useMemo<ReadonlySet<string>>(() => new Set([club.espnTeamId]), [club.espnTeamId]);
   const marks = useMemo(() => new Map(club.koreans.map((k) => [k.id, k.nameKo])), [club]);
 
@@ -146,7 +139,7 @@ function ClubPanel({ club, matches, loaded }: { club: KoreanClub; matches: Match
           ) : (
             <>
               <ClubTop club={club} matches={matches} />
-              <ClubToday club={club} matches={matches} />
+              <ClubToday club={club} onToday={onToday} />
               <PlayersTab target={club} matches={matches} embedded marks={marks} />
             </>
           )}

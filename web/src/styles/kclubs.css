@@ -254,3 +254,13 @@
   .kclub__formnote { display: none; }
   .squad__kor em { display: none; }
 }
+
+/* 대한민국 › 오늘의 경기 — 경기 전환 단추(소속팀 전환과 같은 모양) */
+.ktoday__vs { font-style: normal; font-weight: 600; color: var(--text-lo); }
+.ktoday__st { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: var(--text-mid); }
+.ktoday__st[data-phase='live'] { color: #FF5A5F; }
+.ktoday__st[data-phase='live'] i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: lm-blink 1.2s infinite; }
+.ktoday > section { margin-bottom: 14px; }
+@media (max-width: 640px) {
+  .ktoday__vs { display: none; }
+}
