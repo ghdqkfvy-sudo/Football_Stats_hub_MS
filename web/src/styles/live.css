@@ -282,3 +282,47 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lm__chip .chipbox__name { margin-top: 4px; }
 /* 평점 없음 자리표시 — 등번호 반대편이 비어 칩이 한쪽으로 쏠려 보이지 않게(2026-10-19 밀리탕) */
 .lm__chip .lm__rtg0 { color: rgba(234, 241, 253, .55); background: rgba(20, 30, 46, .82); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 1px 5px rgba(0, 0, 0, .5); }
+
+/* ── 선발 ↔ 교체 전환 (2026-10-22) ── */
+.lm__outk { color: #FF7A7A !important; font-weight: 800; font-style: normal; }
+@keyframes lm-swapin { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.lm__chip[data-cyc] .chipbox__ring, .lm__chip[data-cyc] .chipbox__name, .lm__chip[data-cyc] .chipbox__stat { animation: lm-swapin .5s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .lm__chip[data-cyc] .chipbox__ring, .lm__chip[data-cyc] .chipbox__name, .lm__chip[data-cyc] .chipbox__stat { animation: none; }
+}
+/* 교체된 자리 표시 — 자동 전환 · 선발 · 현재 */
+.lm__cyc {
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px; width: 100%; max-width: 880px; margin: 0 auto 6px;
+  font-size: 11.5px; color: var(--text-lo);
+}
+.lm__cyc > span { margin-right: 4px; font-weight: 700; }
+.lm__cyc button {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-weight: 700; color: var(--text-mid); background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px var(--line);
+}
+.lm__cyc button[data-on] { color: #06210F; background: #7CF0A6; box-shadow: none; }
+.lm__cyc button i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lm__cyc button[data-on] i { animation: lm-blink 1.6s infinite; }
+
+/* ── 호버 카드 (넓은 화면 · 마우스) ── */
+.lmt {
+  position: fixed; z-index: 60; pointer-events: none; display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px;
+  font-size: 12px; color: var(--text-mid); background: rgba(10, 18, 34, .97);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
+.lmt__h { display: grid; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.lmt__h b { display: flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 800; color: var(--text-hi); }
+.lmt__h span { font-size: 11px; color: var(--text-lo); }
+.lmt__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lmt__row i { font-style: normal; font-weight: 900; }
+.lmt__ev { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--text-hi); font-weight: 700; }
+.lmt__ev span { display: inline-flex; align-items: center; gap: 3px; }
+.lmt__st { margin: 0; font-size: 11.5px; line-height: 1.45; }
+.lmt__sw { margin: 0; font-size: 11.5px; color: var(--text-lo); }
+.lmt__sw b { color: var(--text-mid); }
+.lmt__lo { font-style: normal; color: var(--text-lo); margin: 0; }
+.lmt__warn { margin: 0; font-weight: 800; color: #FF6B6B; }
+.lmt__warn[data-doubt] { color: #F5A524; }
+.lmt__season { display: grid; gap: 2px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11.5px; }
+.lmt__cmp em { margin-left: 6px; font-style: normal; font-weight: 800; color: #FF7A7A; }
+.lmt__cmp em[data-up] { color: #3EE07A; }
