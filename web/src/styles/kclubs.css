@@ -25,9 +25,9 @@
   /* 폰 타일은 한 줄(우리 · 상대 · 시각) — 이름표는 시각 바로 앞 */
   .wcal__tl { flex-direction: row-reverse; justify-content: flex-start; gap: 8px; }
   .wcal__tl .kortag { font-size: 10px; padding: 1px 7px 1px 4px; }
-  /* 이름표가 둘 이상이면 타일 둘째 줄로 — 시각은 첫 줄 오른쪽 그대로, 이름표는 왼쪽부터 */
-  .wcal__tl[data-many] { display: contents; }
-  .wcal__tl[data-many] .wcal__kos { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
+  /* 이름표가 둘 이상이면 오른쪽 칸에 이름표를 위로 쌓고 시각은 그 아래 */
+  .wcal__tl[data-many] { flex-direction: column-reverse; align-items: flex-end; gap: 4px; }
+  .wcal__tl[data-many] .wcal__kos { flex-direction: column; align-items: flex-end; }
 }
 /* 코리안리거 맞대결 — 팀 줄 아래 이름표 줄 */
 .mdr__derby { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
