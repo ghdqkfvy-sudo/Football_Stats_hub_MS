@@ -1,0 +1,24 @@
+name: 점검 — 선수 경기 기록 (FotMob)
+
+# 오늘의 경기 호버 카드용 선수별 경기 기록 모양을 본다(2026-10-22). 로그만 남긴다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-player-stats.mjs'
+      - '.github/workflows/player-stats-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/probe-player-stats.mjs
