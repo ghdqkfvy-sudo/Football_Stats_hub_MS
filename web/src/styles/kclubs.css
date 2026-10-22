@@ -20,11 +20,18 @@
 
 /* 주간 일정 — 이름표를 시각·스코어 줄에 (칸 높이를 늘리지 않는다) */
 .wcal__tl { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.wcal__kos { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 @media (max-width: 640px) {
   /* 폰 타일은 한 줄(우리 · 상대 · 시각) — 이름표는 시각 바로 앞 */
   .wcal__tl { flex-direction: row-reverse; justify-content: flex-start; gap: 8px; }
   .wcal__tl .kortag { font-size: 10px; padding: 1px 7px 1px 4px; }
+  /* 이름표가 둘 이상이면 타일 둘째 줄로 — 시각은 첫 줄 오른쪽 그대로, 이름표는 왼쪽부터 */
+  .wcal__tl[data-many] { display: contents; }
+  .wcal__tl[data-many] .wcal__kos { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
 }
+/* 코리안리거 맞대결 — 팀 줄 아래 이름표 줄 */
+.mdr__derby { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
+.mdr__derby > i { font-size: 10.5px; font-style: normal; color: var(--text-lo); }
 
 /* 폰 한 줄 카드 — 가장 좁은 폰(360px)에서는 이름표를 조금 줄여 상대 팀 이름이 잘리지 않게 */
 @media (max-width: 374px) {
