@@ -36,7 +36,9 @@ type Find = (p: LivePlayer) => PlayerSeason | null;
 type CycMode = 'auto' | 'start' | 'now';
 /** 호버 카드 — 넓은 화면(마우스)에서만. 경기장은 overflow:hidden 이라 body 로 띄운다 */
 type Tip = (body: () => React.ReactNode) => Partial<Pick<React.HTMLAttributes<HTMLElement>, 'onMouseEnter' | 'onMouseLeave'>>;
-const CYCLE_MS = 3000;
+const CYCLE_MS = 4000;
+/** 슬라이드 한 번에 걸리는 시간(ms) — live.css 의 .lm__slide · .lm__layer transition 과 같게 */
+const SLIDE_MS = 900;
 
 /** MVP 왕관 */
 const CROWN = (
@@ -78,7 +80,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
     return () => window.removeEventListener('scroll', off, { capture: true });
   }, [tipAt]);
 
-  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(3초) 마다 디졸브로 바뀐다. 골키퍼 쪽부터 물결처럼.
+  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(4초) 마다 슬라이드인으로 바뀐다. 골키퍼 쪽부터 물결처럼.
      호버 카드 · 상세 카드가 떠 있으면 멈춘다(누르려는 순간 선수가 바뀌지 않게).
      기기에서 '동작 줄이기' 를 켰으면 자동은 쓰지 않고 지금 선수로 */
   const reduce = useMedia('(prefers-reduced-motion: reduce)');
@@ -146,7 +148,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
         </div>
         {!wide && <TeamBar side={live[ours]} crest={crest(ours, 18)} />}
         {/* 범례 — 예전엔 "↑74' 교체 투입" 이라 실제 선수(마운트 74분) 기록처럼 읽혔다 */}
-        <p className="lm__key"><span>평점 · 카드 = 이 경기 기록(FotMob)</span><span><b className="lm__ink">↑분</b> = 교체 투입 · <b className="lm__outk">↓분</b> = 교체 아웃</span>{mvp.size > 0 && <span className="lm__keymvp">{CROWN} = MVP(최고 평점)</span>}</p>
+        <p className="lm__key"><span>평점 · 카드 = 이 경기 기록(FotMob)</span><span><b className="lm__ink">↑분</b> = 교체 투입 · <b className="lm__outk">↓분</b> = 교체 아웃</span>{mvp.size > 0 && <span className="lm__keymvp"><i>{CROWN}금색 이름표</i> = MVP(최고 평점)</span>}</p>
       </section>
 
       <section className="lm__squads">
@@ -294,13 +296,18 @@ function Half({ side, subs, top = false, wide = false, find, onPick, live, slot,
 }
 
 /** 포메이션 탭과 같은 칩 — 등번호 자리에는 이 경기 카드, 아래 알약에는 투입 분 · 골 · 도움 */
+/** 슬라이드 층의 자리 — 보이는 중(on) · 방금 나간 것(prev, 왼쪽/위로 빠짐) · 대기(next, 오른쪽/아래에서 대기) */
+type SlidePos = 'on' | 'prev' | 'next';
+
 /**
  * 포메이션 탭과 같은 칩 — 등번호 자리에는 이 경기 카드, 아래 알약에는 투입 분 · 골 · 도움.
  *
- * 교체가 있었던 자리는 그 자리를 거쳐 간 선수(full)를 **전부 겹쳐 그려 두고 투명도만 바꾼다**(크로스페이드).
- * 예전엔 선수가 바뀔 때 안쪽을 새로 그려 이전 선수가 즉시 사라지고 새 선수만 나타나, 칩이 한순간
- * 비어 깜빡여 보였다(2026-10-22). 아무것도 사라지지 않으니 자리 · 크기도 흔들리지 않는다.
+ * 교체가 있었던 자리는 그 자리를 거쳐 간 선수(full)를 모두 그려 두고 **슬라이드인**으로 바꾼다(2026-10-22).
+ *  · 사진 — 원 안(lm__mask)에서 나가는 선수는 왼쪽으로 빠지고, 들어오는 선수는 오른쪽에서 밀려 들어온다.
+ *  · 평점 · 등번호 · 이름 · 알약 — 제자리에서 위로 살짝 밀리며 바뀐다(원 밖 배지가 움직여 남을 가리지 않게).
+ * 들어오는 쪽이 늘 오른쪽(아래)이 되도록, 나간 층(prev)은 전환이 끝나면 효과 없이 대기(next) 자리로 돌려 둔다.
  * delay 는 골키퍼 쪽부터 공격 쪽으로 물결처럼 바뀌게 하는 칩별 지연(ms).
+ * MVP(이 경기 최고 평점)를 보여 주는 동안은 포지션 이름표가 금색 + 왕관 + 반짝임, 사진 테두리가 금빛(U3).
  */
 function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
   full: LivePlayer[]; k: number; tag: string; color: string; onOpen?: () => void;
@@ -310,8 +317,21 @@ function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
   const starter = full[0];
   const cycled = full.length > 1;
   const redNow = p.cards.some((c) => c.kind !== 'y');
+  const isMvp = mvp.has(p.id);
+
+  /* 방금 나간 층 — 바뀐 그 렌더에서 기억하고(렌더 중 상태 갱신), 전환이 끝나면 지운다 */
+  const [hist, setHist] = useState<{ k: number; pk: number | null }>({ k, pk: null });
+  if (hist.k !== k) setHist({ k, pk: hist.k });
+  useEffect(() => {
+    if (hist.pk == null) return;
+    const t = setTimeout(() => setHist((h) => ({ ...h, pk: null })), SLIDE_MS + delay + 150);
+    return () => clearTimeout(t);
+  }, [hist.pk, hist.k, delay]);
+  const pos = (i: number): SlidePos => (i === k ? 'on' : i === hist.pk ? 'prev' : 'next');
+
   const title = [
     p.name,
+    isMvp ? 'MVP(이 경기 최고 평점)' : '',
     p !== starter ? `${p.in ?? '?'}분 ${full[k - 1]?.name ?? starter.name} 대신 투입` : '',
     p.rating ? `평점 ${p.rating}` : '',
     ...p.cards.map((c) => `${c.kind === 'y' ? '경고' : '퇴장'}${c.min ? ` ${c.min}'` : ''}`),
@@ -333,23 +353,31 @@ function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
   };
   const pills = full.map(pill);
   const Box = onOpen ? 'button' : 'div';
-  const on = (i: number) => (i === k ? true : undefined);
+  const layer = (i: number) => ({ 'data-pos': pos(i), 'aria-hidden': i !== k || undefined });
   return (
     <Box
       className="chipbox lm__chip" style={{ ['--pc' as string]: color, ['--d' as string]: `${delay}ms` }}
-      data-red={redNow || undefined} data-cyc={cycled || undefined}
+      data-red={redNow || undefined} data-cyc={cycled || undefined} data-mvp={isMvp || undefined}
       title={HAS_HOVER ? undefined : onOpen ? `${title} · 눌러서 시즌 기록` : title}
       {...hover}
       {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}
     >
-      {tag && <span className="chipbox__tag">{tag}</span>}
+      {tag && <span className="chipbox__tag lm__tag">{isMvp && <i className="lm__tagcrown" aria-label="MVP">{CROWN}</i>}{tag}</span>}
       <span className="chipbox__ring">
+        {/* 사진 — 원 안에서 옆으로 */}
+        <span className="lm__mask">
+          {full.map((x, i) => (
+            <span key={x.id} className="lm__slide" {...layer(i)}>
+              <Headshot id={`fm-${x.id}`} src={fotmobImage(x.id)} kind="espn" label={x.no != null ? String(x.no) : x.last.slice(0, 1)} size={38} className="chipbox__hs" />
+            </span>
+          ))}
+        </span>
+        {/* 등번호 · 평점 — 제자리에서 위로 */}
         {full.map((x, i) => {
           const red = x.cards.some((c) => c.kind !== 'y');
           const yellow = !red && x.cards.length > 0;
           return (
-            <span key={x.id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>
-              <Headshot id={`fm-${x.id}`} src={fotmobImage(x.id)} kind="espn" label={x.no != null ? String(x.no) : x.last.slice(0, 1)} size={38} className="chipbox__hs" />
+            <span key={x.id} className="lm__layer lm__badges" {...layer(i)}>
               {red || yellow
                 ? <span className="chipbox__no chipbox__no--card" data-kind={red ? 'red' : 'yellow'}><CardShape color={red ? 'red' : 'yellow'} /></span>
                 : <span className="chipbox__no num">{x.no ?? ''}</span>}
@@ -357,18 +385,16 @@ function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
               {x.rating != null
                 ? <RatingBadge v={x.rating} cls="chipbox__rtg" />
                 : <span className="rtg chipbox__rtg lm__rtg0" title="평점 없음 (FotMob)">–</span>}
-              {/* MVP — 평점 배지 위 왕관 */}
-              {mvp.has(x.id) && <span className="lm__crown" title="MVP · 이 경기 최고 평점">{CROWN}</span>}
             </span>
           );
         })}
       </span>
       <span className="chipbox__name lm__stack">
-        {full.map((x, i) => <span key={x.id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>{x.cap && <em className="lm__cap">C</em>}{x.last}</span>)}
+        {full.map((x, i) => <span key={x.id} className="lm__layer" {...layer(i)}>{x.cap && <em className="lm__cap">C</em>}{x.last}</span>)}
       </span>
       {/* 알약은 늘 그린다(비면 숨김) — 줄마다 칩 높이가 같아야 배치가 흔들리지 않는다 */}
       <span className="chipbox__stat num lm__stack" data-empty={!pills[k].has || undefined}>
-        {pills.map((x, i) => <span key={full[i].id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>{x.body}</span>)}
+        {pills.map((x, i) => <span key={full[i].id} className="lm__layer" {...layer(i)}>{x.body}</span>)}
       </span>
     </Box>
   );
