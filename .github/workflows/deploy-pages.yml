@@ -80,20 +80,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # 후보: github-pages 환경의 최근 배포 + main 최근 커밋(Pages 배포 id 는 그 커밋 sha)
-          cands=$( { gh api "repos/$GH_REPO/deployments?environment=github-pages&per_page=10" --jq '.[].sha' || true;
-                     gh api "repos/$GH_REPO/commits?sha=main&per_page=30" --jq '.[].sha' || true; } | awk 'NF && !seen[$0]++')
-          # ⚠️ 서버가 이미 deployment_cancelled 라고 답하면서도 새 배포를 막은 적이 있다(10-20 1bc97507) —
-          # 그래서 성공(succeed) · 기록 없음이 아니면 전부 취소를 다시 보낸다(끝난 배포면 API 가 거절할 뿐이다)
-          for sha in $cands; do
-            # ⚠️ 지금 배포할 커밋은 빼야 한다 — 미리 취소를 걸어 두면 곧 만들 배포가 바로 취소된다(10-20 d8b67d22)
+          # 후보: github-pages 환경에 **실제로 만들어진** 최근 배포만.
+          # ⚠️ 예전엔 main 최근 커밋 30개에도 취소를 보냈다. 그런데 아직 배포가 없는(더 최신) 커밋에 취소를
+          # 보내 두면 그 커밋의 배포가 만들어지자마자 죽어, 상태가 빈 채로 10분 기다리다 실패했다
+          # (10-22 #3308 · #3310 연속 실패). 이제 배포 기록이 있는 sha 만 본다.
+          for sha in $(gh api "repos/$GH_REPO/deployments?environment=github-pages&per_page=10" --jq '.[].sha' | awk 'NF && !seen[$0]++'); do
+            # 지금 배포할 커밋은 빼야 한다 — 미리 취소를 걸어 두면 곧 만들 배포가 바로 취소된다(10-20 d8b67d22)
             [ "$sha" = "$GITHUB_SHA" ] && continue
-            st=$(gh api "repos/$GH_REPO/pages/deployments/$sha" --jq '.status' 2>&1 || true)
-            echo "${sha:0:8} ${st}"
+            st=$(gh api "repos/$GH_REPO/pages/deployments/$sha" --jq '.status' 2>/dev/null || true)
+            echo "${sha:0:8} ${st:-(상태 없음)}"
             case "$st" in
-              succeed|*'Not Found'*) ;;
+              succeed|deployment_cancelled|deployment_failed|deployment_content_failed|deployment_attempt_error|deployment_lost) ;;
               *)
-                echo "::warning::끝나지 않았을 수 있는 Pages 배포 ${sha} (${st}) — 취소 요청"
+                # 진행 중이거나 상태가 비어 있는 배포(10-20 1bc97507 이 이랬다) — 이 잡이 도는 동안엔 다른 배포가 없으니 멈춘 것
+                echo "::warning::멈춘 Pages 배포 ${sha} (${st:-상태 없음}) — 취소"
                 gh api -X POST "repos/$GH_REPO/pages/deployments/$sha/cancel" || true
                 ;;
             esac
