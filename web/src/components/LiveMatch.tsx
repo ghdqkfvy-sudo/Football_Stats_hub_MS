@@ -38,6 +38,14 @@ type CycMode = 'auto' | 'start' | 'now';
 type Tip = (body: () => React.ReactNode) => Partial<Pick<React.HTMLAttributes<HTMLElement>, 'onMouseEnter' | 'onMouseLeave'>>;
 const CYCLE_MS = 3000;
 
+/** MVP 왕관 */
+const CROWN = (
+  <svg viewBox="0 0 24 18" width="16" height="12" aria-hidden="true">
+    <path d="M2 15h20l1.6-11-6.4 4.6L12 1 6.8 8.6.4 4z" fill="#FFD23F" stroke="#7A5200" strokeWidth="1.2" strokeLinejoin="round" />
+    <rect x="2" y="15" width="20" height="2.6" rx="1" fill="#F2B705" stroke="#7A5200" strokeWidth="1" />
+  </svg>
+);
+
 const PIN = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
     <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
@@ -85,7 +93,14 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
     return () => clearInterval(id);
   }, [mode, anySub, hold]);
   const slot = useCallback((n: number) => (mode === 'start' ? 0 : mode === 'now' ? n - 1 : tick % n), [mode, tick]);
-  const halfProps = { live, slot, tip };
+  /* MVP — 이 경기 최고 평점(양 팀 · 교체 포함, 같으면 모두). 킥오프 전에는 없다 */
+  const mvp = useMemo(() => {
+    if (live.phase === 'pre') return new Set<string>();
+    const all = [live.home, live.away].flatMap((t) => [...t.starters, ...t.bench]).filter((p) => p.rating != null);
+    const top = Math.max(...all.map((p) => p.rating!));
+    return new Set(all.filter((p) => p.rating === top).map((p) => p.id));
+  }, [live]);
+  const halfProps = { live, slot, tip, mvp };
   const theirs = ours === 'home' ? 'away' : 'home';
   const [pick, setPick] = useState<'home' | 'away'>(ours);
   /* 넓은 화면은 경기장을 눕힌다 — 세로로 두 팀을 쌓으면 화면 두 장 길이였다.
@@ -131,7 +146,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
         </div>
         {!wide && <TeamBar side={live[ours]} crest={crest(ours, 18)} />}
         {/* 범례 — 예전엔 "↑74' 교체 투입" 이라 실제 선수(마운트 74분) 기록처럼 읽혔다 */}
-        <p className="lm__key"><span>평점 · 카드 = 이 경기 기록(FotMob)</span><span><b className="lm__ink">↑분</b> = 교체 투입 · <b className="lm__outk">↓분</b> = 교체 아웃</span></p>
+        <p className="lm__key"><span>평점 · 카드 = 이 경기 기록(FotMob)</span><span><b className="lm__ink">↑분</b> = 교체 투입 · <b className="lm__outk">↓분</b> = 교체 아웃</span>{mvp.size > 0 && <span className="lm__keymvp">{CROWN} = MVP(최고 평점)</span>}</p>
       </section>
 
       <section className="lm__squads">
@@ -237,9 +252,9 @@ function rowsOf(starters: LivePlayer[]): LivePlayer[][] {
 }
 
 /** 경기장 반쪽 — top 이면 상대(골키퍼가 맨 위, 좌우를 뒤집어 우리 쪽에서 보는 방향) */
-function Half({ side, subs, top = false, wide = false, find, onPick, live, slot, tip }: {
+function Half({ side, subs, top = false, wide = false, find, onPick, live, slot, tip, mvp }: {
   side: LiveSide; subs: Sub[]; top?: boolean; wide?: boolean; find?: Find; onPick?: (p: PlayerSeason) => void;
-  live: LiveMatch; slot: (n: number) => number; tip: Tip;
+  live: LiveMatch; slot: (n: number) => number; tip: Tip; mvp: Set<string>;
 }) {
   const rows = useMemo(() => rowsOf(side.starters), [side.starters]);
   const shown = rows.map((r, i) => ({ r: top ? [...r].reverse() : r, i }));
@@ -263,11 +278,11 @@ function Half({ side, subs, top = false, wide = false, find, onPick, live, slot,
               const partner = full.length > 1 ? (k === 0 ? full[1] : full[k - 1]) : null;
               return (
                 <Chip
-                  key={p.id} full={full} k={k} tag={lab[j] ?? ''} color={LINE_COLOR[kind]}
+                  key={p.id} full={full} k={k} tag={lab[j] ?? ''} color={LINE_COLOR[kind]} mvp={mvp}
                   /* 물결 — 골키퍼 줄부터 한 줄에 60ms, 줄 안은 20ms 씩 */
                   delay={i * 60 + j * 20}
                   onOpen={ps && onPick ? () => onPick(ps) : undefined}
-                  hover={tip(() => <PlayerTip p={d} starter={k === 0} live={live} ps={ps} partner={partner} />)}
+                  hover={tip(() => <PlayerTip p={d} starter={k === 0} live={live} ps={ps} partner={partner} mvp={mvp.has(d.id)} />)}
                 />
               );
             })}
@@ -287,9 +302,9 @@ function Half({ side, subs, top = false, wide = false, find, onPick, live, slot,
  * 비어 깜빡여 보였다(2026-10-22). 아무것도 사라지지 않으니 자리 · 크기도 흔들리지 않는다.
  * delay 는 골키퍼 쪽부터 공격 쪽으로 물결처럼 바뀌게 하는 칩별 지연(ms).
  */
-function Chip({ full, k, tag, color, onOpen, hover, delay = 0 }: {
+function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
   full: LivePlayer[]; k: number; tag: string; color: string; onOpen?: () => void;
-  hover: ReturnType<Tip>; delay?: number;
+  hover: ReturnType<Tip>; delay?: number; mvp: Set<string>;
 }) {
   const p = full[k];
   const starter = full[0];
@@ -342,6 +357,8 @@ function Chip({ full, k, tag, color, onOpen, hover, delay = 0 }: {
               {x.rating != null
                 ? <RatingBadge v={x.rating} cls="chipbox__rtg" />
                 : <span className="rtg chipbox__rtg lm__rtg0" title="평점 없음 (FotMob)">–</span>}
+              {/* MVP — 평점 배지 위 왕관 */}
+              {mvp.has(x.id) && <span className="lm__crown" title="MVP · 이 경기 최고 평점">{CROWN}</span>}
             </span>
           );
         })}
@@ -565,7 +582,7 @@ function Pairs({ rows, one = false }: { rows: [string, React.ReactNode][]; one?:
 }
 
 /** 포메이션 칩 — 이 경기 카드 + (우리 선수면) 시즌과 비교 */
-function PlayerTip({ p, starter, live, ps, partner }: { p: LivePlayer; starter: boolean; live: LiveMatch; ps: PlayerSeason | null; partner: LivePlayer | null }) {
+function PlayerTip({ p, starter, live, ps, partner, mvp }: { p: LivePlayer; starter: boolean; live: LiveMatch; ps: PlayerSeason | null; partner: LivePlayer | null; mvp: boolean }) {
   const played = playedMin(p, starter, live);
   const { goals, assists } = contributions(live.events, p);
   const diff = p.rating != null && ps?.rating != null ? Math.round((p.rating - ps.rating) * 10) / 10 : null;
@@ -574,7 +591,7 @@ function PlayerTip({ p, starter, live, ps, partner }: { p: LivePlayer; starter: 
     : (p.in != null ? <em className="lmt__chip" data-k="in">↑{p.in}&apos; 교체 투입</em> : <em className="lmt__chip">출전 안 함</em>);
   return (
     <>
-      <TipHead p={p} sub={role} fallbackPos={ps?.pos} />
+      <TipHead p={p} sub={<>{role}{mvp && <em className="lmt__mvp">{CROWN} MVP</em>}</>} fallbackPos={ps?.pos} />
       <div className="lmt__tiles">
         <Tile v={played != null ? `${played}'` : '–'} k="출전" tone={played == null ? 'mute' : undefined} />
         <div className="lmt__tile lmt__tile--rtg">
