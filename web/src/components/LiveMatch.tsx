@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { LiveEvent, LiveMatch, LivePlayer, LiveSide } from '../types/feedTypes';
 import type { Match } from '../lib/types';
 import { teamColor } from '../lib/live';
-import { contributions, playedMin, scoreAt, slotChain, statLine } from '../lib/liveCard';
+import { contributions, playedMin, scoreAt, slotChain, statPairs } from '../lib/liveCard';
 import { susNote } from '../lib/discipline';
 import { fotmobImage } from '../lib/injury';
 import { kstFullDate, kstParts, kstTime } from '../lib/kst';
@@ -483,71 +483,106 @@ function evBody(e: Exclude<LiveEvent, { t: 'half' }>) {
 }
 
 /* ── 호버 카드 (넓은 화면 · 마우스) ─────────────────────────────── */
+/*
+ * 가시성 우선(2026-10-22): 사진 · 이름 머리 + 큰 숫자 타일(출전 · 평점 · 골 · 도움) + 2열 기록 표 + 색 칩.
+ * 위 줄의 색은 포지션 색(포메이션 칩과 같은 LINE_COLOR)이다.
+ */
 
 /** 떠 있는 상자 — 요소 아래(아래 공간이 모자라면 위), 화면 밖으로 나가지 않게 */
 function TipBox({ el, children }: { el: HTMLElement; children: React.ReactNode }) {
   const r = el.getBoundingClientRect();
-  const W = 280;
+  const W = 300;
   const left = Math.max(8, Math.min(window.innerWidth - W - 8, r.left + r.width / 2 - W / 2));
-  const below = window.innerHeight - r.bottom > 240;
+  const below = window.innerHeight - r.bottom > 300;
   return (
-    <div className="lmt" role="tooltip" style={{ left, width: W, ...(below ? { top: r.bottom + 8 } : { top: r.top - 8, transform: 'translateY(-100%)' }) }}>
+    <div className="lmt" role="tooltip" style={{ left, width: W, ...(below ? { top: r.bottom + 10 } : { top: r.top - 10, transform: 'translateY(-100%)' }) }}>
       {children}
     </div>
   );
 }
 
 const POS_KO = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' } as const;
-const mins = (xs: { min: number; plus?: number }[]) => xs.map((x) => `${x.min}${x.plus ? `+${x.plus}` : ''}'`).join(' · ');
+const mins = (xs: { min: number; plus?: number }[]) => xs.map((x) => `${x.min}${x.plus ? `+${x.plus}` : ''}'`).join(' ');
+const posColor = (pos?: LivePlayer['pos']) => (pos ? LINE_COLOR[POS_LINE[pos]] : 'rgba(255,255,255,.35)');
 
-/** 머리 — 이름 · 포지션 · 등번호 · 주장 */
-function TipHead({ p, sub }: { p: LivePlayer; sub?: React.ReactNode }) {
+/** 머리 — 사진 · 이름 · 포지션 칩 · 등번호 · 주장 */
+function TipHead({ p, sub, fallbackPos }: { p: LivePlayer; sub?: React.ReactNode; fallbackPos?: LivePlayer['pos'] }) {
+  const pos = p.pos ?? fallbackPos;
   return (
-    <div className="lmt__h">
-      <b>{p.cap && <em className="lm__cap">C</em>}{p.name}</b>
-      <span>{[p.pos && POS_KO[p.pos], p.no != null && `#${p.no}`].filter(Boolean).join(' · ')}{sub}</span>
+    <div className="lmt__h" style={{ ['--pc' as string]: posColor(pos) }}>
+      <Headshot id={`fm-${p.id}`} src={fotmobImage(p.id)} kind="espn" label={p.no != null ? String(p.no) : p.last.slice(0, 1)} size={44} className="lmt__face" />
+      <div className="lmt__who">
+        <b>{p.name}</b>
+        <span>
+          {pos && <em className="lmt__pos">{POS_KO[pos]}</em>}
+          {p.no != null && <em className="lmt__no num">#{p.no}</em>}
+          {p.cap && <em className="lmt__capt">주장</em>}
+          {sub}
+        </span>
+      </div>
     </div>
   );
+}
+
+/** 큰 숫자 타일 */
+function Tile({ v, k, tone }: { v: React.ReactNode; k: string; tone?: 'g' | 'a' | 'mute' }) {
+  return <div className="lmt__tile" data-tone={tone}><b className="num">{v}</b><span className="lmt__k">{k}</span></div>;
+}
+
+/** 2열 기록 표 */
+function Pairs({ rows, one = false }: { rows: [string, React.ReactNode][]; one?: boolean }) {
+  if (!rows.length) return null;
+  return <dl className="lmt__dl" data-one={one || undefined}>{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="num">{v}</dd></div>)}</dl>;
 }
 
 /** 포메이션 칩 — 이 경기 카드 + (우리 선수면) 시즌과 비교 */
 function PlayerTip({ p, starter, live, ps, partner }: { p: LivePlayer; starter: boolean; live: LiveMatch; ps: PlayerSeason | null; partner: LivePlayer | null }) {
   const played = playedMin(p, starter, live);
   const { goals, assists } = contributions(live.events, p);
-  const line = statLine(p.st);
   const diff = p.rating != null && ps?.rating != null ? Math.round((p.rating - ps.rating) * 10) / 10 : null;
-  const minLine = starter
-    ? (p.out != null ? `선발 · ${p.out}' 교체 아웃${p.outInjury ? ' (부상)' : ''}` : `선발 · ${played ?? 0}분`)
-    : (p.in != null ? `↑${p.in}' 교체 투입 · ${played ?? 0}분${p.out != null ? ` · ↓${p.out}'` : ''}` : '출전 안 함');
+  const role = starter
+    ? (p.out != null ? <em className="lmt__chip" data-k="out">↓{p.out}&apos; 교체 아웃{p.outInjury ? ' · 부상' : ''}</em> : <em className="lmt__chip" data-k="start">선발</em>)
+    : (p.in != null ? <em className="lmt__chip" data-k="in">↑{p.in}&apos; 교체 투입</em> : <em className="lmt__chip">출전 안 함</em>);
   return (
     <>
-      <TipHead p={p} />
-      <div className="lmt__row"><span>{minLine}</span>{p.rating != null ? <RatingBadge v={p.rating} cls="rtg--sm" /> : <em className="lmt__lo">평점 없음</em>}</div>
+      <TipHead p={p} sub={role} fallbackPos={ps?.pos} />
+      <div className="lmt__tiles">
+        <Tile v={played != null ? `${played}'` : '–'} k="출전" tone={played == null ? 'mute' : undefined} />
+        <div className="lmt__tile lmt__tile--rtg">
+          {p.rating != null ? <RatingBadge v={p.rating} cls="lmt__rtg" /> : <b className="num lmt__none">–</b>}
+          <span className="lmt__k">평점</span>
+        </div>
+        <Tile v={goals.length || p.goals} k="골" tone={goals.length || p.goals ? 'g' : 'mute'} />
+        <Tile v={assists.length || p.assists} k="도움" tone={assists.length || p.assists ? 'a' : 'mute'} />
+      </div>
       {(goals.length > 0 || assists.length > 0 || p.cards.length > 0) && (
         <div className="lmt__ev">
-          {goals.length > 0 && <span>⚽ {mins(goals)}</span>}
-          {assists.length > 0 && <span>도움 {mins(assists)}</span>}
-          {p.cards.map((c, i) => <span key={i}><CardShape color={c.kind === 'y' ? 'yellow' : 'red'} w={8} /> {c.min != null ? `${c.min}'` : ''}{c.kind === 'yr' ? ' 경고 누적' : ''}</span>)}
+          {goals.length > 0 && <span data-k="g">⚽ {mins(goals)}</span>}
+          {assists.length > 0 && <span data-k="a">도움 {mins(assists)}</span>}
+          {p.cards.map((c, i) => (
+            <span key={i} data-k={c.kind === 'y' ? 'y' : 'r'}><CardShape color={c.kind === 'y' ? 'yellow' : 'red'} w={9} />{c.min != null ? ` ${c.min}'` : ''}{c.kind === 'yr' ? ' 경고 누적' : c.kind === 'r' ? ' 퇴장' : ''}</span>
+          ))}
         </div>
       )}
-      {line.length > 0 && <p className="lmt__st">{line.join(' · ')}</p>}
-      {(p.st?.dist != null || p.st?.spd != null) && (
-        <p className="lmt__st">{[p.st?.dist != null && `뛴 거리 ${(p.st.dist / 1000).toFixed(1)}km`, p.st?.spd != null && `최고 ${p.st.spd.toFixed(1)}km/h`].filter(Boolean).join(' · ')}</p>
-      )}
+      <Pairs rows={statPairs(p.st)} />
       {partner && (
-        <p className="lmt__sw">
-          {starter ? <>↓{p.out ?? partner.in}&apos; → <b>{partner.name}</b></> : <>↑{p.in}&apos; ← <b>{partner.name}</b></>}
-        </p>
+        <div className="lmt__sw">
+          <Headshot id={`fm-${partner.id}`} src={fotmobImage(partner.id)} kind="espn" label={partner.no != null ? String(partner.no) : partner.last.slice(0, 1)} size={22} />
+          <span>{starter ? <>↓{p.out ?? partner.in}&apos; 이후 <b>{partner.name}</b></> : <>↑{p.in}&apos; <b>{partner.name}</b> 대신</>}</span>
+        </div>
       )}
       {ps && (
         <div className="lmt__season">
-          <span>시즌 {ps.apps}경기 · {ps.goals}골 {ps.assists}도움</span>
-          {ps.rating != null && (
-            <span className="lmt__cmp">
-              시즌 평점 {ps.rating.toFixed(1)}{p.rating != null && <> → 오늘 {p.rating.toFixed(1)}</>}
-              {diff != null && diff !== 0 && <em data-up={diff > 0 || undefined}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff).toFixed(1)}</em>}
-            </span>
-          )}
+          <span className="lmt__cap">시즌</span>
+          <div className="lmt__srow">
+            <span className="num">{ps.apps}경기 · {ps.goals}골 {ps.assists}도움</span>
+            {ps.rating != null && (
+              <span className="lmt__cmp num">
+                <small>평점</small><RatingBadge v={ps.rating} cls="rtg--sm" title="시즌 평점" />
+                {diff != null && diff !== 0 && <em data-up={diff > 0 || undefined}>오늘 {diff > 0 ? '▲' : '▼'}{Math.abs(diff).toFixed(1)}</em>}
+              </span>
+            )}
+          </div>
         </div>
       )}
     </>
@@ -556,47 +591,72 @@ function PlayerTip({ p, starter, live, ps, partner }: { p: LivePlayer; starter: 
 
 /** 벤치 대기 — 왜 안 뛰는지(시즌 출전 · 마지막 출전 · 부상 · 징계) */
 function BenchTip({ p, ps }: { p: LivePlayer; ps: PlayerSeason | null }) {
-  if (!ps) return <><TipHead p={p} /><p className="lmt__lo">시즌 기록 없음(상대 팀이거나 이번 시즌 첫 명단)</p></>;
+  if (!ps) {
+    return (
+      <>
+        <TipHead p={p} sub={<em className="lmt__chip">벤치</em>} />
+        <p className="lmt__lo">시즌 기록 없음 — 상대 팀이거나 이번 시즌 첫 명단</p>
+      </>
+    );
+  }
   const last = [...ps.recent].sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc))[0];
   const lp = last && kstParts(last.kickoffUtc);
   return (
     <>
-      <TipHead p={p} />
-      <div className="lmt__row">
-        <span>시즌 {ps.apps}경기(선발 {ps.starts}) · {ps.minutes}분</span>
-        {ps.rating != null && <RatingBadge v={ps.rating} cls="rtg--sm" title="시즌 평점" />}
+      <TipHead p={p} sub={<em className="lmt__chip">벤치</em>} fallbackPos={ps.pos} />
+      {(ps.inj || ps.disc?.sus) && (
+        <div className="lmt__alerts">
+          {ps.inj && <em className="lmt__alert" data-doubt={ps.inj.doubtful || undefined}>{ps.inj.doubtful ? '출전 불투명' : '부상'} · {ps.inj.ko}</em>}
+          {ps.disc?.sus && <em className="lmt__alert">징계 · {susNote(ps.disc.sus)}</em>}
+        </div>
+      )}
+      <div className="lmt__tiles">
+        <Tile v={ps.apps} k="시즌 출전" />
+        <Tile v={ps.starts} k="선발" />
+        <Tile v={ps.minutes} k="분" />
+        <div className="lmt__tile lmt__tile--rtg">
+          {ps.rating != null ? <RatingBadge v={ps.rating} cls="lmt__rtg" /> : <b className="num lmt__none">–</b>}
+          <span className="lmt__k">시즌 평점</span>
+        </div>
       </div>
       {last && lp && (
-        <p className="lmt__st">마지막 출전 {lp.month}.{lp.date} vs {last.opponentName} · {last.started ? '선발' : '교체'} {last.minutes}분</p>
+        <Pairs rows={[['마지막 출전', `${lp.month}.${lp.date} vs ${last.opponentName}`], ['그 경기', `${last.started ? '선발' : '교체'} · ${last.minutes}분`]]} one />
       )}
-      {ps.inj && <p className="lmt__warn" data-doubt={ps.inj.doubtful || undefined}>부상 · {ps.inj.ko}</p>}
-      {ps.disc?.sus && <p className="lmt__warn">징계 · {susNote(ps.disc.sus)}</p>}
     </>
   );
 }
 
-/** 교체 한 건 — 그때 스코어 · 들어간 선수가 그 뒤에 한 것 · 두 선수 기록 */
+/** 교체 한 건 — 그때 스코어 · 두 선수 기록 · 들어간 선수가 그 뒤에 한 것 */
 function SubTip({ s, pin, pout, live }: { s: Sub; pin?: LivePlayer; pout?: LivePlayer; live: LiveMatch }) {
   const [h, a] = scoreAt(live.events, s.min);
   const [me, them] = s.side === 'home' ? [h, a] : [a, h];
-  const state = me > them ? '앞설 때' : me < them ? '뒤질 때' : '동점일 때';
+  const state = me > them ? 'lead' : me < them ? 'trail' : 'level';
   const after = pin ? contributions(live.events, pin) : { goals: [], assists: [] };
   const g = after.goals.filter((x) => x.min >= s.min).length, as = after.assists.filter((x) => x.min >= s.min).length;
-  const row = (p: LivePlayer | undefined, name: string, dir: '↑' | '↓', starter: boolean) => {
+  const row = (p: LivePlayer | undefined, name: string, dir: 'in' | 'out', starter: boolean) => {
     const m = p ? playedMin(p, starter, live) : null;
     return (
-      <div className="lmt__row">
-        <span><i className={dir === '↑' ? 'lm__ink' : 'lm__outk'}>{dir}</i> {name}{m != null ? ` · ${m}분` : ''}</span>
+      <div className="lmt__prow" data-dir={dir}>
+        <i aria-hidden="true">{dir === 'in' ? '↑' : '↓'}</i>
+        <Headshot id={`fm-${p?.id ?? name}`} src={p ? fotmobImage(p.id) : undefined} kind="espn" label={p?.no != null ? String(p.no) : name.slice(0, 1)} size={28} />
+        <span className="lmt__pn"><b>{name}</b><small className="num">{m != null ? `${m}분` : ''}{p?.no != null ? ` · #${p.no}` : ''}</small></span>
         {p?.rating != null ? <RatingBadge v={p.rating} cls="rtg--sm" /> : <em className="lmt__lo">–</em>}
       </div>
     );
   };
   return (
     <>
-      <div className="lmt__h"><b>{s.min}{s.plus ? `+${s.plus}` : ''}&apos; 교체{s.injury ? ' · 부상' : ''}</b><span>{me}:{them} {state}</span></div>
-      {row(pin, s.in, '↑', false)}
-      {row(pout, s.out, '↓', !!pout && pout.in == null)}
-      <p className="lmt__st">투입 후 {g || as ? [g && `⚽ ${g}`, as && `도움 ${as}`].filter(Boolean).join(' · ') : '공격 포인트 없음'}</p>
+      <div className="lmt__subh">
+        <b className="num">{s.min}{s.plus ? `+${s.plus}` : ''}&apos;</b>
+        <span>교체{s.injury && <em className="lmt__chip" data-k="inj">부상</em>}</span>
+        <em className="lmt__score num" data-state={state}>{me}:{them} {state === 'lead' ? '앞설 때' : state === 'trail' ? '뒤질 때' : '동점일 때'}</em>
+      </div>
+      {row(pin, s.in, 'in', false)}
+      {row(pout, s.out, 'out', !!pout && pout.in == null)}
+      <div className="lmt__after" data-hit={g || as ? true : undefined}>
+        <span>투입 후</span>
+        <b>{g || as ? [g && `⚽ ${g}골`, as && `도움 ${as}`].filter(Boolean).join(' · ') : '공격 포인트 없음'}</b>
+      </div>
     </>
   );
 }

@@ -304,25 +304,97 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lm__cyc button i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .lm__cyc button[data-on] i { animation: lm-blink 1.6s infinite; }
 
-/* ── 호버 카드 (넓은 화면 · 마우스) ── */
+/* ── 호버 카드 (넓은 화면 · 마우스) — 가시성 우선 ── */
 .lmt {
-  position: fixed; z-index: 60; pointer-events: none; display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px;
-  font-size: 12px; color: var(--text-mid); background: rgba(10, 18, 34, .97);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1);
+  position: fixed; z-index: 60; pointer-events: none; display: grid; gap: 10px; padding: 0 14px 14px; border-radius: 16px;
+  font-size: 12.5px; line-height: 1.35; color: var(--text-mid);
+  /* 완전 불투명 — 반투명이면 아래 선수 이름이 비쳐 읽기 어려웠다 */
+  background-color: #111B30; background-image: linear-gradient(180deg, #17243F, #0E1628);
+  isolation: isolate;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .14);
+  animation: lmt-in .14s ease-out both;
 }
-.lmt__h { display: grid; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.lmt__h b { display: flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 800; color: var(--text-hi); }
-.lmt__h span { font-size: 11px; color: var(--text-lo); }
-.lmt__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.lmt__row i { font-style: normal; font-weight: 900; }
-.lmt__ev { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--text-hi); font-weight: 700; }
-.lmt__ev span { display: inline-flex; align-items: center; gap: 3px; }
-.lmt__st { margin: 0; font-size: 11.5px; line-height: 1.45; }
-.lmt__sw { margin: 0; font-size: 11.5px; color: var(--text-lo); }
-.lmt__sw b { color: var(--text-mid); }
-.lmt__lo { font-style: normal; color: var(--text-lo); margin: 0; }
-.lmt__warn { margin: 0; font-weight: 800; color: #FF6B6B; }
-.lmt__warn[data-doubt] { color: #F5A524; }
-.lmt__season { display: grid; gap: 2px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11.5px; }
-.lmt__cmp em { margin-left: 6px; font-style: normal; font-weight: 800; color: #FF7A7A; }
-.lmt__cmp em[data-up] { color: #3EE07A; }
+@keyframes lmt-in { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+/* 머리 — 위 가장자리에 포지션 색 띠 */
+.lmt__h {
+  display: flex; align-items: center; gap: 12px; margin: 0 -14px; padding: 14px 14px 12px; border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 22%, transparent), transparent);
+  box-shadow: inset 0 3px 0 var(--pc);
+}
+.lmt__face { flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--pc); }
+.lmt__who { display: grid; gap: 5px; min-width: 0; }
+.lmt__who b { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lmt__who span { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.lmt__who em { font-style: normal; }
+.lmt__pos { padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 900; letter-spacing: .04em; color: #06210F; background: var(--pc); }
+.lmt__no { font-size: 11.5px; font-weight: 800; color: var(--text-hi); }
+.lmt__capt { padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 800; color: #1a1300; background: #F5C542; }
+.lmt__chip { padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 800; color: var(--text-hi); background: rgba(255, 255, 255, .1); }
+.lmt__chip[data-k='in'] { color: #06210F; background: #7CF0A6; }
+.lmt__chip[data-k='out'] { color: #fff; background: #C8424A; }
+.lmt__chip[data-k='start'] { color: #fff; background: rgba(76, 141, 255, .55); }
+.lmt__chip[data-k='inj'] { margin-left: 6px; color: #fff; background: #C81E25; }
+/* 큰 숫자 타일 */
+.lmt__tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.lmt__tile {
+  display: grid; justify-items: center; gap: 3px; padding: 8px 4px 7px; border-radius: 10px;
+  background: #1B2945; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+.lmt__tile b { font-family: var(--font-display); font-size: 18px; font-weight: 700; line-height: 1; color: #fff; }
+.lmt__tile > .lmt__k { font-size: 10px; font-weight: 700; color: var(--text-lo); white-space: nowrap; }
+.lmt__tile[data-tone='g'] b { color: #7CF0A6; }
+.lmt__tile[data-tone='a'] b { color: #6FC3FF; }
+.lmt__tile[data-tone='mute'] b, .lmt__none { color: var(--text-lo) !important; }
+.lmt__tile--rtg { align-content: center; }
+.lmt__rtg { height: 22px; min-width: 38px; font-size: 13px; border-radius: 6px; }
+/* 골 · 도움 · 카드 분 */
+.lmt__ev { display: flex; flex-wrap: wrap; gap: 5px; }
+.lmt__ev span {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 800; color: var(--text-hi); background: rgba(255, 255, 255, .07);
+}
+.lmt__ev span[data-k='g'] { color: #06210F; background: #7CF0A6; }
+.lmt__ev span[data-k='a'] { color: #04203A; background: #6FC3FF; }
+/* 2열 기록 표 */
+.lmt__dl { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; margin: 0; padding: 8px 10px; border-radius: 10px; background: #0B1324; }
+.lmt__dl > div { display: flex; justify-content: space-between; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); min-width: 0; }
+.lmt__dl > div:nth-last-child(-n + 2) { border-bottom: 0; }
+.lmt__dl[data-one] { grid-template-columns: 1fr; }
+.lmt__dl[data-one] > div:nth-last-child(2) { border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.lmt__cmp small { font-size: 10.5px; font-weight: 700; color: var(--text-lo); }
+.lmt__dl dt { font-size: 11px; color: var(--text-lo); white-space: nowrap; }
+.lmt__dl dd { margin: 0; font-size: 12px; font-weight: 800; color: var(--text-hi); white-space: nowrap; }
+/* 교체 상대 */
+.lmt__sw { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-lo); }
+.lmt__sw b { color: var(--text-hi); }
+/* 시즌 */
+.lmt__season { display: grid; gap: 5px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.lmt__cap { font-size: 10px; font-weight: 800; letter-spacing: .08em; color: var(--text-lo); }
+.lmt__srow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; color: var(--text-hi); }
+.lmt__cmp { display: inline-flex; align-items: center; gap: 6px; }
+.lmt__cmp em { padding: 2px 7px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; background: #C8424A; }
+.lmt__cmp em[data-up] { color: #06210F; background: #7CF0A6; }
+.lmt__lo { margin: 0; font-style: normal; font-size: 11.5px; color: var(--text-lo); }
+/* 부상 · 징계 */
+.lmt__alerts { display: grid; gap: 5px; }
+.lmt__alert { padding: 6px 10px; border-radius: 8px; font-style: normal; font-weight: 800; color: #fff; background: rgba(200, 30, 37, .85); }
+.lmt__alert[data-doubt] { color: #1a1300; background: #F5A524; }
+/* 교체 카드 */
+.lmt__subh { display: flex; align-items: center; gap: 10px; margin: 0 -14px; padding: 12px 14px 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.lmt__subh > b { font-family: var(--font-display); font-size: 20px; color: #fff; }
+.lmt__subh > span { display: inline-flex; align-items: center; font-weight: 800; color: var(--text-hi); }
+.lmt__score { margin-left: auto; padding: 3px 9px; border-radius: 999px; font-style: normal; font-size: 11.5px; font-weight: 800; color: var(--text-hi); background: rgba(255, 255, 255, .1); }
+.lmt__score[data-state='lead'] { color: #06210F; background: #7CF0A6; }
+.lmt__score[data-state='trail'] { color: #fff; background: #C8424A; }
+.lmt__prow { display: grid; grid-template-columns: 14px 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.lmt__prow > i { font-style: normal; font-weight: 900; font-size: 14px; }
+.lmt__prow[data-dir='in'] > i { color: #3EE07A; }
+.lmt__prow[data-dir='out'] > i { color: #FF6B6B; }
+.lmt__prow[data-dir='out'] .hs { opacity: .75; }
+.lmt__pn { display: grid; min-width: 0; }
+.lmt__pn b { font-size: 13px; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lmt__pn small { font-size: 10.5px; color: var(--text-lo); }
+.lmt__after { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 10px; background: #1B2945; }
+.lmt__after span { font-size: 11px; color: var(--text-lo); }
+.lmt__after b { font-size: 12.5px; color: var(--text-mid); }
+.lmt__after[data-hit] b { color: #7CF0A6; }

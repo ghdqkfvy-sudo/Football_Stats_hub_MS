@@ -56,18 +56,20 @@ export function slotChain(starter: LivePlayer, side: LiveSide, subs: Extract<Liv
   return out;
 }
 
-/** 경기 기록 한 줄 — "슈팅 3(유효 1) · 키패스 2 · 패스 41/47 · xG 0.42" (있는 것만) */
-export function statLine(st: LivePlayer['st']): string[] {
+/** 경기 기록 — [이름, 값] 줄들(있는 것만). 호버 카드의 2열 표로 그린다 */
+export function statPairs(st: LivePlayer['st']): [string, string][] {
   if (!st) return [];
-  const out: string[] = [];
-  if (st.sh != null) out.push(`슈팅 ${st.sh}${st.sot != null ? `(유효 ${st.sot})` : ''}`);
-  if (st.kp != null) out.push(`키패스 ${st.kp}`);
-  if (st.pa) out.push(`패스 ${st.pa[0]}/${st.pa[1]}${st.pa[1] ? ` (${Math.round((st.pa[0] / st.pa[1]) * 100)}%)` : ''}`);
-  if (st.xg != null) out.push(`xG ${st.xg.toFixed(2)}`);
-  if (st.xa != null) out.push(`xA ${st.xa.toFixed(2)}`);
-  if (st.tk != null) out.push(`태클 ${st.tk}`);
-  if (st.du) out.push(`경합 ${st.du[0]}/${st.du[1]}`);
-  if (st.rec != null) out.push(`리커버리 ${st.rec}`);
-  if (st.sv != null) out.push(`선방 ${st.sv}`);
+  const out: [string, string][] = [];
+  if (st.sh != null) out.push(['슈팅', `${st.sh}${st.sot != null ? ` (유효 ${st.sot})` : ''}`]);
+  if (st.kp != null) out.push(['키패스', `${st.kp}`]);
+  if (st.pa) out.push(['패스', `${st.pa[0]}/${st.pa[1]}${st.pa[1] ? ` · ${Math.round((st.pa[0] / st.pa[1]) * 100)}%` : ''}`]);
+  if (st.xg != null) out.push(['xG', st.xg.toFixed(2)]);
+  if (st.xa != null) out.push(['xA', st.xa.toFixed(2)]);
+  if (st.tk != null) out.push(['태클', `${st.tk}`]);
+  if (st.du) out.push(['경합 승', `${st.du[0]}/${st.du[1]}`]);
+  if (st.rec != null) out.push(['리커버리', `${st.rec}`]);
+  if (st.sv != null) out.push(['선방', `${st.sv}`]);
+  if (st.dist != null) out.push(['뛴 거리', `${(st.dist / 1000).toFixed(1)}km`]);
+  if (st.spd != null) out.push(['최고 속도', `${st.spd.toFixed(1)}km/h`]);
   return out;
 }
