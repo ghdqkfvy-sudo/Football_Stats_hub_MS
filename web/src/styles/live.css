@@ -285,25 +285,25 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 
 /* ── 선발 ↔ 교체 전환 (2026-10-22) ── */
 .lm__outk { color: #FF7A7A !important; font-weight: 800; font-style: normal; }
-/* 크로스페이드 — 그 자리를 거쳐 간 선수를 모두 겹쳐 두고 투명도만 0.9초에 걸쳐 바꾼다(--d = 칩별 물결 지연).
-   사라지는 쪽 · 나타나는 쪽이 동시에 움직여 칩이 비는 순간이 없다 */
-.lm__chip .chipbox__ring > .lm__layer { position: absolute; inset: 0; display: grid; place-items: center; }
+/* 슬라이드인(2026-10-22) — 그 자리를 거쳐 간 선수를 모두 그려 두고 자리(data-pos)만 바꾼다.
+   on = 보이는 중 · prev = 방금 나감(사진은 왼쪽, 글자는 위로) · next = 대기(사진은 오른쪽, 글자는 아래).
+   next 로 갈 때는 효과 없이 순간 이동(다음 차례에 늘 오른쪽에서 들어오게). --d = 칩별 물결 지연 */
+.lm__mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+.lm__slide { position: absolute; inset: 0; display: grid; place-items: center; }
+.lm__chip .chipbox__ring > .lm__badges { position: absolute; inset: 0; pointer-events: none; }
 .lm__stack { display: grid; }
 .lm__stack > .lm__layer { grid-area: 1 / 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: inherit; overflow: hidden; text-overflow: ellipsis; }
-/* 디졸브(2026-10-22) — 같은 시간에 둘을 50%씩 겹치면 두 얼굴 · 두 번호가 겹쳐 보여 어색했다.
-   나가는 선수가 1초에 걸쳐 흐려지며(살짝 블러 · 축소) 빠지고, 0.65초 뒤 들어오는 선수가 1.3초에 걸쳐 블러에서
-   또렷해진다. 겹치는 구간은 둘 다 옅을 때뿐이라 겹침이 보이지 않는다. 전체 약 2초, 사인 곡선으로 천천히 */
-.lm__chip .lm__layer {
-  opacity: 0; filter: blur(3px); transform: scale(.96);
-  transition: opacity 1s cubic-bezier(.37, 0, .63, 1) var(--d, 0ms), filter 1s ease var(--d, 0ms), transform 1s ease var(--d, 0ms);
-}
-.lm__chip .lm__layer[data-on] {
-  opacity: 1; filter: none; transform: none;
-  transition: opacity 1.3s cubic-bezier(.37, 0, .63, 1) calc(var(--d, 0ms) + .65s), filter 1.3s ease calc(var(--d, 0ms) + .65s), transform 1.3s ease calc(var(--d, 0ms) + .65s);
-}
-.lm__chip .lm__layer:not([data-on]) { pointer-events: none; }
+.chipbox__name.lm__stack > .lm__layer { display: block; text-align: center; white-space: nowrap; }
+.lm__chip .lm__slide, .lm__chip .lm__layer { transition: transform .9s cubic-bezier(.65, 0, .35, 1) var(--d, 0ms), opacity .9s cubic-bezier(.65, 0, .35, 1) var(--d, 0ms); }
+.lm__chip .lm__slide[data-pos='on'] { transform: translateX(0); }
+.lm__chip .lm__slide[data-pos='prev'] { transform: translateX(-105%); }
+.lm__chip .lm__slide[data-pos='next'] { transform: translateX(105%); transition: none; }
+.lm__chip .lm__layer[data-pos='on'] { transform: translateY(0); opacity: 1; }
+.lm__chip .lm__layer[data-pos='prev'] { transform: translateY(-7px); opacity: 0; }
+.lm__chip .lm__layer[data-pos='next'] { transform: translateY(7px); opacity: 0; transition: none; }
+.lm__chip .lm__layer:not([data-pos='on']) { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
-  .lm__chip .lm__layer, .lm__chip .lm__layer[data-on] { transition: none; filter: none; transform: none; }
+  .lm__chip .lm__slide, .lm__chip .lm__layer { transition: none !important; }
 }
 /* 교체된 자리 표시 — 자동 전환 · 선발 · 현재 */
 .lm__cyc {
@@ -415,14 +415,30 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lmt__after[data-hit] b { color: #7CF0A6; }
 .chipbox__name.lm__stack > .lm__layer { display: block; text-align: center; white-space: nowrap; }
 
-/* MVP — 이 경기 최고 평점. 사진 원 왼쪽 위 바깥 빈자리(포지션 이름표 · 사진 · 평점 · 등번호를 가리지 않게,
-   2026-10-22 — 평점 배지 위에 두었더니 사진 · 배지에 걸쳤다). 겹침은 화면 검사로 확인한다 */
-.lm__crown {
-  position: absolute; z-index: 3; right: calc(100% + 4px); top: -6px; transform: rotate(-18deg); display: grid; line-height: 0;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)) drop-shadow(0 0 5px rgba(255, 210, 63, .55));
+/* MVP(U3, 2026-10-22) — 이 경기 최고 평점 선수를 보여 주는 동안 포지션 이름표가 금색 + 왕관 + 반짝임,
+   사진 테두리가 금빛. 자리를 더 쓰지 않아 다른 배지를 가리지 않는다 */
+.lm__chip .lm__tag { display: inline-flex; align-items: center; gap: 3px; overflow: hidden; transition: background-color .5s ease, color .5s ease, box-shadow .5s ease; }
+.lm__tagcrown { display: inline-grid; line-height: 0; font-style: normal; }
+.lm__tagcrown svg { width: 10px; height: 8px; }
+.lm__tagcrown path, .lm__tagcrown rect { fill: #3A2600; stroke: none; }
+.lm__chip[data-mvp] .lm__tag {
+  color: #3A2600; background: linear-gradient(180deg, #FFE98A, #F2B705);
+  box-shadow: 0 0 8px rgba(255, 210, 63, .85), 0 1px 4px rgba(0, 0, 0, .5);
 }
-.lm__crown svg { width: 17px; height: 13px; }
+@keyframes lm-glint { 0%, 62% { transform: translateX(-140%) skewX(-22deg); } 100% { transform: translateX(260%) skewX(-22deg); } }
+.lm__chip[data-mvp] .lm__tag::after {
+  content: ""; position: absolute; inset: 0; width: 45%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent);
+  animation: lm-glint 2.4s ease-in-out infinite;
+}
+.lm__chip .chipbox__ring { transition: border-color .5s ease, box-shadow .5s ease; }
+.lm__chip[data-mvp] .chipbox__ring { border-color: #FFD23F; box-shadow: 0 0 0 2px rgba(255, 210, 63, .3), 0 0 16px rgba(255, 210, 63, .75); }
+@media (prefers-reduced-motion: reduce) {
+  .lm__chip[data-mvp] .lm__tag::after { animation: none; display: none; }
+}
 .lmt__mvp { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 900; color: #3A2600; background: #FFD23F; }
 .lmt__mvp svg { width: 13px; height: 10px; }
 .lm__keymvp { display: inline-flex; align-items: center; gap: 4px; }
-.lm__keymvp svg { width: 14px; height: 11px; }
+.lm__keymvp i { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 4px; font-style: normal; font-weight: 800; color: #3A2600; background: linear-gradient(180deg, #FFE98A, #F2B705); }
+.lm__keymvp svg { width: 10px; height: 8px; }
+.lm__keymvp path, .lm__keymvp rect { fill: #3A2600; stroke: none; }
