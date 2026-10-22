@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { LiveEvent, LiveMatch, LivePlayer, LiveSide } from '../types/feedTypes';
 import type { Match } from '../lib/types';
@@ -36,7 +36,7 @@ type Find = (p: LivePlayer) => PlayerSeason | null;
 type CycMode = 'auto' | 'start' | 'now';
 /** 호버 카드 — 넓은 화면(마우스)에서만. 경기장은 overflow:hidden 이라 body 로 띄운다 */
 type Tip = (body: () => React.ReactNode) => Partial<Pick<React.HTMLAttributes<HTMLElement>, 'onMouseEnter' | 'onMouseLeave'>>;
-const CYCLE_MS = 4000;
+const CYCLE_MS = 5000;
 
 const PIN = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
@@ -70,7 +70,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
     return () => window.removeEventListener('scroll', off, { capture: true });
   }, [tipAt]);
 
-  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS 마다 바뀐다. 모든 칩이 같은 박자.
+  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(5초) 마다 크로스페이드로 바뀐다. 골키퍼 쪽부터 물결처럼.
      호버 카드 · 상세 카드가 떠 있으면 멈춘다(누르려는 순간 선수가 바뀌지 않게).
      기기에서 '동작 줄이기' 를 켰으면 자동은 쓰지 않고 지금 선수로 */
   const reduce = useMedia('(prefers-reduced-motion: reduce)');
@@ -263,7 +263,9 @@ function Half({ side, subs, top = false, wide = false, find, onPick, live, slot,
               const partner = full.length > 1 ? (k === 0 ? full[1] : full[k - 1]) : null;
               return (
                 <Chip
-                  key={p.id} starter={p} now={d} cycled={full.length > 1} tag={lab[j] ?? ''} color={LINE_COLOR[kind]}
+                  key={p.id} full={full} k={k} tag={lab[j] ?? ''} color={LINE_COLOR[kind]}
+                  /* 물결 — 골키퍼 줄부터 한 줄에 60ms, 줄 안은 20ms 씩 */
+                  delay={i * 60 + j * 20}
                   onOpen={ps && onPick ? () => onPick(ps) : undefined}
                   hover={tip(() => <PlayerTip p={d} starter={k === 0} live={live} ps={ps} partner={partner} />)}
                 />
@@ -277,53 +279,80 @@ function Half({ side, subs, top = false, wide = false, find, onPick, live, slot,
 }
 
 /** 포메이션 탭과 같은 칩 — 등번호 자리에는 이 경기 카드, 아래 알약에는 투입 분 · 골 · 도움 */
-function Chip({ starter, now: p, cycled, tag, color, onOpen, hover }: {
-  starter: LivePlayer; now: LivePlayer; cycled: boolean; tag: string; color: string; onOpen?: () => void;
-  hover: ReturnType<Tip>;
+/**
+ * 포메이션 탭과 같은 칩 — 등번호 자리에는 이 경기 카드, 아래 알약에는 투입 분 · 골 · 도움.
+ *
+ * 교체가 있었던 자리는 그 자리를 거쳐 간 선수(full)를 **전부 겹쳐 그려 두고 투명도만 바꾼다**(크로스페이드).
+ * 예전엔 선수가 바뀔 때 안쪽을 새로 그려 이전 선수가 즉시 사라지고 새 선수만 나타나, 칩이 한순간
+ * 비어 깜빡여 보였다(2026-10-22). 아무것도 사라지지 않으니 자리 · 크기도 흔들리지 않는다.
+ * delay 는 골키퍼 쪽부터 공격 쪽으로 물결처럼 바뀌게 하는 칩별 지연(ms).
+ */
+function Chip({ full, k, tag, color, onOpen, hover, delay = 0 }: {
+  full: LivePlayer[]; k: number; tag: string; color: string; onOpen?: () => void;
+  hover: ReturnType<Tip>; delay?: number;
 }) {
-  const red = p.cards.some((c) => c.kind !== 'y');
-  const yellow = !red && p.cards.length > 0;
-  const subbed = p !== starter;
-  /* 선발을 보여 주는데 교체로 나간 선수 — 알약에 나간 분 */
-  const wentOff = !subbed && cycled && p.out != null;
+  const p = full[k];
+  const starter = full[0];
+  const cycled = full.length > 1;
+  const redNow = p.cards.some((c) => c.kind !== 'y');
   const title = [
     p.name,
-    subbed ? `${p.in ?? '?'}분 ${starter.name} 대신 투입` : '',
+    p !== starter ? `${p.in ?? '?'}분 ${full[k - 1]?.name ?? starter.name} 대신 투입` : '',
     p.rating ? `평점 ${p.rating}` : '',
     ...p.cards.map((c) => `${c.kind === 'y' ? '경고' : '퇴장'}${c.min ? ` ${c.min}'` : ''}`),
   ].filter(Boolean).join(' · ');
-  const stat = subbed || wentOff || p.goals > 0 || p.assists > 0;
+  /* 알약에 들어갈 것 — 선수마다 */
+  const pill = (x: LivePlayer, i: number) => {
+    const subbed = i > 0;
+    const wentOff = cycled && x.out != null && i < full.length - 1;
+    const has = subbed || wentOff || x.goals > 0 || x.assists > 0;
+    return { has, body: (
+      <>
+        {subbed && <em className="lm__ink">↑{x.in ?? ''}&apos;</em>}
+        {wentOff && <em className="lm__outk">↓{x.out}&apos;</em>}
+        {x.goals > 0 && <em className="g">⚽{x.goals}</em>}
+        {x.assists > 0 && <em className="a">A{x.assists}</em>}
+        {!has && <em>·</em>}
+      </>
+    ) };
+  };
+  const pills = full.map(pill);
   const Box = onOpen ? 'button' : 'div';
+  const on = (i: number) => (i === k ? true : undefined);
   return (
     <Box
-      className="chipbox lm__chip" style={{ ['--pc' as string]: color }} data-red={red || undefined} data-cyc={cycled || undefined}
+      className="chipbox lm__chip" style={{ ['--pc' as string]: color, ['--d' as string]: `${delay}ms` }}
+      data-red={redNow || undefined} data-cyc={cycled || undefined}
       title={HAS_HOVER ? undefined : onOpen ? `${title} · 눌러서 시즌 기록` : title}
       {...hover}
       {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}
     >
       {tag && <span className="chipbox__tag">{tag}</span>}
-      {/* 선수가 바뀌면 안쪽을 다시 그려 서서히 나타나게(lm-swapin) */}
-      <Fragment key={p.id}>
       <span className="chipbox__ring">
-        <Headshot id={`fm-${p.id}`} src={fotmobImage(p.id)} kind="espn" label={p.no != null ? String(p.no) : p.last.slice(0, 1)} size={38} className="chipbox__hs" />
-        {red || yellow
-          ? <span className="chipbox__no chipbox__no--card" data-kind={red ? 'red' : 'yellow'}><CardShape color={red ? 'red' : 'yellow'} /></span>
-          : <span className="chipbox__no num">{p.no ?? ''}</span>}
-        {/* 평점이 없으면(FotMob 이 비움 — 짧게 뛴 교체 선수 · 킥오프 전) 흐린 "–" 자리표시. 지어내지 않는다 */}
-        {p.rating != null
-          ? <RatingBadge v={p.rating} cls="chipbox__rtg" />
-          : <span className="rtg chipbox__rtg lm__rtg0" title="평점 없음 (FotMob)">–</span>}
+        {full.map((x, i) => {
+          const red = x.cards.some((c) => c.kind !== 'y');
+          const yellow = !red && x.cards.length > 0;
+          return (
+            <span key={x.id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>
+              <Headshot id={`fm-${x.id}`} src={fotmobImage(x.id)} kind="espn" label={x.no != null ? String(x.no) : x.last.slice(0, 1)} size={38} className="chipbox__hs" />
+              {red || yellow
+                ? <span className="chipbox__no chipbox__no--card" data-kind={red ? 'red' : 'yellow'}><CardShape color={red ? 'red' : 'yellow'} /></span>
+                : <span className="chipbox__no num">{x.no ?? ''}</span>}
+              {/* 평점이 없으면(FotMob 이 비움 — 짧게 뛴 교체 선수 · 킥오프 전) 흐린 "–" 자리표시. 지어내지 않는다 */}
+              {x.rating != null
+                ? <RatingBadge v={x.rating} cls="chipbox__rtg" />
+                : <span className="rtg chipbox__rtg lm__rtg0" title="평점 없음 (FotMob)">–</span>}
+            </span>
+          );
+        })}
       </span>
-      <span className="chipbox__name">{p.cap && <em className="lm__cap">C</em>}{p.last}</span>
+      <span className="chipbox__name lm__stack">
+        {full.map((x, i) => <span key={x.id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>{x.cap && <em className="lm__cap">C</em>}{x.last}</span>)}
+      </span>
       {/* 알약은 늘 그린다(비면 숨김) — 줄마다 칩 높이가 같아야 배치가 흔들리지 않는다 */}
-      <span className="chipbox__stat num" data-empty={!stat || undefined}>
-        {subbed && <em className="lm__ink">↑{p.in ?? ''}&apos;</em>}
-        {wentOff && <em className="lm__outk">↓{p.out}&apos;</em>}
-        {p.goals > 0 && <em className="g">⚽{p.goals}</em>}
-        {p.assists > 0 && <em className="a">A{p.assists}</em>}
-        {!stat && <em>·</em>}
+      <span className="chipbox__stat num lm__stack" data-empty={!pills[k].has || undefined}>
+        {pills.map((x, i) => <span key={full[i].id} className="lm__layer" data-on={on(i)} aria-hidden={i !== k || undefined}>{x.body}</span>)}
       </span>
-      </Fragment>
     </Box>
   );
 }
