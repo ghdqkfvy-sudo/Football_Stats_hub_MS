@@ -27,9 +27,13 @@
   /* 폰 타일은 한 줄(우리 · 상대 · 시각) — 이름표는 시각 바로 앞 */
   .wcal__tl { flex-direction: row-reverse; justify-content: flex-start; gap: 8px; }
   .wcal__tl .kortag { font-size: 10px; padding: 1px 7px 1px 4px; }
-  /* 이름표가 둘 이상이면 오른쪽 칸 위에 이름표를 좌우로 나란히, 시각은 그 아래 */
-  .wcal__tl[data-many] { flex-direction: column-reverse; align-items: flex-end; gap: 4px; }
-  .wcal__tl[data-many] .wcal__kos { justify-content: flex-end; gap: 3px; }
+  /* 이름표가 둘 이상이면 타일을 두 줄로 — 첫 줄: 우리 · 상대 · 이름표(같은 높이), 둘째 줄: 오른쪽에 시각.
+     이름표는 칸 순서(우리 팀 → 상대)대로 */
+  .wcal__tl[data-many] { display: contents; }
+  .wcal__tl[data-many] .wcal__kos { grid-row: 1; grid-column: 3; justify-self: end; justify-content: flex-end; gap: 3px; }
+  .wcal__tl[data-many] .wcal__t { grid-row: 2; grid-column: 3; justify-self: end; margin-top: 2px; }
+  .wcal__tl[data-many] .kortag[data-mine] { order: -1; }
+  .wcal__m:has(.wcal__tl[data-many]) > .wcal__mine, .wcal__m:has(.wcal__tl[data-many]) > .wcal__opp { grid-row: 1; }
   .wcal__tl[data-many] .kortag { padding: 1px 5px 1px 3px; }
   /* 팀 · 상대는 제 폭을 다 쓰고 남는 폭을 이름표 칸에 — 좁은 폰(360px 이하)에서 나란히가 안 들어가면
      상대 약칭(ATM)을 자르는 대신 이름표가 위아래로 접힌다 */
