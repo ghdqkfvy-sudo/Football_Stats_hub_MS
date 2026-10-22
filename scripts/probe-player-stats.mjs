@@ -11,7 +11,9 @@ const md = await res.json();
 const ps = md?.content?.playerStats;
 console.log('content 키:', Object.keys(md?.content ?? {}).join(', '));
 console.log('playerStats:', ps ? `${Object.keys(ps).length}명` : '없음');
-const one = ps && Object.values(ps)[0];
+const one = ps && (Object.values(ps).find((x) => !x.isGoalkeeper && x.stats?.length) ?? Object.values(ps)[0]);
+const gk = ps && Object.values(ps).find((x) => x.isGoalkeeper && x.stats?.length);
+if (gk) console.log('골키퍼 항목:', JSON.stringify(gk.stats).slice(0, 2500));
 if (one) {
   console.log('선수 칸:', Object.keys(one).join(', '));
   console.log(JSON.stringify(one).slice(0, 6000));
