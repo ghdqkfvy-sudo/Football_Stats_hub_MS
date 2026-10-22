@@ -213,7 +213,7 @@ export function WeekCalendar({
                            줄을 하나 더 쓰면 그 칸만 길어져 주간 표가 들쭉날쭉해진다 */
                         const ko = koreansIn(m.home.id, m.away.id);
                         if (!ko.length) return time;
-                        /* 이름표가 둘 이상(코리안리거 맞대결 등)이면 폰에서는 오른쪽 칸에 이름표를 쌓고 시각은 그 아래 — 같은 줄에 두면
+                        /* 이름표가 둘 이상(코리안리거 맞대결 등)이면 폰에서는 오른쪽 칸 위에 이름표를 좌우로, 시각은 그 아래 — 같은 줄에 두면
                            상대 엠블럼 · 이름을 덮었다(2026-11-04 아틀레티코 vs 뮌헨, 이강인 · 김민재) */
                         return (
                           <span className="wcal__tl" data-many={ko.length > 1 || undefined}>
