@@ -86,8 +86,38 @@ export function phaseOf(md) {
 /** FotMob usualPlayingPositionId — 0 골키퍼 · 1 수비 · 2 미드필더 · 3 공격 */
 const POS = ['G', 'D', 'M', 'F'];
 
+/**
+ * 선수 한 명의 경기 기록 — content.playerStats[id].stats[] 의 묶음(Top stats · Attack · Defense · Duels · Physical)을
+ * 펼쳐 stat.key 로 찾는다(2026-10-22 점검 scripts/probe-player-stats.mjs). 표시 이름은 바뀔 수 있어 key 만 믿는다.
+ * 안 뛴 선수는 묶음이 비어 있다 → undefined.
+ */
+export function playerStatsOf(entry, perf = {}) {
+  const flat = new Map();
+  for (const g of entry?.stats ?? []) for (const v of Object.values(g?.stats ?? {})) if (v?.key && !flat.has(v.key)) flat.set(v.key, v.stat ?? {});
+  const val = (k) => { const n = num(flat.get(k)?.value); return n; };
+  const frac = (k) => { const s = flat.get(k); const a = num(s?.value), b = num(s?.total); return a != null && b != null ? [a, b] : undefined; };
+  const r2 = (n) => (n == null ? undefined : Math.round(n * 100) / 100);
+  const won = val('duel_won'), lost = val('duel_lost');
+  const st = {
+    sh: val('total_shots') ?? undefined,
+    sot: val('ShotsOnTarget') ?? undefined,
+    kp: val('chances_created') ?? undefined,
+    pa: frac('accurate_passes'),
+    xg: r2(val('expected_goals')),
+    xa: r2(val('expected_assists')),
+    tk: val('matchstats.headers.tackles') ?? undefined,
+    du: won != null && lost != null ? [won, won + lost] : undefined,
+    rec: val('recoveries') ?? undefined,
+    sv: val('saves') ?? undefined,
+    dist: val('physical_metrics_distance_covered') ?? num(perf.totalDistanceCovered) ?? undefined,
+    spd: r2(val('physical_metrics_topspeed') ?? num(perf.topSpeed)),
+  };
+  const out = Object.fromEntries(Object.entries(st).filter(([, v]) => v != null));
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** 선수 한 명 — 칩 · 벤치 줄에 필요한 것만 */
-function player(p, cardsById) {
+function player(p, cardsById, statsById) {
   const perf = p?.performance ?? {};
   const evs = perf.events ?? [];
   const count = (t) => evs.filter((e) => e?.type === t).length;
@@ -115,6 +145,7 @@ function player(p, cardsById) {
     ],
     ...(out ? { out: num(out.time), outInjury: out.reason === 'injury' || undefined } : {}),
     ...(inn ? { in: num(inn.time) } : {}),
+    ...((st) => (st ? { st } : {}))(playerStatsOf(statsById?.[id], perf)),
   };
 }
 
@@ -161,15 +192,15 @@ export function eventsOf(md) {
 }
 
 /** 한 팀 줄 */
-function side(t, cardsById) {
+function side(t, cardsById, statsById) {
   return {
     fm: num(t?.id),
     name: String(t?.name ?? ''),
     formation: t?.formation ? String(t.formation) : null,
     rating: rating(t?.rating),
     coach: t?.coach?.name ?? null,
-    starters: (t?.starters ?? []).map((p) => player(p, cardsById)),
-    bench: (t?.subs ?? []).map((p) => player(p, cardsById)),
+    starters: (t?.starters ?? []).map((p) => player(p, cardsById, statsById)),
+    bench: (t?.subs ?? []).map((p) => player(p, cardsById, statsById)),
   };
 }
 
@@ -182,8 +213,9 @@ export function liveSnapshot(md, ourFm) {
   const teams = md?.header?.teams ?? [];
   const lu = md?.content?.lineup ?? {};
   const { events, cardsById } = eventsOf(md);
-  const home = side(lu.homeTeam ?? { id: teams[0]?.id, name: teams[0]?.name }, cardsById);
-  const away = side(lu.awayTeam ?? { id: teams[1]?.id, name: teams[1]?.name }, cardsById);
+  const statsById = md?.content?.playerStats ?? {};
+  const home = side(lu.homeTeam ?? { id: teams[0]?.id, name: teams[0]?.name }, cardsById, statsById);
+  const away = side(lu.awayTeam ?? { id: teams[1]?.id, name: teams[1]?.name }, cardsById, statsById);
   return {
     fmId: String(md?.general?.matchId ?? ''),
     kickoffUtc: md?.general?.matchTimeUTCDate ?? md?.header?.status?.utcTime ?? null,

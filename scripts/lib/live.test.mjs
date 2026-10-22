@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { eventsOf, fixtureNear, liveCandidates, liveSnapshot, phaseOf } from './live.mjs';
+import { eventsOf, fixtureNear, liveCandidates, liveSnapshot, phaseOf, playerStatsOf } from './live.mjs';
 
 /* 2026-10-17 브렌트퍼드 1-2 리버풀(FotMob 5795476) 응답에서 칸 모양만 줄여 옮긴 것 */
 const MD = {
@@ -75,4 +75,21 @@ test('liveCandidates · fixtureNear: 킥오프 150분 전 ~ 150분 뒤, 끝난 �
   const team = { fixtures: { allFixtures: { fixtures: [{ id: 9, status: { utcTime: '2026-10-18T14:00:00Z' } }, { id: 8, status: { utcTime: '2026-10-11T14:00:00Z', finished: true } }] } } };
   assert.equal(fixtureNear(team, '2026-10-18T14:00Z'), '9');
   assert.equal(fixtureNear(team, '2026-10-25T14:00Z'), null);
+});
+
+test('playerStatsOf: 묶음을 펼쳐 key 로 — 슈팅 · 키패스 · 패스 · xG · 경합 · 거리 (안 뛰면 undefined)', () => {
+  const entry = { stats: [
+    { key: 'top_stats', stats: {
+      'Total shots': { key: 'total_shots', stat: { value: 3 } },
+      'Shots on target': { key: 'ShotsOnTarget', stat: { value: 1 } },
+      'Chances created': { key: 'chances_created', stat: { value: 2 } },
+      'Accurate passes': { key: 'accurate_passes', stat: { value: 41, total: 47 } },
+      'Expected goals (xG)': { key: 'expected_goals', stat: { value: 0.4234 } },
+      'Distance covered': { key: 'physical_metrics_distance_covered', stat: { value: 10821 } },
+    } },
+    { key: 'duels', stats: { 'Duels won': { key: 'duel_won', stat: { value: 5 } }, 'Duels lost': { key: 'duel_lost', stat: { value: 3 } } } },
+  ] };
+  assert.deepEqual(playerStatsOf(entry, { topSpeed: 30.899 }), { sh: 3, sot: 1, kp: 2, pa: [41, 47], xg: 0.42, du: [5, 8], dist: 10821, spd: 30.9 });
+  assert.equal(playerStatsOf({ stats: [] }), undefined);
+  assert.equal(playerStatsOf(undefined), undefined);
 });

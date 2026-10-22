@@ -232,6 +232,12 @@ export interface LivePlayer {
   outInjury?: boolean;
   /** 교체 투입 분 */
   in?: number;
+  /**
+   * 이 경기 기록(FotMob playerStats, 2026-10-22 부터 — 없을 수 있다).
+   * sh 슈팅 · sot 유효 슈팅 · kp 키패스 · pa [성공, 시도] 패스 · xg · xa · tk 태클 · du [이긴, 전체] 경합 · rec 리커버리 · sv 선방
+   * · dist 뛴 거리(m) · spd 최고 속도(km/h)
+   */
+  st?: { sh?: number; sot?: number; kp?: number; pa?: [number, number]; xg?: number; xa?: number; tk?: number; du?: [number, number]; rec?: number; sv?: number; dist?: number; spd?: number };
 }
 export interface LiveSide {
   fm: number | null;
@@ -243,7 +249,7 @@ export interface LiveSide {
   bench: LivePlayer[];
 }
 export type LiveEvent =
-  | { t: 'goal'; min: number; plus?: number; side: 'home' | 'away'; player: string; pid: string; og?: boolean; pen?: boolean; score?: [number, number] }
+  | { t: 'goal'; min: number; plus?: number; side: 'home' | 'away'; player: string; pid: string; og?: boolean; pen?: boolean; assist?: string; score?: [number, number] }
   | { t: 'card'; min: number; plus?: number; side: 'home' | 'away'; kind: LiveCard['kind']; player: string; pid: string }
   | { t: 'sub'; min: number; plus?: number; side: 'home' | 'away'; in: string; inId: string; out: string; outId: string; injury?: boolean }
   | { t: 'half'; min: number; label: string };
