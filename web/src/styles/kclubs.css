@@ -20,8 +20,10 @@
 
 /* 주간 일정 — 이름표를 시각·스코어 줄에 (칸 높이를 늘리지 않는다) */
 .wcal__tl { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
-.wcal__kos { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+/* 데스크톱은 이름표 묶음 없이 예전처럼 시각 옆에 나란히 — 묶음은 폰에서만 */
+.wcal__kos { display: contents; }
 @media (max-width: 640px) {
+  .wcal__kos { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
   /* 폰 타일은 한 줄(우리 · 상대 · 시각) — 이름표는 시각 바로 앞 */
   .wcal__tl { flex-direction: row-reverse; justify-content: flex-start; gap: 8px; }
   .wcal__tl .kortag { font-size: 10px; padding: 1px 7px 1px 4px; }
