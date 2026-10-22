@@ -308,13 +308,29 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
       <span className="mdr__mid">
         {/* 이름표는 첫 줄에 — 우리 팀 선수면 vs 앞("🇰🇷이강인 vs Espanyol"), 상대 팀 선수면 상대 이름 뒤.
             둘째 줄(대회 · HOME)에 두면 대회명이 "Cha…" 로 잘렸다 */}
-        <span className="mdr__vs">
-          {koreansOf(target.espnTeamId).map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
-          <i>vs</i>
-          <Crest team={opp} size={16} />
-          <b>{opp.shortName}</b>
-          {koreansOf(opp.id).map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
-        </span>
+        {(() => {
+          const us = koreansOf(target.espnTeamId), them = koreansOf(opp.id);
+          const tag = (n: string) => <span key={n} className="kortag"><KorFlag />{n}</span>;
+          /* 코리안리거 맞대결 — 이름표를 한 줄에 다 넣으면 상대 이름이 "A…" 로 잘리고 엠블럼을 덮었다(11-04).
+             팀 줄은 그대로 두고 이름표만 다음 줄에 "🇰🇷김민재 vs 🇰🇷이강인" 으로 */
+          if (us.length && them.length) {
+            return (
+              <>
+                <span className="mdr__vs"><i>vs</i><Crest team={opp} size={16} /><b>{opp.shortName}</b></span>
+                <span className="mdr__derby">{us.map(tag)}<i>vs</i>{them.map(tag)}</span>
+              </>
+            );
+          }
+          return (
+            <span className="mdr__vs">
+              {us.map(tag)}
+              <i>vs</i>
+              <Crest team={opp} size={16} />
+              <b>{opp.shortName}</b>
+              {them.map(tag)}
+            </span>
+          );
+        })()}
         <span className="mdr__meta">
           <CompCrest k={match.competition} size={12} />
           <span className="mdr__comp">{c.name}</span>
