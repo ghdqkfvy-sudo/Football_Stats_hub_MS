@@ -36,7 +36,7 @@ type Find = (p: LivePlayer) => PlayerSeason | null;
 type CycMode = 'auto' | 'start' | 'now';
 /** 호버 카드 — 넓은 화면(마우스)에서만. 경기장은 overflow:hidden 이라 body 로 띄운다 */
 type Tip = (body: () => React.ReactNode) => Partial<Pick<React.HTMLAttributes<HTMLElement>, 'onMouseEnter' | 'onMouseLeave'>>;
-const CYCLE_MS = 4000;
+const CYCLE_MS = 3500;
 /** 슬라이드 한 번에 걸리는 시간(ms) — live.css 의 .lm__slide · .lm__layer transition 과 같게 */
 const SLIDE_MS = 900;
 
@@ -80,7 +80,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
     return () => window.removeEventListener('scroll', off, { capture: true });
   }, [tipAt]);
 
-  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(4초) 마다 슬라이드인으로 바뀐다. 골키퍼 쪽부터 물결처럼.
+  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(3.5초) 마다 슬라이드인으로 바뀐다. 골키퍼 쪽부터 물결처럼.
      호버 카드 · 상세 카드가 떠 있으면 멈춘다(누르려는 순간 선수가 바뀌지 않게).
      기기에서 '동작 줄이기' 를 켰으면 자동은 쓰지 않고 지금 선수로 */
   const reduce = useMedia('(prefers-reduced-motion: reduce)');
@@ -362,7 +362,16 @@ function Chip({ full, k, tag, color, onOpen, hover, delay = 0, mvp }: {
       {...hover}
       {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}
     >
-      {tag && <span className="chipbox__tag lm__tag">{isMvp && <i className="lm__tagcrown" aria-label="MVP">{CROWN}</i>}{tag}</span>}
+      {/* 포지션 이름표도 선수마다 한 장씩 겹쳐 두고 함께 미끄러진다 — MVP 금색 이름표가 그 선수와 같은 박자로 들어오고 나가게 */}
+      {tag && (
+        <span className="chipbox__tag lm__tag">
+          {full.map((x, i) => (
+            <span key={x.id} className="lm__layer lm__tagl" data-mvp={mvp.has(x.id) || undefined} {...layer(i)}>
+              {mvp.has(x.id) && <i className="lm__tagcrown" aria-label="MVP">{CROWN}</i>}{tag}
+            </span>
+          ))}
+        </span>
+      )}
       <span className="chipbox__ring">
         {/* 사진 — 원 안에서 옆으로 */}
         <span className="lm__mask">

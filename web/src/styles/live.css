@@ -417,24 +417,33 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 
 /* MVP(U3, 2026-10-22) — 이 경기 최고 평점 선수를 보여 주는 동안 포지션 이름표가 금색 + 왕관 + 반짝임,
    사진 테두리가 금빛. 자리를 더 쓰지 않아 다른 배지를 가리지 않는다 */
-.lm__chip .lm__tag { display: inline-flex; align-items: center; gap: 3px; overflow: hidden; transition: background-color .5s ease, color .5s ease, box-shadow .5s ease; }
+/* 이름표는 겉틀(위치만)과 선수별 층(lm__tagl, 모양 · 색)으로 — 층이 사진 · 배지와 같은 박자(--d · 0.9초)로 미끄러진다 */
+.lm__chip .lm__tag { display: grid; justify-items: center; padding: 0; background: none; box-shadow: none; overflow: visible; }
+.lm__tagl {
+  grid-area: 1 / 1; position: relative; display: inline-flex; align-items: center; gap: 3px; overflow: hidden; white-space: nowrap;
+  padding: 2px 4px; border-radius: 4px; color: #06210F; background: var(--pc); box-shadow: 0 1px 5px rgba(0, 0, 0, .4);
+}
+.lm__chip .lm__tagl[data-pos='prev'] { transform: translateY(-5px); }
+.lm__chip .lm__tagl[data-pos='next'] { transform: translateY(5px); }
 .lm__tagcrown { display: inline-grid; line-height: 0; font-style: normal; }
 .lm__tagcrown svg { width: 10px; height: 8px; }
 .lm__tagcrown path, .lm__tagcrown rect { fill: #3A2600; stroke: none; }
-.lm__chip[data-mvp] .lm__tag {
+.lm__tagl[data-mvp] {
   color: #3A2600; background: linear-gradient(180deg, #FFE98A, #F2B705);
   box-shadow: 0 0 8px rgba(255, 210, 63, .85), 0 1px 4px rgba(0, 0, 0, .5);
 }
 @keyframes lm-glint { 0%, 62% { transform: translateX(-140%) skewX(-22deg); } 100% { transform: translateX(260%) skewX(-22deg); } }
-.lm__chip[data-mvp] .lm__tag::after {
+.lm__tagl[data-mvp]::after {
   content: ""; position: absolute; inset: 0; width: 45%; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent);
   animation: lm-glint 2.4s ease-in-out infinite;
 }
-.lm__chip .chipbox__ring { transition: border-color .5s ease, box-shadow .5s ease; }
+/* 금빛 테두리도 사진이 들어오는 박자에 — 같은 지연(--d) · 같은 0.9초 곡선 */
+.lm__chip .chipbox__ring { transition: border-color .9s cubic-bezier(.65, 0, .35, 1) var(--d, 0ms), box-shadow .9s cubic-bezier(.65, 0, .35, 1) var(--d, 0ms); }
 .lm__chip[data-mvp] .chipbox__ring { border-color: #FFD23F; box-shadow: 0 0 0 2px rgba(255, 210, 63, .3), 0 0 16px rgba(255, 210, 63, .75); }
 @media (prefers-reduced-motion: reduce) {
-  .lm__chip[data-mvp] .lm__tag::after { animation: none; display: none; }
+  .lm__tagl[data-mvp]::after { animation: none; display: none; }
+  .lm__chip .chipbox__ring { transition: none; }
 }
 .lmt__mvp { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 900; color: #3A2600; background: #FFD23F; }
 .lmt__mvp svg { width: 13px; height: 10px; }
