@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clockMin, contributions, playedMin, scoreAt, slotChain, statLine } from '../liveCard';
+import { clockMin, contributions, playedMin, scoreAt, slotChain, statPairs } from '../liveCard';
 import type { LiveEvent, LivePlayer, LiveSide } from '../../types/feedTypes';
 
 const P = (id: string, name: string, extra: Partial<LivePlayer> = {}) =>
@@ -29,6 +29,6 @@ describe('오늘의 경기 호버 카드 계산', () => {
     const side = { bench: [P('3', 'Ben Davies')] } as unknown as LiveSide;
     const subs = ev.filter((e): e is Extract<LiveEvent, { t: 'sub' }> => e.t === 'sub');
     expect(slotChain(P('2', 'Andrew Robertson'), side, subs).map((p) => p.id)).toEqual(['2', '3']);
-    expect(statLine({ sh: 3, sot: 1, kp: 2, pa: [41, 47], xg: 0.42 })).toEqual(['슈팅 3(유효 1)', '키패스 2', '패스 41/47 (87%)', 'xG 0.42']);
+    expect(statPairs({ sh: 3, sot: 1, kp: 2, pa: [41, 47], xg: 0.42, dist: 9800 })).toEqual([['슈팅', '3 (유효 1)'], ['키패스', '2'], ['패스', '41/47 · 87%'], ['xG', '0.42'], ['뛴 거리', '9.8km']]);
   });
 });
