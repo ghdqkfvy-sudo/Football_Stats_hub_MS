@@ -415,9 +415,10 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lmt__after[data-hit] b { color: #7CF0A6; }
 .chipbox__name.lm__stack > .lm__layer { display: block; text-align: center; white-space: nowrap; }
 
-/* MVP — 이 경기 최고 평점. 평점 배지(사진 원 왼쪽 아래) 바로 위에 왕관 */
+/* MVP — 이 경기 최고 평점. 사진 원 왼쪽 위 바깥 빈자리(포지션 이름표 · 사진 · 평점 · 등번호를 가리지 않게,
+   2026-10-22 — 평점 배지 위에 두었더니 사진 · 배지에 걸쳤다). 겹침은 화면 검사로 확인한다 */
 .lm__crown {
-  position: absolute; z-index: 3; right: calc(100% - 3px); bottom: 10px; display: grid; line-height: 0;
+  position: absolute; z-index: 3; right: calc(100% + 4px); top: -6px; transform: rotate(-18deg); display: grid; line-height: 0;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .7)) drop-shadow(0 0 5px rgba(255, 210, 63, .55));
 }
 .lm__crown svg { width: 17px; height: 13px; }
