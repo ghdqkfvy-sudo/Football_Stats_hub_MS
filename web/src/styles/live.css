@@ -285,10 +285,16 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 
 /* ── 선발 ↔ 교체 전환 (2026-10-22) ── */
 .lm__outk { color: #FF7A7A !important; font-weight: 800; font-style: normal; }
-@keyframes lm-swapin { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
-.lm__chip[data-cyc] .chipbox__ring, .lm__chip[data-cyc] .chipbox__name, .lm__chip[data-cyc] .chipbox__stat { animation: lm-swapin .5s ease both; }
+/* 크로스페이드 — 그 자리를 거쳐 간 선수를 모두 겹쳐 두고 투명도만 0.9초에 걸쳐 바꾼다(--d = 칩별 물결 지연).
+   사라지는 쪽 · 나타나는 쪽이 동시에 움직여 칩이 비는 순간이 없다 */
+.lm__chip .chipbox__ring > .lm__layer { position: absolute; inset: 0; display: grid; place-items: center; }
+.lm__stack { display: grid; }
+.lm__stack > .lm__layer { grid-area: 1 / 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: inherit; overflow: hidden; text-overflow: ellipsis; }
+.lm__chip .lm__layer { opacity: 0; transition: opacity .9s cubic-bezier(.4, 0, .2, 1) var(--d, 0ms); }
+.lm__chip .lm__layer[data-on] { opacity: 1; }
+.lm__chip .lm__layer:not([data-on]) { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
-  .lm__chip[data-cyc] .chipbox__ring, .lm__chip[data-cyc] .chipbox__name, .lm__chip[data-cyc] .chipbox__stat { animation: none; }
+  .lm__chip .lm__layer { transition: none; }
 }
 /* 교체된 자리 표시 — 자동 전환 · 선발 · 현재 */
 .lm__cyc {
@@ -398,3 +404,4 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lmt__after span { font-size: 11px; color: var(--text-lo); }
 .lmt__after b { font-size: 12.5px; color: var(--text-mid); }
 .lmt__after[data-hit] b { color: #7CF0A6; }
+.chipbox__name.lm__stack > .lm__layer { display: block; text-align: center; white-space: nowrap; }
