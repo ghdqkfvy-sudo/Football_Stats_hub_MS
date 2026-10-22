@@ -290,11 +290,20 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lm__chip .chipbox__ring > .lm__layer { position: absolute; inset: 0; display: grid; place-items: center; }
 .lm__stack { display: grid; }
 .lm__stack > .lm__layer { grid-area: 1 / 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: inherit; overflow: hidden; text-overflow: ellipsis; }
-.lm__chip .lm__layer { opacity: 0; transition: opacity .9s cubic-bezier(.4, 0, .2, 1) var(--d, 0ms); }
-.lm__chip .lm__layer[data-on] { opacity: 1; }
+/* 디졸브(2026-10-22) — 같은 시간에 둘을 50%씩 겹치면 두 얼굴 · 두 번호가 겹쳐 보여 어색했다.
+   나가는 선수가 먼저 흐려지며(살짝 블러 · 축소) 빠지고, 0.45초 뒤 들어오는 선수가 블러에서 또렷해진다.
+   겹치는 구간은 둘 다 옅을 때뿐이라 겹침이 보이지 않는다. 전체 약 1.35초, 사인 곡선으로 천천히 */
+.lm__chip .lm__layer {
+  opacity: 0; filter: blur(3px); transform: scale(.96);
+  transition: opacity .7s cubic-bezier(.37, 0, .63, 1) var(--d, 0ms), filter .7s ease var(--d, 0ms), transform .7s ease var(--d, 0ms);
+}
+.lm__chip .lm__layer[data-on] {
+  opacity: 1; filter: none; transform: none;
+  transition: opacity .9s cubic-bezier(.37, 0, .63, 1) calc(var(--d, 0ms) + .45s), filter .9s ease calc(var(--d, 0ms) + .45s), transform .9s ease calc(var(--d, 0ms) + .45s);
+}
 .lm__chip .lm__layer:not([data-on]) { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
-  .lm__chip .lm__layer { transition: none; }
+  .lm__chip .lm__layer, .lm__chip .lm__layer[data-on] { transition: none; filter: none; transform: none; }
 }
 /* 교체된 자리 표시 — 자동 전환 · 선발 · 현재 */
 .lm__cyc {

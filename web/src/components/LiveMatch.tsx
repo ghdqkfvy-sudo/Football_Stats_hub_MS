@@ -36,7 +36,7 @@ type Find = (p: LivePlayer) => PlayerSeason | null;
 type CycMode = 'auto' | 'start' | 'now';
 /** 호버 카드 — 넓은 화면(마우스)에서만. 경기장은 overflow:hidden 이라 body 로 띄운다 */
 type Tip = (body: () => React.ReactNode) => Partial<Pick<React.HTMLAttributes<HTMLElement>, 'onMouseEnter' | 'onMouseLeave'>>;
-const CYCLE_MS = 5000;
+const CYCLE_MS = 3000;
 
 const PIN = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
@@ -70,7 +70,7 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
     return () => window.removeEventListener('scroll', off, { capture: true });
   }, [tipAt]);
 
-  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(5초) 마다 크로스페이드로 바뀐다. 골키퍼 쪽부터 물결처럼.
+  /* 선발 ↔ 교체 — 교체가 있었던 자리만 CYCLE_MS(3초) 마다 디졸브로 바뀐다. 골키퍼 쪽부터 물결처럼.
      호버 카드 · 상세 카드가 떠 있으면 멈춘다(누르려는 순간 선수가 바뀌지 않게).
      기기에서 '동작 줄이기' 를 켰으면 자동은 쓰지 않고 지금 선수로 */
   const reduce = useMedia('(prefers-reduced-motion: reduce)');
