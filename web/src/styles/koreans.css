@@ -259,6 +259,8 @@
   background: color-mix(in srgb, var(--c) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
 }
+/* 경기 날짜(KST) — 대회 이름표 바로 옆, 출전 기록보다 한 톤 낮게 */
+.krr__d { flex: none; font-size: 10px; color: var(--text-lo); white-space: nowrap; }
 .krr__m { margin-left: auto; font-size: 10.5px; color: var(--accent); text-align: right; white-space: nowrap; }
 .krr__gg, .krr__aa {
   font-style: normal; margin-left: 5px; padding: 0 4px; border-radius: 3px;

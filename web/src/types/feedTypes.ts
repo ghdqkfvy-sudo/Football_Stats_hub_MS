@@ -141,6 +141,8 @@ export interface KoreanGame {
   /** ESPN 경기 id — 선발/교체 시각을 경기 로스터에서 채울 때 쓴다 */
   eventId?: string;
   competition: string;
+  /** 킥오프 ISO(UTC) */
+  date?: string;
   result: 'W' | 'D' | 'L';
   opponentId: string;
   opponent: string;
