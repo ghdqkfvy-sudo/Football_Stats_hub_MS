@@ -503,6 +503,11 @@
   .kr__filters button { flex: none; white-space: nowrap; }
   .kr__bar .kr__sort { margin-left: auto; }
 }
+/* 정렬 단추 다섯 개(최근 출전 추가)가 좁은 폰(320~360px)에서 화면 밖으로 나가 가로 스크롤을 만들었다 */
+@media (max-width: 380px) {
+  .kr__sort > span { padding: 0 3px 0 6px; }
+  .kr__sort button { padding: 5px 7px; }
+}
 
 /*
  * 선수 스탯 목록 (폰 전용) — 이름을 성만 쓰게 바꾼 뒤(PR #11) 이름 길이가 줄마다

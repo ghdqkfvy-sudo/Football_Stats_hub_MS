@@ -3,6 +3,7 @@ import { RatingBadge } from './RatingBadge';
 import { CREST, mobileName } from '../config/targets';
 import { tintOf } from '../config/crestTint';
 import { usePalette } from '../lib/palette';
+import { kstShortDate } from '../lib/kst';
 import type { AthleteInfo } from '../types/feedTypes';
 import { Crest } from './Crest';
 import { Headshot } from './Headshot';
@@ -40,6 +41,8 @@ export interface CompLine {
 
 export interface RecentLine {
   competition?: string;
+  /** 킥오프 ISO(UTC) — 있으면 대회 이름표 옆에 "10.18 (토)" */
+  date?: string;
   result?: 'W' | 'D' | 'L';
   opponent: string;
   /** ESPN 팀 id — 상대 엠블럼 */
@@ -434,6 +437,7 @@ function RecentPanel({
                   {mobileName(gm.competition)}
                 </span>
               )}
+              {gm.date && <span className="krr__d num">{kstShortDate(gm.date)}</span>}
             <span className="krr__m num">
               {/* 선발/교체·출전시간은 경기 로스터에서 온 실제 값일 때만 적는다.
                   없으면 "-" — 예전처럼 0분으로 꾸미지 않는다. */}

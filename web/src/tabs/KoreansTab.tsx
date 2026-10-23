@@ -21,6 +21,7 @@ const shownStats = (p: KoreanPlayer) => visibleComps(p.stats, p.league);
 
 const toRecent = (gm: KoreanGame): RecentLine => ({
   competition: gm.competition,
+  date: gm.date,
   result: gm.result,
   opponent: gm.opponent,
   opponentId: gm.opponentId,
@@ -49,9 +50,10 @@ const nationalOf = (p: KoreanPlayer): NationalLine | undefined =>
 const sum = (rows: { goals: number; assists: number; apps: number }[], k: 'goals' | 'assists' | 'apps') =>
   rows.reduce((a, r) => a + r[k], 0);
 
-type SortKey = 'default' | 'points' | 'apps' | 'form';
+type SortKey = 'default' | 'recent' | 'points' | 'apps' | 'form';
 const SORTS: [SortKey, string][] = [
   ['default', '기본'],
+  ['recent', '최근 출전'],
   ['points', '공격P'],
   ['apps', '출전'],
   ['form', '최근 폼'],
@@ -63,6 +65,11 @@ const pointsOf = (p: KoreanPlayer) => {
 };
 const appsOf = (p: KoreanPlayer) => sum(shownStats(p), 'apps');
 const startsOf = (p: KoreanPlayer) => shownStats(p).reduce((a, r) => a + r.starts, 0);
+/** 마지막으로 뛴 경기의 킥오프(ms) — 클럽 · 대표팀 중 늦은 쪽. 명단에만 든 경기는 뺀다. 없으면 0 */
+const lastPlayedOf = (p: KoreanPlayer) =>
+  Math.max(0, ...[...p.recent, ...(p.national?.recent ?? [])]
+    .filter((g) => g.date && (g.started !== false || g.subIn !== undefined))
+    .map((g) => Date.parse(g.date!) || 0));
 /** 최근 경기(최신순 3경기)의 골+도움 */
 const formOf = (p: KoreanPlayer) => p.recent.reduce((a, g) => a + g.goals + g.assists, 0);
 /** 클럽도 대표팀도 이번 시즌 한 경기도 안 뛴 선수 — 큰 카드 대신 칩으로 접는다 */
@@ -120,6 +127,7 @@ export function KoreansTab() {
     };
     /* 정렬 단추 — 기본 정렬은 동점일 때의 순서로 그대로 쓴다 */
     const by: Record<Exclude<SortKey, 'default'>, (p: KoreanPlayer) => number[]> = {
+      recent: (p) => [lastPlayedOf(p), 0],
       points: (p) => [pointsOf(p), appsOf(p)],
       apps: (p) => [appsOf(p), startsOf(p)],
       form: (p) => [formOf(p), pointsOf(p)],
