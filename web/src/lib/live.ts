@@ -131,6 +131,20 @@ export function showToday(l: LiveMatch | null | undefined, now = Date.now()): l 
   return !!l && isTodayLive(l, now) && !(l.phase === 'pre' && !l.home.starters.length);
 }
 
+/**
+ * 같은 경기가 두 팀 파일에 다 들어 있으면(지켜보는 두 팀끼리의 맞대결) 하나만 — 홈팀 쪽을 남긴다.
+ * 같은 경기는 ESPN 경기 id 로 묶는다.
+ */
+export function dedupeToday(lives: LiveMatch[]): LiveMatch[] {
+  const by = new Map<string, LiveMatch>();
+  for (const l of lives) {
+    const k = l.espnId || `${l.kickoffUtc}|${l.home.name}|${l.away.name}`;
+    const had = by.get(k);
+    if (!had || (had.ours !== 'home' && l.ours === 'home')) by.set(k, l);
+  }
+  return lives.filter((l) => by.get(l.espnId || `${l.kickoffUtc}|${l.home.name}|${l.away.name}`) === l);
+}
+
 /** 여러 오늘의 경기 순서 — 진행 중 → 킥오프 전(빠른 순) → 끝남(늦게 끝난 순) */
 export function orderToday(lives: LiveMatch[]): LiveMatch[] {
   const rank = (l: LiveMatch) => (l.phase === 'live' ? 0 : l.phase === 'pre' ? 1 : 2);
