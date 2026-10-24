@@ -4,7 +4,7 @@ import type { Match } from '../lib/types';
 import type { LiveMatch } from '../types/feedTypes';
 import { loadSchedule } from '../lib/api';
 import { kstTime } from '../lib/kst';
-import { orderToday } from '../lib/live';
+import { dedupeToday, orderToday } from '../lib/live';
 import { PaletteProvider } from '../lib/palette';
 import { Crest } from '../components/Crest';
 import { KorFlag } from '../components/KorFlag';
@@ -31,7 +31,7 @@ export function KoreaTodayTab({ lives, pick, onPick }: {
   pick: TargetId | null;
   onPick: (id: TargetId) => void;
 }) {
-  const list = useMemo(() => orderToday(lives), [lives]);
+  const list = useMemo(() => orderToday(dedupeToday(lives)), [lives]);
   const cur = list.find((l) => l.slug === pick) ?? list[0];
 
   /* 그 팀 일정 — 엠블럼 · 선수 상세 카드(스쿼드 잇기)에 쓴다 */

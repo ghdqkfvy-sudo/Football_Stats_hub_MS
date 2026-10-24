@@ -19,7 +19,7 @@ import { MonthList } from '../components/MonthList';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 import { euroStage, pointsPerGame, seasonRecord } from '../lib/compare';
 import { Crest } from '../components/Crest';
-import { isTodayLive, useLives, withLiveScore } from '../lib/live';
+import { dedupeToday, isTodayLive, useLives, withLiveScore } from '../lib/live';
 
 /**
  * Summary — 앱에 들어오면 처음 보이는 화면.
@@ -44,8 +44,8 @@ const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].map((t) => t.id);
 export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
   const lives = useLives(LIVE_SLUGS);
   /* 오늘 끝난 경기만 — 경기 중인 경기는 위 매치데이 히어로가 이미 보여 주고 누르면 오늘의 경기로 간다 */
-  const todays = Object.values(lives)
-    .filter((l) => isTodayLive(l) && l.phase === 'done')
+  /* 지켜보는 두 팀끼리의 경기는 카드 하나 — 홈팀 쪽(dedupeToday) */
+  const todays = dedupeToday(Object.values(lives).filter((l) => isTodayLive(l) && l.phase === 'done'))
     .sort((a, b) => b.kickoffUtc.localeCompare(a.kickoffUtc));
   /* ── 모든 팀 일정 ─────────────────────────────────── */
   const [rawFeeds, setFeeds] = useState<Record<string, Match[]>>({});
