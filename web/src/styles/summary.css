@@ -152,6 +152,20 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   font-size: 30px; margin-top: 22px;
   text-shadow: 0 0 22px color-mix(in srgb, var(--team) 50%, transparent);
 }
+/* 경기 중 — 스코어 아래 빨간 경기 시간 칩(깜빡이는 점). 스코어가 VS 자리를 맡는다 */
+.mdh__vs { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mdh__clock {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .04em; line-height: 1;
+  padding: 3px 8px; border-radius: 999px; color: #fff; text-shadow: none;
+  background: color-mix(in srgb, var(--loss) 85%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--loss) 45%, transparent);
+}
+.mdh__clock i, .mdr__live i {
+  width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s ease-in-out infinite;
+}
+.mdh__card[data-hero] .mdh__clock { font-size: 13px; padding: 4px 11px; }
+.mdh__vs .mdh__clock i { opacity: 1; margin: 0; }
 
 /* 히어로 킥오프 */
 .mdh__when { text-align: center; margin-top: 14px; }
@@ -400,6 +414,12 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 /* 진 경기는 이달의 결과·히어로 목록과 같은 규칙으로 한 톤 낮춘다 */
 .wcal__t[data-r='L'] { color: var(--text-mid); }
+/* 경기 중 — 지금 스코어 앞에 깜빡이는 빨간 점 */
+.wcal__t[data-live] { display: inline-flex; align-items: center; gap: 5px; color: #fff; }
+.wcal__t[data-live]::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--loss); box-shadow: 0 0 8px var(--loss); animation: pulse 1.4s ease-in-out infinite;
+}
 
 .wcal__hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line);
   font-size: 11px; color: var(--text-lo); }

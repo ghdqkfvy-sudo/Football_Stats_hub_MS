@@ -179,15 +179,18 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       <div className="mdh__fx">
         <Side team={match.home} focus={home} standing={standingOf?.(match.home.id)} fifa={fifa(match.home)} big={hero} />
         <div className="mdh__vs">
-          {done
+          {done || live
             ? (
               /* 이달의 결과와 같은 규칙 — 우리 득점은 팀 컬러, 상대는 흰색.
-                 순서는 홈-원정 그대로 두고 색으로만 가른다. */
-              <span className="num">
-                <b className={home ? 'mdh__su' : 'mdh__so'}>{match.homeScore}</b>
-                <i>-</i>
-                <b className={home ? 'mdh__so' : 'mdh__su'}>{match.awayScore}</b>
-              </span>
+                 순서는 홈-원정 그대로 두고 색으로만 가른다. 경기 중이면 지금 스코어 + 경기 시간 */
+              <>
+                <span className="num">
+                  <b className={home ? 'mdh__su' : 'mdh__so'}>{match.homeScore ?? 0}</b>
+                  <i>-</i>
+                  <b className={home ? 'mdh__so' : 'mdh__su'}>{match.awayScore ?? 0}</b>
+                </span>
+                {live && <em className="mdh__clock num"><i aria-hidden="true" />{match.statusDetail || 'LIVE'}</em>}
+              </>
             )
             : <span className="num">VS</span>}
         </div>
@@ -199,7 +202,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
           <div className="mdh__when">
             <div className="mdh__date">{kstFullDate(match.kickoffUtc)}</div>
             <div className="mdh__time">
-              {!done && <span className="mdh__ico">{ALARM}</span>}
+              {!done && !live && <span className="mdh__ico">{ALARM}</span>}
               <b>{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>
               {!match.timeTBD && <em>KST</em>}
             </div>
@@ -227,7 +230,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
          */
         <footer className="mdh__foot">
           <div className="mdh__kick" data-tone={dd.tone}>
-            <em className="mdh__dday">{done ? '종료' : dd.text}</em>
+            <em className="mdh__dday">{done ? '종료' : live ? '경기 중' : dd.text}</em>
             {/* 날짜 · 요일 · 시각은 같은 글꼴 · 같은 크기 — 색으로만 가른다 */}
             <b className="mdh__kdate num">
               {kp.month}.{kp.date}
@@ -339,7 +342,11 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
       </span>
       <span className="mdr__when">
         {live ? (
-          <em className="mdr__live">LIVE</em>
+          /* 경기 중 — 지금 스코어(우리 득점 먼저)를 크게, 아래 줄에 LIVE · 경기 시간 */
+          <>
+            <b className="mdr__score num" data-live="true">{ours}<i>-</i>{theirs}</b>
+            <em className="mdr__live"><i aria-hidden="true" />{match.statusDetail ? `LIVE ${match.statusDetail}` : 'LIVE'}</em>
+          </>
         ) : done ? (
           /* 이 줄은 "우리 팀 vs 상대" 순서라 스코어도 우리 득점부터 —
              홈-원정 순서로 두면 원정 승리가 진 것처럼 읽혔다 */
@@ -351,13 +358,13 @@ export function MatchdayRow({ target, match, onSelect }: Omit<Props, 'hero' | 's
         )}
         {/* 1줄: D-day 칩(끝난 경기는 스코어) · 2줄: 날짜·요일(같은 크기, 주말은
             요일 색 — 토 파랑 · 일 빨강)과 킥오프 시각. */}
-        <span className="mdr__dt num">
+        {!live && <span className="mdr__dt num">
           <span className="mdr__date">
             <b>{kp.month}.{kp.date}</b>
             <i data-wd={kp.weekday}>{kp.weekdayKo}</i>
           </span>
           {!done && <b className="mdr__time">{match.timeTBD ? 'TBD' : kstTime(match.kickoffUtc)}</b>}
-        </span>
+        </span>}
       </span>
     </button>
   );
