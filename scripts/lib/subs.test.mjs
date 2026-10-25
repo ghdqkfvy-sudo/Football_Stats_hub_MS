@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normName, parseSubText, redCardMinutes, substitutionsFrom } from './subs.mjs';
+import { fixSubMinutes, normName, parseSubText, redCardMinutes, substitutionsFrom } from './subs.mjs';
 
 const R = (id, name, starter = true) => ({ athlete: { id, displayName: name }, starter });
 const ROSTER = [
@@ -68,4 +68,18 @@ test('redCardMinutes: 퇴장 사건의 분 — keyEvents · 스코어보드 deta
   assert.equal(m.get('286831'), 67);
   assert.equal(m.get('7'), 90);
   assert.equal(m.has('9'), false);
+});
+
+test('fixSubMinutes: 들어간 분 ≥ 나간 분이면 대신 나간 선수의 나간 분으로 (08-30 첼시 vs 브라이튼 카이세도)', () => {
+  const E = (id, starter, inn, out, forId) => [id, 0, starter, inn, out, 0, 0, 'X', 0, 0, ...(forId ? [forId] : [])];
+  const es = [
+    E('neto', true, null, 68), E('caicedo', false, 82, 82, 'neto'), E('barco', false, 82, null, 'caicedo'),
+    E('james', false, 68, null, 'lavia'), E('lavia', true, null, 68),
+    E('nobody', false, null, null),                 // 벤치 — 손대지 않는다
+  ];
+  assert.equal(fixSubMinutes(es), 1);
+  assert.deepEqual(es[1].slice(3, 5), [68, 82]);
+  assert.deepEqual(es[2].slice(3, 5), [82, null]);  // 정상은 그대로
+  assert.deepEqual(es[3].slice(3, 5), [68, null]);
+  assert.deepEqual(es[5].slice(3, 5), [null, null]);
 });
