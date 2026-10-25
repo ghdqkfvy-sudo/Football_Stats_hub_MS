@@ -15,7 +15,7 @@ import { RatingBadge } from './RatingBadge';
 import { CardShape } from './InjuryMark';
 import { Crest } from './Crest';
 import { PlayerDetail } from './PlayerDetail';
-import { matchLivePlayer, useSquadPlayers } from '../lib/liveSquad';
+import { matchLivePlayer, useRivalSquad, useSquadPlayers } from '../lib/liveSquad';
 import type { PlayerSeason } from '../lib/squad';
 
 /**
@@ -63,9 +63,16 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
   const ours = live.ours ?? 'home';
   const pool = useSquadPlayers(live.ours ? teamId : undefined, matches);
   const find = useMemo<Find | undefined>(() => (pool.length ? (p) => matchLivePlayer(p, pool) : undefined), [pool]);
+  /* 상대도 지켜보는 팀이면 그 팀 스쿼드로 상대 선수도 상세 카드를 연다 */
+  const rivalId = live.ours && match ? (match.home.id === teamId ? match.away.id : match.home.id) : undefined;
+  const rivalPool = useRivalSquad(rivalId);
+  const findRival = useMemo<Find | undefined>(() => (rivalPool.length ? (p) => matchLivePlayer(p, rivalPool) : undefined), [rivalPool]);
   const [detail, setDetail] = useState<PlayerSeason | null>(null);
   const closeDetail = useCallback(() => setDetail(null), []);
   const pickProps = { find, onPick: setDetail };
+  const rivalProps = { find: findRival, onPick: setDetail };
+  /** 그 쪽 칩 · 벤치 · 교체 줄에 붙일 상세 카드 연결 */
+  const linkOf = (k: 'home' | 'away') => (k === ours ? pickProps : rivalProps);
 
   /* 호버 카드 — 마우스가 올라간 요소 아래(공간이 없으면 위)에 띄운다 */
   const [tipAt, setTipAt] = useState<{ el: HTMLElement; body: React.ReactNode } | null>(null);
@@ -136,12 +143,12 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
           <div className="lm__lines"><PitchMarkings /></div>
           {wide ? (
             <>
-              <Half side={live.home} subs={subsOf(live, 'home')} wide {...halfProps} {...(ours === 'home' ? pickProps : {})} />
-              <Half side={live.away} subs={subsOf(live, 'away')} top wide {...halfProps} {...(ours === 'away' ? pickProps : {})} />
+              <Half side={live.home} subs={subsOf(live, 'home')} wide {...halfProps} {...linkOf('home')} />
+              <Half side={live.away} subs={subsOf(live, 'away')} top wide {...halfProps} {...linkOf('away')} />
             </>
           ) : (
             <>
-              <Half side={live[theirs]} subs={subsOf(live, theirs)} top {...halfProps} />
+              <Half side={live[theirs]} subs={subsOf(live, theirs)} top {...halfProps} {...rivalProps} />
               <Half side={live[ours]} subs={subsOf(live, ours)} {...halfProps} {...pickProps} />
             </>
           )}
@@ -162,13 +169,13 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
         </div>
         <div className="lm__teams">
           {(['home', 'away'] as const).map((k) => (
-            <BenchCol key={k} side={live[k]} subs={subsOf(live, k)} crest={crest(k, 22)} active={pick === k} live={live} tip={tip} {...(k === ours ? pickProps : {})} />
+            <BenchCol key={k} side={live[k]} subs={subsOf(live, k)} crest={crest(k, 22)} active={pick === k} live={live} tip={tip} {...linkOf(k)} />
           ))}
         </div>
       </section>
 
       <Timeline live={live} crest={crest} colors={{ home: teamColor(live, 'home', match?.home.id), away: teamColor(live, 'away', match?.away.id) }} />
-      {find && <PlayerDetail p={detail} onClose={closeDetail} />}
+      {(find || findRival) && <PlayerDetail p={detail} onClose={closeDetail} />}
       {tipAt && createPortal(<TipBox el={tipAt.el}>{tipAt.body}</TipBox>, document.body)}
     </div>
   );

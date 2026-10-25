@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { LivePlayer } from '../types/feedTypes';
 import type { Match } from './types';
 import type { SquadData } from './api';
-import { loadSquad } from './api';
+import { loadSchedule, loadSquad } from './api';
+import { SLUG_BY_TEAM_ID } from '../config/targets';
 import { buildSquad } from './squad';
 import type { PlayerSeason } from './squad';
 import { discipline } from './discipline';
@@ -12,7 +13,8 @@ import { discipline } from './discipline';
  *
  * 라이브 파일은 FotMob 선수(id · 이름 · 등번호)라 우리(ESPN) 스쿼드와 이어 줘야 한다.
  * 등번호 + 성(姓) → 이름 낱말 묶음 → 성 하나 순으로 보고, **후보가 둘 이상이면 포기한다**
- * — 엉뚱한 사람의 카드를 여느니 안 여는 편이 낫다. 우리 팀 스쿼드만 있으므로 상대 선수는 열리지 않는다.
+ * — 엉뚱한 사람의 카드를 여느니 안 여는 편이 낫다. 상대도 우리가 지켜보는 팀(스쿼드 파일이 있는 팀)이면
+ * 그 팀 스쿼드로 상대 선수도 잇는다(useRivalSquad, 2026-10-25 첼시 vs 토트넘).
  */
 const tokens = (s: string) =>
   String(s ?? '')
@@ -57,4 +59,20 @@ export function useSquadPlayers(teamId: string | undefined, matches: Match[] | u
     const { players } = buildSquad(matches, squad.lineups ?? {}, squad.athletes ?? {}, teamId);
     return players.map((p) => ({ ...p, disc: discipline(p.recent, matches, squad.athletes?.[p.id]?.sus, undefined, teamId) }));
   }, [squad, teamId, matches]);
+}
+
+/**
+ * 상대 팀 스쿼드 — 상대도 지켜보는 팀이면(일곱 팀 · 대표팀 · 코리안리거 소속팀) 그 팀 일정 → 스쿼드를 받아 온다.
+ * 아니면 빈 목록(상대 칩은 그냥 칩으로 남는다).
+ */
+export function useRivalSquad(rivalId: string | undefined): PlayerSeason[] {
+  const id = rivalId && SLUG_BY_TEAM_ID[rivalId] ? rivalId : undefined;
+  const [sched, setSched] = useState<{ team: string; data: Match[] } | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    loadSchedule(id).then((r) => { if (alive) setSched({ team: id, data: r.data }); });
+    return () => { alive = false; };
+  }, [id]);
+  return useSquadPlayers(id, sched && sched.team === id && sched.data.length ? sched.data : undefined);
 }
