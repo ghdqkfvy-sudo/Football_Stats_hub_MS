@@ -309,7 +309,11 @@
   .mdr__live {
     font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
     color: #fff; background: var(--loss);
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   }
+  /* 경기 중 — 1줄 스코어(크게, 흰색), 2줄 LIVE · 경기 시간 */
+  .mdr__score[data-live] { font-size: 20px; color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--loss) 55%, transparent); }
+  .mdr__score[data-live] + .mdr__live { grid-row: 2; grid-column: 1 / -1; justify-self: end; font-size: 10.5px; }
   .mdr__score { font-family: var(--font-display); font-size: 17px; color: var(--text-hi); }
   .mdr__score i { font-style: normal; opacity: .5; margin: 0 2px; }
   .mdr__score[data-r='L'] { color: var(--text-mid); }

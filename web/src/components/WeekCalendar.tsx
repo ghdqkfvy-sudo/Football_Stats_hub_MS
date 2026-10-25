@@ -155,6 +155,8 @@ export function WeekCalendar({
                   const mine = m.home.id === t.espnTeamId;
                   const opp = mine ? m.away : m.home;
                   const done = m.status === 'finished';
+                  /* 경기 중이면 시각 자리에 지금 스코어(빨간 점) */
+                  const live = m.status === 'live';
                   const ours = (mine ? m.homeScore : m.awayScore) ?? 0;
                   const theirs = (mine ? m.awayScore : m.homeScore) ?? 0;
                   const on = isSel && idx === selectedIndex;
@@ -203,10 +205,12 @@ export function WeekCalendar({
                         const time = (
                           <span
                             className="wcal__t num"
-                            data-done={done || undefined}
+                            data-done={done || live || undefined}
+                            data-live={live || undefined}
                             data-r={done ? (ours > theirs ? 'W' : ours < theirs ? 'L' : 'D') : undefined}
+                            title={live && m.statusDetail ? `경기 중 ${m.statusDetail}` : undefined}
                           >
-                            {done ? `${ours}-${theirs}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
+                            {done || live ? `${ours}-${theirs}` : (m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc))}
                           </span>
                         );
                         /* 코리안리거 소속팀 경기 — 이름표를 시각·스코어와 **같은 줄**에.
