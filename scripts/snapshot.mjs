@@ -36,7 +36,7 @@ import {
   maskTsdbKey, pickTsdbKey, rankOf, rateLimiter, urlVerdict, canonicalPhotoUrl,
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
-import { redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
+import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -79,7 +79,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-29';
+const CODE_VERSION = 'snap-30';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2292,6 +2292,9 @@ async function main() {
             if (forId) subKnown++;
           }
         }
+        /* (5) 말이 안 되는 투입 분(들어간 분 ≥ 나간 분)은 대신 나간 선수의 나간 분으로 */
+        const fixedIn = fixSubMinutes(entries);
+        if (fixedIn) console.log(`    ${t.slug} ${ev.id}: 교체 투입 분 ${fixedIn}건 바로잡음`);
         lineups[String(ev.id)] = {
           teamId: t.id,
           formation: String(mine?.formation ?? ''),

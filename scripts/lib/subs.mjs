@@ -149,3 +149,26 @@ export function redCardMinutes(sum) {
   }
   return out;
 }
+
+/**
+ * 교체 투입 분 바로잡기 — core 로스터의 subbedIn 시각이 가끔 틀린다.
+ * 2026-08-30 첼시 vs 브라이튼: 카이세도가 68분 네투 대신 들어가 82분 바르코와 바뀌었는데,
+ * 투입 분이 82분(나간 분과 같다)으로 와서 0분 출전 → "안 뛴 경기" 로 빠졌다.
+ * 들어간 분 ≥ 나간 분처럼 말이 안 될 때만, **대신 나간 선수의 나간 분**으로 고친다
+ * (같은 교체 사건이라 그쪽이 맞다). 투입 분이 비어 있으면 같은 값으로 채운다.
+ *
+ * @param entries 라인업 항목 [id, 자리, 선발, 들어간 분, 나간 분, …, 10: 대신 나간 선수 id] — 그 자리에서 고친다
+ * @returns 고친 수
+ */
+export function fixSubMinutes(entries) {
+  const outOf = new Map(entries.map((x) => [x[0], x[4]]));
+  let fixed = 0;
+  for (const x of entries) {
+    if (x[2] || !x[10]) continue;
+    const forOut = outOf.get(x[10]);
+    if (forOut == null) continue;
+    const bad = x[3] == null || (x[4] != null && x[3] >= x[4] && forOut < x[4]);
+    if (bad && x[3] !== forOut) { x[3] = forOut; fixed++; }
+  }
+  return fixed;
+}
