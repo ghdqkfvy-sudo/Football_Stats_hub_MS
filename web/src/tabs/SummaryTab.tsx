@@ -58,23 +58,24 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   );
   const [loading, setLoading] = useState(true);
 
+  /*
+   * 첫 화면은 **열 팀(일곱 팀 + 코리안리거 소속팀) 일정이 다 온 뒤** 한 번에 그린다.
+   * 한 팀이라도 오면 그리던 때는 파일이 도착할 때마다 카드가 킥오프 순으로 끼어들고
+   * 큰 카드 · 대한민국 칸이 바뀌어, 1초 남짓 카드가 네 번 뒤섞였다(2026-10-25).
+   * 한 파일이 아주 늦어도 2.5초 넘게 기다리지는 않는다 — 늦게 온 팀은 오는 대로 들어간다.
+   */
   useEffect(() => {
     let alive = true;
-    let left = TARGETS.length;
-    for (const t of TARGETS) {
-      loadSchedule(t.espnTeamId).then((r) => {
-        if (!alive) return;
-        setFeeds((f) => ({ ...f, [t.id]: r.data }));
-        if (--left === 0) setLoading(false);
-      });
-    }
-    /* 코리안리거 소속팀 — 첫 화면(로딩)을 기다리게 하지 않는다 */
-    for (const t of KOREAN_CLUBS) {
+    const all = [...TARGETS, ...KOREAN_CLUBS];
+    let left = all.length;
+    const done = () => { if (alive && --left === 0) setLoading(false); };
+    for (const t of all) {
       loadSchedule(t.espnTeamId).then((r) => {
         if (alive) setFeeds((f) => ({ ...f, [t.id]: r.data }));
-      });
+      }).finally(done);
     }
-    return () => { alive = false; };
+    const cap = setTimeout(() => { if (alive) setLoading(false); }, 2500);
+    return () => { alive = false; clearTimeout(cap); };
   }, []);
 
   /** 팀 탭이 있는 일곱 팀 — 팀 비교는 여기만 */
@@ -330,7 +331,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
     return map;
   }, [results]);
 
-  if (loading && !board.length) {
+  if (loading) {
     return (
       <div className="page">
         <div className="skel" style={{ height: 260, borderRadius: 22 }} />
