@@ -181,8 +181,8 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
         <div className="mdh__vs">
           {done || live
             ? (
-              /* 이달의 결과와 같은 규칙 — 우리 득점은 팀 컬러, 상대는 흰색.
-                 순서는 홈-원정 그대로 두고 색으로만 가른다. 경기 중이면 지금 스코어 + 경기 시간 */
+              /* 스코어는 숫자마다 흰 칩.
+                 순서는 홈-원정 그대로. 숫자 칩(summary.css) — 경기 중이면 지금 스코어 + 경기 시간 */
               <>
                 <span className="num">
                   <b className={home ? 'mdh__su' : 'mdh__so'}>{match.homeScore ?? 0}</b>
