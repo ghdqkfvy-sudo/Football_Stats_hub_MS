@@ -14,7 +14,7 @@
  * 없다고 말한다(`source: 'none'`).
  */
 import type { Match, StandingTable } from './types';
-import { matchesFromSchedule, goalsFromPlays, standingsFrom } from './normalize';
+import { matchFrom, matchesFromSchedule, goalsFromPlays, standingsFrom } from './normalize';
 import { roleOf } from './squad';
 import { load, proxy, feed, HAS_PROXY, type Loaded, type Source } from './feed';
 import type {
@@ -478,4 +478,27 @@ export async function loadFutureStat(league: string, athleteId: string): Promise
     } catch { /* 피드로 */ }
   }
   return fromFeed();
+}
+
+/* ── 컵 라운드 대진 (cup-{대회}.json, 2026-10-26) ───────────
+   Summary › 대회 순위의 컵 대진표. 라운드 달력 구간마다 그 라운드 **모든** 경기.
+   정적 피드에만 있다(snapshot.mjs · lib/cups.mjs). 없으면 빈 목록 — 대회 버튼이 안 생긴다. */
+export interface CupRoundData { label: string; start: string; end: string; matches: Match[] }
+
+export async function loadCup(slug: string): Promise<CupRoundData[]> {
+  const r = await load<CupRoundData[]>({
+    feedFile: `cup-${slug}.json`,
+    pick: (json) => (Array.isArray(json?.rounds) ? json.rounds : []).map((x: any) => ({
+      label: String(x?.label ?? ''),
+      start: String(x?.start ?? ''),
+      end: String(x?.end ?? ''),
+      matches: (Array.isArray(x?.events) ? x.events : [])
+        .map(matchFrom)
+        .filter((m: Match | null): m is Match => !!m)
+        .map((m: Match) => ({ ...m, competition: slug })),
+    })),
+    empty: (v) => !v.some((x) => x.matches.length),
+    fallback: [],
+  });
+  return r.data;
 }

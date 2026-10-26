@@ -37,6 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
+import { CUP_LEAGUES, cupEvent, daysToFetch, mergeRound, roundIndexOf } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -79,7 +80,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-30';
+const CODE_VERSION = 'snap-31';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2061,6 +2062,37 @@ async function main() {
       console.error(`  ! ${t.slug}: 이벤트 0건 — 기존 파일 유지`);
     }
     await sleep(400);
+  }
+
+  /* ── 컵 라운드 대진 (slow) ─────────────────────────────
+     Summary › 대회 순위의 컵 대진표 — 이번 라운드에 누가 누구랑 붙는지는 우리 팀 일정에 없다.
+     스코어보드를 하루씩(범위로 받으면 잘린다) 받아 라운드 달력 구간에 떨어뜨린다.
+     지난 날짜는 이전 파일 그대로 — 매 회차 받는 건 라운드 구간 ∩ [지금-3일, 지금+14일] 뿐이다(lib/cups.mjs). */
+  if (wants('slow')) for (const lg of CUP_LEAGUES) {
+    const now = Date.now();
+    await ensureRounds(lg, new Date(now).toISOString());
+    const cal = roundCal.get(lg);
+    if (!cal?.length) { console.log(`    ${lg}: 라운드 달력 없음 — 건너뜀`); continue; }
+    let prev = null;
+    try { prev = JSON.parse(await readFile(join(OUT, `cup-${lg}.json`), 'utf8')); } catch { /* 처음 */ }
+    const prevRound = (label) => (prev?.rounds ?? []).find((r) => r.label === label);
+    const rounds = [];
+    let fetchedDays = 0;
+    for (const r of cal) {
+      const had = prevRound(r.label);
+      const days = daysToFetch(r, now, !!had?.events?.length);
+      fetchedDays += days.length;
+      const got = await pool(days, 6, async (d) => {
+        const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}`);
+        return (j?.events ?? []).map(cupEvent);
+      });
+      const inRound = got.flat().filter((e) => e && roundIndexOf([r], e.date) === 0);
+      rounds.push({ label: r.label, start: r.start, end: r.end, events: mergeRound(had?.events, inRound) });
+    }
+    const total = rounds.reduce((a, r) => a + r.events.length, 0);
+    if (!total) { console.log(`    ${lg}: 경기 0건 — 저장 안 함`); continue; }
+    await save(`cup-${lg}.json`, { league: lg, rounds, codeVersion: CODE_VERSION, fetchedAt: new Date().toISOString() });
+    console.log(`    ${lg}: ${rounds.filter((r) => r.events.length).length}라운드 · ${total}경기 (이번에 ${fetchedDays}일 받음)`);
   }
 
   if (wants('slow')) for (const lg of [...LEAGUES, ...TABLE_LEAGUES]) {

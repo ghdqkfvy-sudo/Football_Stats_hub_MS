@@ -1,0 +1,112 @@
+/* ══ 컵 라운드 대진 (CupBracket, 2026-10-26) ═══════════════
+   Summary › 대회 순위에서 컵을 고르면 순위표 자리에. 라운드 ‹ › · 맞대결 카드 · 8강부터 트리 */
+
+.cbr {
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--panel); backdrop-filter: var(--panel-blur); padding: 14px 16px 16px;
+}
+.cbr__nav { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+.cbr__arr {
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-size: 18px; line-height: 1; color: var(--text-mid); background: rgba(255,255,255,.03);
+  box-shadow: inset 0 0 0 1px var(--line-2); cursor: pointer;
+}
+.cbr__arr:disabled { opacity: .3; cursor: default; }
+.cbr__rb {
+  padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-lo);
+  white-space: nowrap; cursor: pointer; background: none;
+}
+.cbr__rb[data-on] { color: var(--text-hi); background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px var(--line-2); }
+.cbr__rb--gap { min-width: 40px; cursor: default; }
+.cbr__meta { margin-left: auto; font-size: 12px; color: var(--text-lo); white-space: nowrap; }
+.cbr__meta b { color: var(--accent); font-family: var(--font-display); font-size: 15px; letter-spacing: .04em; }
+.cbr__none { margin: 6px 2px; font-size: 12.5px; color: var(--text-lo); }
+
+/* 맞대결 카드 — [팀 줄 · 스코어] 두 줄, 예정이면 오른쪽에 킥오프 */
+.cbr__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cbr__tie {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 5px 12px;
+  padding: 10px 14px 10px 16px; border-radius: 12px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.025);
+}
+.cbr__tie[data-ours] {
+  border-color: color-mix(in srgb, var(--tc) 55%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 16%, transparent), rgba(255,255,255,.02) 60%);
+  box-shadow: inset 3px 0 0 var(--tc);
+}
+.cbr__row { grid-column: 1; display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13.5px; }
+.cbr__row b { font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cbr__row > img, .cbr__row > .mono, .cbr__row .kortag { flex: none; }
+.cbr__row[data-lost] b { color: var(--text-lo); font-weight: 500; }
+.cbr__row[data-lost] > img, .cbr__row[data-lost] > .mono { opacity: .5; }
+.cbr__thr {
+  flex: none; font-style: normal; font-family: var(--font-display); font-size: 10.5px; font-weight: 800;
+  letter-spacing: .12em; color: #06150C; background: var(--win); padding: 2px 6px; border-radius: 4px;
+}
+.cbr__sc { grid-column: 2; text-align: right; font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text-hi); line-height: 1.1; }
+.cbr__sc[data-lost] { color: var(--text-lo); }
+.cbr__ko { grid-column: 2; grid-row: 1 / span 2; text-align: right; font-family: var(--font-display); }
+.cbr__ko b { display: block; font-size: 20px; font-weight: 700; color: var(--text-hi); line-height: 1; }
+.cbr__ko span { font-size: 12px; color: var(--text-mid); letter-spacing: .04em; }
+.cbr__sub {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 1px;
+  font-family: var(--font-display); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; color: var(--text-mid);
+}
+.cbr__live {
+  display: inline-flex; align-items: center; gap: 5px; font-style: normal; color: #fff;
+  background: var(--loss); padding: 1px 7px; border-radius: 999px;
+}
+.cbr__live i { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s ease-in-out infinite; }
+
+/* 8강 → 4강 → 결승 트리 */
+.cbr__tree { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 34px; }
+.cbr__col { display: flex; flex-direction: column; min-width: 0; }
+.cbr__colh {
+  font-family: var(--font-display); font-size: 12.5px; letter-spacing: .18em; color: var(--text-lo);
+  text-align: center; margin-bottom: 12px;
+}
+.cbr__colb { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 12px; }
+.cbr__m { position: relative; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03); }
+.cbr__m[data-empty] { display: grid; place-items: center; min-height: 74px; border-style: dashed; font-size: 12px; color: var(--text-lo); }
+.cbr__m[data-ours] {
+  border-color: color-mix(in srgb, var(--tc) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 30%, transparent), 0 6px 20px color-mix(in srgb, var(--tc) 18%, transparent);
+}
+.cbr__mt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 13px; min-width: 0; }
+.cbr__mt + .cbr__mt { border-top: 1px solid var(--line); }
+.cbr__mt b { flex: 1; min-width: 0; font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbr__mt i { font-style: normal; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.cbr__mt[data-win] { background: linear-gradient(90deg, color-mix(in srgb, var(--win) 14%, transparent), transparent); }
+.cbr__mt[data-lost] b, .cbr__mt[data-lost] i { color: var(--text-lo); font-weight: 500; }
+.cbr__when {
+  position: absolute; right: 8px; top: -9px; font-family: var(--font-display); font-size: 10.5px; letter-spacing: .06em;
+  color: var(--text-mid); background: #0B1630; padding: 0 5px; border-radius: 4px;
+}
+/* 칸 사이 잇는 선 */
+.cbr__col:not(:last-child) .cbr__m::after { content: ''; position: absolute; right: -18px; top: 50%; width: 18px; height: 1px; background: var(--line-2); }
+.cbr__col:not(:first-child) .cbr__m::before { content: ''; position: absolute; left: -17px; top: 50%; width: 17px; height: 1px; background: var(--line-2); }
+.cbr__champ { text-align: center; }
+.cbr__cup {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: .14em; color: #2A1C00;
+  background: linear-gradient(135deg, #FFE27A, #F2B705 55%, #C98A00); padding: 7px 14px; border-radius: 9px;
+  box-shadow: 0 4px 18px rgba(242, 183, 5, .4);
+}
+.cbr__cup b { letter-spacing: .02em; }
+.cbr__cup[data-wait] { opacity: .35; box-shadow: none; }
+
+.cbr__key { margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--text-lo); }
+.cbr__key span::before {
+  content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px;
+}
+.cbr__key [data-k='ours']::before { background: linear-gradient(135deg, #4F8BFF, #FF4D5E); }
+.cbr__key [data-k='thr']::before { background: var(--win); }
+
+@media (max-width: 640px) {
+  .cbr { padding: 12px 12px 14px; }
+  .cbr__grid { grid-template-columns: 1fr; }
+  .cbr__meta { display: none; }
+  .cbr__nav { justify-content: space-between; }
+  .cbr__rb { padding: 7px 10px; font-size: 12.5px; }
+  .cbr__rb:not([data-on]) { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+}
