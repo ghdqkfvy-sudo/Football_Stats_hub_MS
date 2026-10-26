@@ -150,6 +150,8 @@ export function matchFrom(ev: any): Match | null {
     awayScore: num(pick(awayRaw?.score?.displayValue, awayRaw?.score)),
     homePens: num(homeRaw?.shootoutScore),
     awayPens: num(awayRaw?.shootoutScore),
+    winnerId: homeRaw?.winner === true ? String(homeRaw?.team?.id ?? homeRaw?.id ?? '') || undefined
+      : awayRaw?.winner === true ? String(awayRaw?.team?.id ?? awayRaw?.id ?? '') || undefined : undefined,
     goals,
     goalsLoaded: goals.length > 0,
     timeTBD: c.timeValid === false,

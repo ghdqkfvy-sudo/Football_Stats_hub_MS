@@ -3,6 +3,7 @@ import type { Match } from '../lib/types';
 import { Crest } from './Crest';
 import { kstShortDate } from '../lib/kst';
 import { roundKo } from '../lib/rounds';
+import { WDL_KO, fateLabel, gameResult, tieOutcome } from '../lib/cupFate';
 
 /**
  * 컵 대진표 — **실제로 나온 라운드부터** 결승까지.
@@ -46,12 +47,14 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
   const path = byRound.slice(firstIdx);
 
   /* 탈락 지점: 마지막으로 치른 라운드에서 졌으면 거기서 끝난 것이다.
-     (다음 라운드 경기가 아직 안 잡힌 것과 구분하려면 결과를 봐야 한다) */
+     (다음 라운드 경기가 아직 안 잡힌 것과 구분하려면 결과를 봐야 한다)
+     맞대결 라운드는 진출 여부(tieOutcome — 승부차기까지)로, 조별 라운드는 예전처럼 합산 결과로 */
   const lastPlayed = [...path].reverse().find((x) => x.games.some((g) => g.status === 'finished'));
+  const lastOutcome = lastPlayed ? tieOutcome(lastPlayed.games, focusTeamId) : null;
   const out =
-    lastPlayed &&
+    !!lastPlayed &&
     lastPlayed.games.every((g) => g.status === 'finished') &&
-    resultOfTie(lastPlayed.games, focusTeamId) === 'L';
+    (lastOutcome ? lastOutcome === 'out' : resultOfTie(lastPlayed.games, focusTeamId) === 'L');
 
   return (
     <div className="cup">
@@ -65,13 +68,14 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
       <ol className="cup__path">
         {path.map((x, i) => {
           const res = x.games.length ? resultOfTie(x.games, focusTeamId) : null;
+          const fate = tieOutcome(x.games, focusTeamId);
           const reached = x.games.length > 0;
           const blocked = out && i > path.findIndex((y) => y === lastPlayed);
           return (
             <li
               className="cup__r"
               key={x.round.label}
-              data-res={res ?? undefined}
+              data-res={(fate ? (fate === 'adv' ? 'W' : 'L') : res) ?? undefined}
               data-on={reached}
               data-blocked={blocked || undefined}
             >
@@ -84,6 +88,7 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
                   const home = m.home.id === focusTeamId;
                   const opp = home ? m.away : m.home;
                   const done = m.status === 'finished';
+                  const r = done ? gameResult(m, focusTeamId) : null;
                   return (
                     <span className="cup__tie" key={m.id}>
                       <Crest team={opp} size={18} />
@@ -92,10 +97,14 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
                       <span className="cup__sc num">
                         {done ? `${home ? m.homeScore : m.awayScore} : ${home ? m.awayScore : m.homeScore}` : kstShortDate(m.kickoffUtc)}
                       </span>
+                      {r && <i className="cup__wdl" data-r={r.wdl}>{WDL_KO[r.wdl]}</i>}
+                      {r?.pk && <i className="cup__pk" data-won={r.pk === 'W' || undefined}>PK {r.pk === 'W' ? '승' : '패'}{r.pkScore ? ` ${r.pkScore}` : ''}</i>}
                     </span>
                   );
                 })
               )}
+              {/* 맞대결 라운드가 끝났으면 진출 · 탈락(결승은 우승 · 준우승, 3위 결정전은 3위 · 4위) */}
+              {fate && <em className="cup__fate" data-fate={fate}>{fateLabel(x.round.label, fate)}</em>}
             </li>
           );
         })}
