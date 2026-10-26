@@ -87,7 +87,10 @@
   letter-spacing: .12em; line-height: 1; white-space: nowrap;
   padding: 6px 11px 6px 9px; border-radius: 8px;
 }
-.cup__fate svg { flex: none; }
+.cup__fate svg { flex: none; display: block; }
+/* 글자 줄 상자를 대문자 높이로 잘라 아이콘과 글자 가운데를 맞춘다 — 글꼴마다 위아래 여백이 달라
+   (웹 글꼴 · 대체 글꼴) ✕ · → 가 글자보다 1~2px 위아래로 어긋나 보였다 */
+.cup__fate > span { display: block; text-box: trim-both cap alphabetic; }
 .cup__fate[data-fate='through'] {
   color: #06150C; background: linear-gradient(135deg, #5CF29A, var(--win));
   box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset, 0 4px 16px color-mix(in srgb, var(--win) 32%, transparent);

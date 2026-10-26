@@ -96,7 +96,7 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
                 <span className="cup__rl">{roundKo(x.round.label)}</span>
                 {fate && (() => {
                   const f = fateOf(x.round.label, fate);
-                  return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}{f.label}</em>;
+                  return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}<span>{f.label}</span></em>;
                 })()}
               </div>
 
