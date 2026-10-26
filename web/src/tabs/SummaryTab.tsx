@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
-import { loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound } from '../lib/api';
+import { loadCup, loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound, type CupRoundData } from '../lib/api';
+import { CupBracket } from '../components/CupBracket';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { dayKey, kstParts, kstTime, monthKey, todayKey } from '../lib/kst';
 import {
@@ -34,6 +35,8 @@ import { dedupeToday, isTodayLive, useLives, withLiveScore } from '../lib/live';
 
 /** 순위·선수 기록을 보여 줄 대회 */
 const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
+/** 대회 순위 옆에 붙는 컵 — 라운드 대진 파일(cup-{대회}.json)이 있을 때만 버튼이 생긴다 (scripts/lib/cups.mjs 와 같은 목록) */
+const CUPS: CompetitionKey[] = ['eng.league_cup', 'eng.fa', 'esp.copa_del_rey', 'ger.dfb_pokal'];
 /** 팀 비교의 유럽대항전 칸 — 위에 있는 대회부터 */
 const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
@@ -173,9 +176,17 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   /* ── 대회 순위 ────────────────────────────────────── */
   const [active, setActive] = useState<CompetitionKey>('eng.1');
   const [compDir, setCompDir] = useState<SwapDir>('fade');
+  /* 컵 라운드 대진 — 파일이 있는 컵만 대회 버튼에 붙는다 */
+  const [cups, setCups] = useState<Record<string, CupRoundData[]>>({});
+  useEffect(() => {
+    let alive = true;
+    for (const c of CUPS) loadCup(c).then((r) => { if (alive && r.length) setCups((x) => ({ ...x, [c]: r })); });
+    return () => { alive = false; };
+  }, []);
+  const compList = useMemo(() => [...COMPS, ...CUPS.filter((c) => cups[c])], [cups]);
   const pickComp = (c: CompetitionKey) => {
     if (c === active) return;
-    setCompDir(dirOf(COMPS.indexOf(active), COMPS.indexOf(c)));
+    setCompDir(dirOf(compList.indexOf(active), compList.indexOf(c)));
     setActive(c);
   };
   const [tables, setTables] = useState<Record<string, { table: StandingTable | null; matches: Match[] } | null>>({});
@@ -226,6 +237,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
    * #241F20(거의 검정), 토트넘은 #132257(짙은 남색)이라 어두운 표 위에서
    * 순위 숫자와 승점이 그대로 묻혀 버린다.
    */
+  /** 컵 대진의 우리 팀 — 일곱 팀 + 코리안리거 소속팀 */
+  const cupColors = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const t of [...TARGETS, ...KOREAN_CLUBS]) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
+    return out;
+  }, []);
   const clubColors = useMemo(() => {
     const out: Record<string, string> = {};
     for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
@@ -525,14 +542,16 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
         <div className="sec__head">
           <h2 className="sec__title">대회 순위</h2>
           <span className="sec__note">
-            {league?.table
+            {cups[active]
+              ? `${comp(active).name} — 라운드 대진 · 우리 팀은 팀 컬러로 표시`
+              : league?.table
               ? `${tableRound(league.table)}R 기준 · 우리 팀은 팀 컬러로 표시`
               : '불러오는 중'}
           </span>
         </div>
 
         <nav className="comps" aria-label="대회 선택">
-          {COMPS.map((c) => (
+          {compList.map((c) => (
             <button
               key={c}
               className="comps__b"
@@ -547,8 +566,10 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
           ))}
         </nav>
 
-        <Swap k={`${active}:${league ? 1 : 0}`} dir={compDir}>
-        {!league ? (
+        <Swap k={`${active}:${league || cups[active] ? 1 : 0}`} dir={compDir}>
+        {cups[active] ? (
+          <CupBracket rounds={cups[active]} colors={cupColors} mobile={mobile} />
+        ) : !league ? (
           <div className="skel" style={{ height: 420 }} />
         ) : league.table ? (
           <>
