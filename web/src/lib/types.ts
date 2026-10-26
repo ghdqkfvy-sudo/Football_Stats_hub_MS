@@ -50,6 +50,8 @@ export interface Match {
   awayScore?: number;
   homePens?: number;
   awayPens?: number;
+  /** ESPN 이 이긴 쪽으로 표시한 팀 id(competitors[].winner) — 승부차기 승자처럼 스코어로 못 가리는 경우 */
+  winnerId?: string;
   goals: GoalEvent[];
   /** 득점 이벤트를 아직 못 불러온 상태 (지연 로딩용) */
   goalsLoaded: boolean;

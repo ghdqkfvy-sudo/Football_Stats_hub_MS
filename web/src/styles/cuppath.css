@@ -32,6 +32,26 @@
 .cup__tie em { font-style: normal; font-size: 10.5px; color: var(--text-lo); }
 .cup__sc { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-hi); }
 .cup__tbd { font-size: 11.5px; color: var(--text-lo); }
+/* 경기별 승 · 무 · 패 칩, 승부차기 승패 */
+.cup__wdl {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 5px;
+  font-style: normal; font-size: 11px; font-weight: 800; color: #0A0D16;
+}
+.cup__wdl[data-r='W'] { background: var(--win); }
+.cup__wdl[data-r='D'] { background: var(--draw); }
+.cup__wdl[data-r='L'] { background: var(--loss); color: #fff; }
+.cup__pk {
+  font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
+  color: var(--loss); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 55%, transparent);
+}
+.cup__pk[data-won] { color: var(--win); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--win) 55%, transparent); }
+/* 라운드 끝 — 진출 · 탈락(우승 · 준우승 …) */
+.cup__fate {
+  margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 800; letter-spacing: .02em;
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+}
+.cup__fate[data-fate='adv'] { color: #0A0D16; background: var(--win); }
+.cup__fate[data-fate='out'] { color: #fff; background: var(--loss); }
 
 /* 퓨처 리소스 — 조항 종류별 영역 */
 .fgroup { margin-top: 18px; }
