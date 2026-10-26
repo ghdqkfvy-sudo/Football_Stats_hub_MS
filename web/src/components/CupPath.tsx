@@ -1,7 +1,7 @@
 import type { CupRound } from '../lib/api';
 import type { Match } from '../lib/types';
 import { Crest } from './Crest';
-import { kstShortDate } from '../lib/kst';
+import { kstShortDate, kstTime } from '../lib/kst';
 import { roundKo } from '../lib/rounds';
 import { fateOf, gameResult, tieOutcome } from '../lib/cupFate';
 
@@ -91,39 +91,54 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
               data-on={reached}
               data-blocked={blocked || undefined}
             >
-              <span className="cup__rl">{roundKo(x.round.label)}</span>
+              {/* 머리 — 라운드 이름 · (끝났으면) 진출 배지. 결승은 CHAMPIONS · RUNNERS-UP, 3위 결정전은 THIRD · FOURTH PLACE */}
+              <div className="cup__rh">
+                <span className="cup__rl">{roundKo(x.round.label)}</span>
+                {fate && (() => {
+                  const f = fateOf(x.round.label, fate);
+                  return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}{f.label}</em>;
+                })()}
+              </div>
 
               {x.games.length === 0 ? (
-                <span className="cup__tbd">{blocked ? 'OUT' : '미정'}</span>
+                <span className="cup__tbd">{blocked ? 'OUT' : '대진 미정'}</span>
               ) : (
-                x.games.map((m) => {
-                  const home = m.home.id === focusTeamId;
-                  const opp = home ? m.away : m.home;
-                  const done = m.status === 'finished';
-                  const r = done ? gameResult(m, focusTeamId) : null;
-                  return (
-                    <span className="cup__tie" key={m.id}>
-                      <Crest team={opp} size={18} />
-                      <b>{opp.shortName}</b>
-                      <em className="num">{home ? '홈' : '원정'}</em>
-                      <span className="cup__sc num">
-                        {done ? `${home ? m.homeScore : m.awayScore} : ${home ? m.awayScore : m.homeScore}` : kstShortDate(m.kickoffUtc)}
-                      </span>
-                      {r && <i className="cup__wdl" data-r={r.wdl} title={r.wdl === 'W' ? '승' : r.wdl === 'D' ? '무' : '패'}>{r.wdl}</i>}
-                      {r?.pk && (
-                        <i className="cup__pk" data-won={r.pk === 'W' || undefined} title={`승부차기 ${r.pk === 'W' ? '승' : '패'}`}>
-                          {r.pkScore ? `PK ${r.pkScore}` : r.pk === 'W' ? 'PK WIN' : 'PK LOSS'}
-                        </i>
-                      )}
-                    </span>
-                  );
-                })
+                <div className="cup__games">
+                  {x.games.map((m) => {
+                    const home = m.home.id === focusTeamId;
+                    const us = home ? m.home : m.away;
+                    const opp = home ? m.away : m.home;
+                    const done = m.status === 'finished';
+                    const r = done ? gameResult(m, focusTeamId) : null;
+                    return (
+                      <div className="cup__g" key={m.id} data-done={done || undefined}>
+                        <span className="cup__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</span>
+                        <span className="cup__vs">
+                          <Crest team={us} size={20} />
+                          <i>vs</i>
+                          <Crest team={opp} size={20} />
+                          <b>{opp.shortName}</b>
+                        </span>
+                        <span className="cup__when num">
+                          {kstShortDate(m.kickoffUtc)}
+                        </span>
+                        {/* 승부차기는 스코어 앞 칸 — 폰에서는 둘째 줄(날짜 오른쪽)로 내려 상대 이름을 덜 자른다 */}
+                        {r?.pk && (
+                          <i className="cup__pk" data-won={r.pk === 'W' || undefined} title={`승부차기 ${r.pk === 'W' ? '승' : '패'}`}>
+                            {r.pkScore ? `PK ${r.pkScore}` : r.pk === 'W' ? 'PK WIN' : 'PK LOSS'}
+                          </i>
+                        )}
+                        <span className="cup__res">
+                          {done
+                            ? <b className="cup__sc num" data-r={r?.wdl}>{home ? m.homeScore : m.awayScore}<i>:</i>{home ? m.awayScore : m.homeScore}</b>
+                            : <b className="cup__sc cup__sc--ko num">{m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc)}</b>}
+                          {r && <i className="cup__wdl" data-r={r.wdl} title={r.wdl === 'W' ? '승' : r.wdl === 'D' ? '무' : '패'}>{r.wdl}</i>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              {/* 맞대결 라운드가 끝났으면 진출 · 탈락(결승은 우승 · 준우승, 3위 결정전은 3위 · 4위) */}
-              {fate && (() => {
-                const f = fateOf(x.round.label, fate);
-                return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}{f.label}</em>;
-              })()}
             </li>
           );
         })}
