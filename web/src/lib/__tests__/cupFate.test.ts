@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fateLabel, gameResult, tieOutcome } from '../cupFate';
+import { fateOf, gameResult, tieOutcome } from '../cupFate';
 import type { Match } from '../types';
 
 const m = (home: string, away: string, hs: number, as: number, extra: Partial<Match> = {}) =>
@@ -22,11 +22,11 @@ describe('토너먼트 결과 · 진출', () => {
     expect(tieOutcome([m('A', 'B', 1, 0, { status: 'scheduled' } as Partial<Match>)], 'A')).toBeNull();
     expect(tieOutcome([m('A', 'B', 1, 1)], 'A')).toBeNull();
   });
-  it('라운드별 문구 — 결승은 우승 · 준우승, 3위 결정전은 3위 · 4위', () => {
-    expect(fateLabel('Third Round', 'adv')).toBe('진출');
-    expect(fateLabel('Rd of 16', 'out')).toBe('탈락');
-    expect(fateLabel('Final', 'adv')).toBe('우승');
-    expect(fateLabel('Final', 'out')).toBe('준우승');
-    expect(fateLabel('3rd-Place Match', 'out')).toBe('4위');
+  it('라운드별 배지 — 결승은 CHAMPIONS · RUNNERS-UP, 3위 결정전은 THIRD · FOURTH PLACE ("Third Round" 는 일반 라운드)', () => {
+    expect(fateOf('Third Round', 'adv').label).toBe('THROUGH');
+    expect(fateOf('Rd of 16', 'out').label).toBe('KNOCKED OUT');
+    expect(fateOf('Final', 'adv').label).toBe('CHAMPIONS');
+    expect(fateOf('Final', 'out').label).toBe('RUNNERS-UP');
+    expect(fateOf('3rd-Place Match', 'out').label).toBe('FOURTH PLACE');
   });
 });
