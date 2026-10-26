@@ -458,6 +458,10 @@
     justify-content: center; gap: 6px; padding: 8px 8px; min-height: 44px;
     white-space: normal; line-height: 1.18; text-align: left; font-size: 12px;
   }
+  /* Summary 대회 순위 — 리그 3 · 컵 3 을 3열 두 줄로. 한 줄에 여섯 개를 같은 폭으로 넣으면
+     "La / Liga" · "EFL / Cup" 처럼 이름이 버튼 안에서 꺾였다(2026-10-26). 윗줄 리그 · 아랫줄 컵 */
+  .comps--grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .comps--grid .comps__b { white-space: nowrap; min-height: 40px; }
 
   /* 선수 카드 아래 "최근 경기" 표는 카드를 누르면 펼친다.
      접혀 있을 때는 제목 줄만 남겨 "여기 더 있다" 를 알린다. */

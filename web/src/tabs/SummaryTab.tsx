@@ -551,7 +551,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
           </span>
         </div>
 
-        <nav className="comps" aria-label="대회 선택">
+        <nav className="comps comps--grid" aria-label="대회 선택">
           {compList.map((c) => (
             <button
               key={c}
