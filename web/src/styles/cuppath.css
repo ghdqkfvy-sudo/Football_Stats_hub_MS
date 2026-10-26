@@ -32,26 +32,66 @@
 .cup__tie em { font-style: normal; font-size: 10.5px; color: var(--text-lo); }
 .cup__sc { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text-hi); }
 .cup__tbd { font-size: 11.5px; color: var(--text-lo); }
-/* 경기별 승 · 무 · 패 칩, 승부차기 승패 */
+/* 경기별 W · D · L 칩 — 이달의 결과 폼 칩과 같은 글꼴 · 색 */
 .cup__wdl {
-  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 5px;
-  font-style: normal; font-size: 11px; font-weight: 800; color: #0A0D16;
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; flex: none;
+  font-style: normal; font-family: var(--font-display); font-size: 13.5px; font-weight: 800; line-height: 1;
+  color: #0A0D16;
 }
 .cup__wdl[data-r='W'] { background: var(--win); }
 .cup__wdl[data-r='D'] { background: var(--draw); }
 .cup__wdl[data-r='L'] { background: var(--loss); color: #fff; }
+/* 승부차기 — PK 4:3 (이긴 쪽 초록 · 진 쪽 빨강) */
 .cup__pk {
-  font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
-  color: var(--loss); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 55%, transparent);
+  font-style: normal; font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 6px; white-space: nowrap;
+  color: color-mix(in srgb, var(--loss) 70%, #fff); background: color-mix(in srgb, var(--loss) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 50%, transparent);
 }
-.cup__pk[data-won] { color: var(--win); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--win) 55%, transparent); }
-/* 라운드 끝 — 진출 · 탈락(우승 · 준우승 …) */
+.cup__pk[data-won] {
+  color: color-mix(in srgb, var(--win) 70%, #fff); background: color-mix(in srgb, var(--win) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--win) 50%, transparent);
+}
+/* 라운드 끝 — THROUGH · KNOCKED OUT · CHAMPIONS … 경기장 전광판처럼 좁은 대문자 + 아이콘 */
 .cup__fate {
-  margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 800; letter-spacing: .02em;
-  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px; flex: none;
+  font-style: normal; font-family: var(--font-display); font-size: 13.5px; font-weight: 800;
+  letter-spacing: .12em; line-height: 1; white-space: nowrap;
+  padding: 6px 12px 6px 10px; border-radius: 8px;
 }
-.cup__fate[data-fate='adv'] { color: #0A0D16; background: var(--win); }
-.cup__fate[data-fate='out'] { color: #fff; background: var(--loss); }
+.cup__fate svg { flex: none; }
+.cup__fate[data-fate='through'] {
+  color: #06150C; background: linear-gradient(135deg, #5CF29A, var(--win));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset, 0 4px 16px color-mix(in srgb, var(--win) 32%, transparent);
+}
+.cup__fate[data-fate='out'], .cup__fate[data-fate='fourth'] {
+  color: #fff; background: linear-gradient(135deg, #FF6B79, var(--loss));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.16) inset, 0 4px 16px color-mix(in srgb, var(--loss) 30%, transparent);
+}
+.cup__fate[data-fate='champ'] {
+  color: #2A1C00; background: linear-gradient(135deg, #FFE27A, #F2B705 55%, #C98A00);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 4px 18px rgba(242, 183, 5, .4);
+}
+.cup__fate[data-fate='runner'], .cup__fate[data-fate='third'] {
+  color: #0E1420; background: linear-gradient(135deg, #F2F5FA, #B8C2D3);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.4) inset, 0 4px 14px rgba(184, 194, 211, .28);
+}
+/* 결과가 난 라운드는 왼쪽에 결과 색 띠 — 한눈에 어디까지 갔는지 */
+.cup__r[data-res] { box-shadow: inset 3px 0 0 var(--res-c, transparent); }
+.cup__r[data-res='W'] { --res-c: var(--win); background: color-mix(in srgb, var(--win) 5%, rgba(255,255,255,.02)); }
+.cup__r[data-res='L'] { --res-c: var(--loss); background: color-mix(in srgb, var(--loss) 6%, rgba(255,255,255,.02)); }
+.cup__r[data-res='D'] { --res-c: var(--draw); }
+
+/* 폰 — 라운드 이름 줄 오른쪽에 배지를 붙이고, 경기는 다음 줄 전체 폭으로
+   (배지가 경기 뒤로 밀려 혼자 한 줄을 차지했다) */
+@media (max-width: 640px) {
+  .cup__r { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; }
+  .cup__rl { grid-column: 1; grid-row: 1; min-width: 0; }
+  .cup__fate { grid-column: 2; grid-row: 1; margin-left: 0; font-size: 12px; padding: 5px 10px 5px 8px; }
+  .cup__tie, .cup__tbd { grid-column: 1 / -1; }
+  .cup__r:not(:has(.cup__fate)) .cup__tbd { grid-column: 2; grid-row: 1; justify-self: end; }
+  .cup__tie .cup__wdl { margin-left: auto; }
+}
 
 /* 퓨처 리소스 — 조항 종류별 영역 */
 .fgroup { margin-top: 18px; }

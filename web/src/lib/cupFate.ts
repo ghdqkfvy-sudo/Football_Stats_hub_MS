@@ -6,7 +6,6 @@ import { roundKo } from './rounds';
  * 승 · 무 · 패는 90분(연장 포함) 스코어로, 비긴 경기는 승부차기 승패를 따로 적는다.
  */
 
-export const WDL_KO = { W: '승', D: '무', L: '패' } as const;
 
 /** 한 경기 결과 — 90분(연장 포함) 스코어로 승 · 무 · 패, 비겼으면 승부차기 승패(점수 · ESPN 승자 표시) */
 export function gameResult(m: Match, teamId: string): { wdl: 'W' | 'D' | 'L'; pk?: 'W' | 'L'; pkScore?: string } {
@@ -44,10 +43,11 @@ export function tieOutcome(games: Match[], teamId: string): 'adv' | 'out' | null
   return null;
 }
 
-export const fateLabel = (round: string, fate: 'adv' | 'out') => {
+/** 라운드 끝 배지 — 결승은 CHAMPIONS · RUNNERS-UP, 3위 결정전은 THIRD · FOURTH PLACE, 나머지는 THROUGH · KNOCKED OUT */
+export type FateKind = 'through' | 'out' | 'champ' | 'runner' | 'third' | 'fourth';
+export function fateOf(round: string, fate: 'adv' | 'out'): { kind: FateKind; label: string } {
   const ko = roundKo(round);
-  if (ko === '결승') return fate === 'adv' ? '우승' : '준우승';
-  if (/3rd|third[- ]place/i.test(round) || ko === '3위 결정전') return fate === 'adv' ? '3위' : '4위';
-  return fate === 'adv' ? '진출' : '탈락';
-};
-
+  if (ko === '결승') return fate === 'adv' ? { kind: 'champ', label: 'CHAMPIONS' } : { kind: 'runner', label: 'RUNNERS-UP' };
+  if (/3rd|third[- ]place/i.test(round) || ko === '3위 결정전') return fate === 'adv' ? { kind: 'third', label: 'THIRD PLACE' } : { kind: 'fourth', label: 'FOURTH PLACE' };
+  return fate === 'adv' ? { kind: 'through', label: 'THROUGH' } : { kind: 'out', label: 'KNOCKED OUT' };
+}
