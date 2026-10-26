@@ -35,8 +35,9 @@ import { dedupeToday, isTodayLive, useLives, withLiveScore } from '../lib/live';
 
 /** 순위·선수 기록을 보여 줄 대회 */
 const COMPS: CompetitionKey[] = ['eng.1', 'esp.1', 'uefa.champions'];
-/** 대회 순위 옆에 붙는 컵 — 라운드 대진 파일(cup-{대회}.json)이 있을 때만 버튼이 생긴다 (scripts/lib/cups.mjs 와 같은 목록) */
-const CUPS: CompetitionKey[] = ['eng.league_cup', 'eng.fa', 'esp.copa_del_rey', 'ger.dfb_pokal'];
+/** 대회 순위 옆에 붙는 컵 — 라운드 대진 파일(cup-{대회}.json)이 있을 때만 버튼이 생긴다.
+    DFB 포칼은 수집은 하지만 Summary 에는 넣지 않는다(일곱 팀 중 분데스리가 팀이 없다, 2026-10-26) */
+const CUPS: CompetitionKey[] = ['eng.league_cup', 'eng.fa', 'esp.copa_del_rey'];
 /** 팀 비교의 유럽대항전 칸 — 위에 있는 대회부터 */
 const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
 
