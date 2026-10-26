@@ -31,11 +31,11 @@ export function CupBracket({ rounds, colors, mobile }: {
       if (!mobile && ko.includes(i)) return;
       out.push({ kind: 'list', round: i });
     });
-    /* 폰은 8강부터도 한 라운드씩 — 바로 다음 라운드는 대진이 아직 없어도 "대진 미정" 한 장으로 */
-    if (mobile) {
-      const last = out.length ? (out[out.length - 1] as { round: number }).round : -1;
-      if (last >= 0 && last + 1 < rounds.length) out.push({ kind: 'list', round: last + 1 });
-    } else if (ko.length && (ko.some((i) => rounds[i].matches.length) || out.length)) {
+    /* 바로 다음 라운드는 대진이 아직 없어도 "대진 미정" 한 장으로 — 폰은 8강부터도 한 라운드씩,
+       넓은 화면은 트리 앞 라운드(포칼 16강처럼)만 */
+    const last = out.length ? (out[out.length - 1] as { round: number }).round : -1;
+    if (last >= 0 && last + 1 < rounds.length && (mobile || !ko.includes(last + 1))) out.push({ kind: 'list', round: last + 1 });
+    if (!mobile && ko.length && (ko.some((i) => rounds[i].matches.length) || out.length)) {
       out.push({ kind: 'tree', rounds: ko });
     }
     return out;
