@@ -125,4 +125,23 @@ describe('징계 — 대회별', () => {
     const d = discipline([g('M1', 'usa.1', '2026-10-01T00:00Z', 4)], mls, undefined, NOW);
     expect(d.risks).toEqual([]);
   });
+
+  it('잉글랜드 퇴장은 국내 대회 전부에 걸린다 — 리그 퇴장 → 다음 EFL컵에서 소화, 그 뒤 리그는 뛴다', () => {
+    const eng = [
+      m('L1', 'eng.1', '2026-10-24T16:30Z', 'finished'),
+      m('E1', 'eng.league_cup', '2026-10-28T20:00Z', 'scheduled'),
+      m('L2', 'eng.1', '2026-10-31T12:30Z', 'scheduled'),
+    ];
+    const red = [g('L1', 'eng.1', '2026-10-24T16:30Z', 0, 1)];
+    /* EFL컵 전: 그 EFL컵 경기가 정지 */
+    const before = discipline(red, eng, undefined, Date.parse('2026-10-26T00:00Z'));
+    expect(before.sus?.match?.id).toBe('E1');
+    expect(before.badge).toBe('red');
+    /* EFL컵을 치렀으면 소화 — 리그 다음 경기는 뛴다 */
+    const done = eng.map((x) => (x.id === 'E1' ? { ...x, status: 'finished' as const } : x));
+    expect(discipline(red, done, undefined, Date.parse('2026-10-29T06:00Z')).all).toEqual([]);
+    /* 챔스 퇴장은 여전히 챔스 안에서만 */
+    const ucl = discipline([g('C1', 'uefa.champions', '2026-09-20T19:00Z', 0, 1)], team, undefined, NOW);
+    expect(ucl.sus?.match?.id).toBe('C2');
+  });
 });

@@ -30,6 +30,14 @@ export const CARD_RULES: Record<string, Rule> = {
   /* MLS 등 규정을 확실히 모르는 대회는 넣지 않는다 — 틀린 경고를 띄우느니 안 띄운다 */
 };
 
+/**
+ * 퇴장 징계가 대회를 넘나드는 묶음 — 잉글랜드는 리그 · FA컵 · EFL컵 퇴장 징계가 **국내 1군 경기 전부**에 걸린다
+ * (2026-10-24 팔머: 리그 경고 2장 퇴장 → 10-28 EFL컵 리버풀전 명단 제외로 소화, 10-31 리그는 뛴다).
+ * 경고 누적은 지금처럼 대회마다 따로 센다. 여기 없는 대회(라리가 · 챔스 …)는 그 대회 안에서만.
+ */
+const RED_SCOPE: Record<string, string> = { 'eng.1': 'eng', 'eng.fa': 'eng', 'eng.league_cup': 'eng' };
+const sameRedScope = (a: string, b: string) => a === b || (!!RED_SCOPE[a] && RED_SCOPE[a] === RED_SCOPE[b]);
+
 export interface Suspension {
   competition: string;
   /** red = 퇴장 · yellow = 경고 누적 · fotmob = FotMob 확정(사유 모름) */
@@ -128,10 +136,19 @@ export function discipline(
     const teamGames = teamMatches.filter((m) => m.competition === comp && finished(m)).length;
     const total = yellowsIn(games);
 
-    if (!playedSince && next) {
+    /* 퇴장 — 같은 묶음(잉글랜드 국내 대회)의 다음 경기에서 소화한다 */
+    if (last.red > 0) {
+      const served = teamMatches.some((m) => sameRedScope(m.competition, comp) && finished(m) && m.kickoffUtc > last.kickoffUtc);
+      const nextRed = upcoming.find((m) => sameRedScope(m.competition, comp));
+      if (!served && nextRed) {
+        const calc: Suspension = { competition: comp, reason: 'red', confirmed: false, match: nextRed };
+        const fm = byComp.get(comp);
+        if (!fm) byComp.set(comp, calc);
+        else if (fm.match?.id === calc.match?.id) byComp.set(comp, { ...fm, reason: 'red' });
+      }
+    } else if (!playedSince && next) {
       let calc: Suspension | undefined;
-      if (last.red > 0) calc = { competition: comp, reason: 'red', confirmed: false, match: next };
-      else if (rule && last.yellow > 0) {
+      if (rule && last.yellow > 0) {
         const before = total - last.yellow;
         const hit = rule.thresholds(teamGames - 1).find((t) => before < t && total >= t);
         if (hit) calc = { competition: comp, reason: 'yellow', confirmed: false, yellows: total, match: next };
