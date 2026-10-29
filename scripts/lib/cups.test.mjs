@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cupEvent, daysToFetch, mergeRound, roundIndexOf } from './cups.mjs';
+import { assignRounds, cupEvent, daysToFetch, mergeRound, roundIndexOf } from './cups.mjs';
 
 const EV = { id: '9', date: '2026-10-28T20:00Z', competitions: [{
   status: { type: { completed: true, state: 'post', name: 'STATUS_FINAL_PEN', shortDetail: 'FT-Pens' } },
@@ -39,4 +39,20 @@ test('mergeRound · roundIndexOf', () => {
   const rounds = [{ start: '2026-09-01T00:00Z', end: '2026-09-28T23:59Z' }, { start: '2026-09-29T00:00Z', end: '2026-11-03T00:00Z' }];
   assert.equal(roundIndexOf(rounds, '2026-10-28T20:00Z'), 1);
   assert.equal(roundIndexOf(rounds, '2026-12-01T00:00Z'), -1);
+});
+
+test('assignRounds: 겹치는 라운드 구간 · 미뤄진 경기 — 한 경기는 한 라운드에만', () => {
+  const cal = [
+    { label: 'First Round', start: '2026-10-12T00:00Z', end: '2026-11-01T00:00Z' },
+    { label: 'Second Round', start: '2026-11-01T00:00Z', end: '2027-07-01T00:00Z' },
+    { label: 'Round of 32', start: '2026-11-02T00:00Z', end: '2027-07-01T00:00Z' },
+  ];
+  const prev = [{ label: 'First Round', events: [{ id: '1', date: '2026-10-28T19:00Z', v: 'old' }] }];
+  const got = assignRounds(cal, prev, [
+    { id: '1', date: '2026-11-04T19:00Z', v: 'new' },   // 1라운드 경기가 11-04 로 미뤄짐
+    { id: '2', date: '2026-11-05T19:00Z' },             // 새 경기 — 겹치는 구간 중 첫 라운드
+    { id: '3', date: '2026-10-27T19:00Z' },
+  ]);
+  assert.deepEqual(got.map((r) => r.events.map((e) => e.id)), [['3', '1'], ['2'], []]);
+  assert.equal(got[0].events.find((e) => e.id === '1').v, 'new');
 });

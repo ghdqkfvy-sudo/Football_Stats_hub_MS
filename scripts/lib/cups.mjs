@@ -77,3 +77,36 @@ export function roundIndexOf(rounds, iso) {
   const t = Date.parse(iso);
   return rounds.findIndex((r) => t >= Date.parse(r.start) && t <= Date.parse(r.end));
 }
+
+/**
+ * 경기를 라운드에 **한 번만** 놓는다 (2026-10-29 코파 델 레이).
+ * ESPN 은 미래 라운드 구간을 겹치게 준다(2라운드부터 하루 간격 시작 · 끝은 전부 2027-07-01).
+ * 날짜로만 넣으면 미뤄진 1라운드 경기가 2라운드 · 32강 · 16강 … 에 똑같이 들어갔다.
+ *  - 이전 파일에 있던 경기는 처음 놓였던(가장 이른) 라운드에 그대로 — 날짜가 바뀌어도(연기) 옮기지 않는다
+ *  - 새 경기는 날짜가 들어가는 **첫** 라운드
+ *  - 같은 경기는 이번에 받은 것(최신)으로 덮는다
+ * @param cal    라운드 달력 [{label,start,end}]
+ * @param prev   이전 파일의 rounds [{label, events}] (없으면 [])
+ * @param fetched 이번에 받은 경기들(라운드 구분 없이)
+ * @returns cal 순서대로 [{label,start,end,events}]
+ */
+export function assignRounds(cal, prev, fetched) {
+  const home = new Map();
+  const latest = new Map();
+  for (const r of prev ?? []) for (const e of r.events ?? []) {
+    if (!home.has(e.id)) home.set(e.id, r.label);
+    if (!latest.has(e.id)) latest.set(e.id, e);
+  }
+  for (const e of fetched) if (e) {
+    latest.set(e.id, e);
+    if (!home.has(e.id)) {
+      const i = roundIndexOf(cal, e.date);
+      if (i >= 0) home.set(e.id, cal[i].label);
+    }
+  }
+  return cal.map((r) => ({
+    label: r.label, start: r.start, end: r.end,
+    events: [...latest.values()].filter((e) => home.get(e.id) === r.label)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id)),
+  }));
+}
