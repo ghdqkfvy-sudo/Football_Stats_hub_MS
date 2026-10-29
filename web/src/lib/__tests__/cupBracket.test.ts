@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { currentRound, isKnockoutTree, tiesOf, treeOrder } from '../cupBracket';
 import type { Match } from '../types';
-import type { CupRoundData } from '../api';
+import { dedupeCupRounds, type CupRoundData } from '../api';
 
 const T = (id: string) => ({ id, name: id, shortName: id, abbr: id, logo: '' });
 const m = (h: string, a: string, hs: number | undefined, as: number | undefined, kick: string, extra: Partial<Match> = {}) =>
@@ -30,5 +30,13 @@ describe('컵 대진', () => {
     const qf = tiesOf([m('A', 'B', 1, 0, '1'), m('C', 'D', 1, 0, '2'), m('E', 'F', 1, 0, '3'), m('G', 'H', 0, 1, '4')]);
     const sf = tiesOf([m('A', 'E', undefined, undefined, '5'), m('C', 'H', undefined, undefined, '6')]);
     expect(treeOrder(qf, sf).map((t) => t.a.id)).toEqual(['A', 'E', 'C', 'G']);
+  });
+  it('한 경기는 한 라운드에만 — 가장 이른 라운드, 내용은 최신(미뤄진 코파 델 레이 경기)', () => {
+    const R = (label: string, ms: Match[]): CupRoundData => ({ label, start: '', end: '', matches: ms });
+    const old = m('A', 'B', undefined, undefined, '2026-10-28', { id: 'x' } as Partial<Match>);
+    const moved = m('A', 'B', 2, 1, '2026-11-04', { id: 'x' } as Partial<Match>);
+    const got = dedupeCupRounds([R('First Round', [old]), R('Second Round', [moved]), R('Round of 32', [moved])]);
+    expect(got.map((r) => r.matches.length)).toEqual([1, 0, 0]);
+    expect(got[0].matches[0].kickoffUtc).toBe('2026-11-04');
   });
 });

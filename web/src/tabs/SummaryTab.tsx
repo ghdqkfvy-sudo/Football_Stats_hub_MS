@@ -569,7 +569,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
         <Swap k={`${active}:${league || cups[active] ? 1 : 0}`} dir={compDir}>
         {cups[active] ? (
-          <CupBracket rounds={cups[active]} colors={cupColors} mobile={mobile} />
+          <CupBracket key={active} rounds={cups[active]} colors={cupColors} mobile={mobile} />
         ) : !league ? (
           <div className="skel" style={{ height: 420 }} />
         ) : league.table ? (

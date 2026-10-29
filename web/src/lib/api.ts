@@ -500,5 +500,25 @@ export async function loadCup(slug: string): Promise<CupRoundData[]> {
     empty: (v) => !v.some((x) => x.matches.length),
     fallback: [],
   });
-  return r.data;
+  return dedupeCupRounds(r.data);
+}
+
+/**
+ * 한 경기는 한 라운드에만 — 가장 먼저 나온 라운드에 두고, 내용은 가장 최신(끝난 > 진행 > 예정, 같으면 늦은 날짜).
+ * 겹치는 라운드 구간 때문에 미뤄진 코파 델 레이 1라운드 경기가 2라운드 · 32강 … 에 똑같이 들어 있던 파일용
+ * (수집기도 고쳤다 — scripts/lib/cups.mjs assignRounds).
+ */
+export function dedupeCupRounds(rounds: CupRoundData[]): CupRoundData[] {
+  const rank = (m: Match) => (m.status === 'finished' ? 3 : m.status === 'live' ? 2 : m.status === 'postponed' ? 0 : 1);
+  const best = new Map<string, Match>();
+  const home = new Map<string, number>();
+  rounds.forEach((r, i) => r.matches.forEach((m) => {
+    if (!home.has(m.id)) home.set(m.id, i);
+    const b = best.get(m.id);
+    if (!b || rank(m) > rank(b) || (rank(m) === rank(b) && m.kickoffUtc > b.kickoffUtc)) best.set(m.id, m);
+  }));
+  return rounds.map((r, i) => ({
+    ...r,
+    matches: [...best.values()].filter((m) => home.get(m.id) === i).sort((a, b) => a.kickoffUtc.localeCompare(b.kickoffUtc)),
+  }));
 }

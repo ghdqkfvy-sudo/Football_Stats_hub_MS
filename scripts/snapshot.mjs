@@ -37,7 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
-import { CUP_LEAGUES, cupEvent, daysToFetch, mergeRound, roundIndexOf } from './lib/cups.mjs';
+import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -80,7 +80,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-31';
+const CODE_VERSION = 'snap-32';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2076,19 +2076,16 @@ async function main() {
     let prev = null;
     try { prev = JSON.parse(await readFile(join(OUT, `cup-${lg}.json`), 'utf8')); } catch { /* 처음 */ }
     const prevRound = (label) => (prev?.rounds ?? []).find((r) => r.label === label);
-    const rounds = [];
-    let fetchedDays = 0;
-    for (const r of cal) {
-      const had = prevRound(r.label);
-      const days = daysToFetch(r, now, !!had?.events?.length);
-      fetchedDays += days.length;
-      const got = await pool(days, 6, async (d) => {
-        const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}`);
-        return (j?.events ?? []).map(cupEvent);
-      });
-      const inRound = got.flat().filter((e) => e && roundIndexOf([r], e.date) === 0);
-      rounds.push({ label: r.label, start: r.start, end: r.end, events: mergeRound(had?.events, inRound) });
-    }
+    /* 받을 날짜는 라운드마다 고르되(겹치는 구간은 한 번만), 경기를 라운드에 놓는 건 assignRounds —
+       같은 경기가 겹친 라운드마다 들어가지 않게(코파 델 레이) */
+    const days = new Set();
+    for (const r of cal) for (const d of daysToFetch(r, now, !!prevRound(r.label)?.events?.length)) days.add(d);
+    const fetchedDays = days.size;
+    const got = await pool([...days], 6, async (d) => {
+      const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}`);
+      return (j?.events ?? []).map(cupEvent);
+    });
+    const rounds = assignRounds(cal, prev?.rounds ?? [], got.flat());
     const total = rounds.reduce((a, r) => a + r.events.length, 0);
     if (!total) { console.log(`    ${lg}: 경기 0건 — 저장 안 함`); continue; }
     await save(`cup-${lg}.json`, { league: lg, rounds, codeVersion: CODE_VERSION, fetchedAt: new Date().toISOString() });

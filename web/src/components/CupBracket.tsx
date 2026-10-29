@@ -105,9 +105,12 @@ function Side({ t, team, goals }: { t: Tie; team: Tie['a']; goals: number }) {
   const won = t.winnerId === team.id;
   const lost = !!t.winnerId && !won;
   const kor = koreansOf(team.id);
+  /* H · A — 단판이면 그 경기, 1·2차전이면 1차전 기준 */
+  const home = t.legs[0].home.id === team.id;
   return (
     <>
       <span className="cbr__row" data-lost={lost || undefined}>
+        <i className="cbr__ha" data-home={home || undefined} title={home ? '홈' : '원정'}>{home ? 'H' : 'A'}</i>
         <Crest team={team} size={22} />
         <b>{team.shortName}</b>
         {kor.map((n) => <span key={n} className="kortag"><KorFlag />{n}</span>)}
@@ -175,6 +178,7 @@ function Tree({ rounds, colors }: { rounds: CupRoundData[]; colors: Record<strin
                     const won = t.winnerId === tm.id;
                     return (
                       <div key={tm.id} className="cbr__mt" data-win={won || undefined} data-lost={(!!t.winnerId && !won) || undefined}>
+                        <i className="cbr__ha" data-home={j === 0 || undefined}>{j === 0 ? 'H' : 'A'}</i>
                         <Crest team={tm} size={20} />
                         <b>{tm.shortName}</b>
                         {t.state !== 'scheduled' && <i className="num">{t.agg[j]}</i>}

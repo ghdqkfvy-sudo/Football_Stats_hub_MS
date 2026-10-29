@@ -5,6 +5,7 @@
  */
 const ROUND_KO: Record<string, string> = {
   'preliminary round': '예선',
+  'qualifying round': '예선',
   'first round': '1라운드',
   'second round': '2라운드',
   'third round': '3라운드',
