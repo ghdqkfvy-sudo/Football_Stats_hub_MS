@@ -30,9 +30,14 @@
   border: 1px solid var(--line); background: rgba(255,255,255,.025);
 }
 .cbr__tie[data-ours] {
+  position: relative;
   border-color: color-mix(in srgb, var(--tc) 55%, transparent);
   background: linear-gradient(90deg, color-mix(in srgb, var(--tc) 16%, transparent), rgba(255,255,255,.02) 60%);
-  box-shadow: inset 3px 0 0 var(--tc);
+}
+/* 왼쪽 팀 컬러 띠 — 곧은 막대(둥근 모서리를 따라 휘지 않게) */
+.cbr__tie[data-ours]::before {
+  content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--tc);
 }
 .cbr__row { grid-column: 1; display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13.5px; }
 .cbr__row b { font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

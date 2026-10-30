@@ -17,8 +17,11 @@
 }
 .cup__r[data-on='false'] { border: 1px dashed var(--line); background: transparent; box-shadow: none; padding: 11px 18px; display: flex; align-items: center; justify-content: space-between; }
 .cup__r[data-blocked='true'] { opacity: .4; }
-/* 결과 난 라운드 — 왼쪽 결과 색 띠 */
-.cup__r[data-res] { box-shadow: inset 3px 0 0 var(--res-c, transparent), inset 0 -1px 0 rgba(150,180,230,.10); }
+/* 결과 난 라운드 — 왼쪽 결과 색 띠. 둥근 모서리를 따라 휘면 "(" 처럼 보여서(폰 실측) 곧은 막대를 안쪽에 세운다 */
+.cup__r[data-res]::before {
+  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--res-c, transparent);
+}
 .cup__r[data-res='W'] { --res-c: var(--win); }
 .cup__r[data-res='L'] { --res-c: var(--loss); }
 .cup__r[data-res='D'] { --res-c: var(--draw); }
@@ -36,6 +39,10 @@
 .cup__g .ml__date i { white-space: nowrap; }
 .cup__g .fchip { font-style: normal; }
 .cup__g .ml__meta { gap: 6px; }
+/* 폰: HOME/AWAY 와 W/D/L(또는 시각)을 오른쪽에 붙여서 — 양 끝으로 벌어져 따로 놀았다 */
+@media (max-width: 640px) {
+  .cup__g .ml__meta { justify-content: flex-end; gap: 8px; }
+}
 .cup__ha.ml__ha[data-home] {
   color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
