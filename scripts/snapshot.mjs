@@ -37,7 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
-import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch, farRange } from './lib/cups.mjs';
+import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -80,7 +80,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-33';
+const CODE_VERSION = 'snap-34';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2081,17 +2081,32 @@ async function main() {
     const days = new Set();
     for (const r of cal) for (const d of daysToFetch(r, now, !!prevRound(r.label)?.events?.length)) days.add(d);
     const fetchedDays = days.size;
-    /* +14일 창 너머 — 다음 라운드 대진(8강 12월 중순 등)은 범위 한 번으로 찾는다(farRange) */
-    const far = [...new Set(cal.map((r) => farRange(r, now)).filter(Boolean))];
-    const got = await pool([...days, ...far], 6, async (d) => {
-      const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}${d.includes('-') ? '&limit=200' : ''}`);
+    const got = await pool([...days], 6, async (d) => {
+      const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}`);
       return (j?.events ?? []).map(cupEvent);
     });
-    const rounds = assignRounds(cal, prev?.rounds ?? [], got.flat());
+    let rounds = assignRounds(cal, prev?.rounds ?? [], got.flat());
+    /* +14일 창 너머 — 다음 라운드 대진(EFL컵 8강 12월 중순 등)은 하루 창에 안 걸린다.
+       스코어보드 범위 요청은 400 이라(2026-10-30 실측), 마지막 라운드에 나온 팀들의 그 대회 앞으로의
+       일정(teams/{id}/schedule?fixture=true)에서 찾는다 — 리버풀 일정엔 8강이 이미 있었다 */
+    const lastIdx = rounds.map((r) => r.events.length > 0).lastIndexOf(true);
+    /* 아직 살아 있는 팀만 — 끝난 경기는 이긴 쪽, 안 끝난 경기는 양쪽 */
+    const alive = (e) => {
+      const cs = e.competitions[0].competitors;
+      const won = cs.filter((c) => c.winner);
+      return e.competitions[0].status.type.completed && won.length ? won : cs;
+    };
+    const teamIds = lastIdx < 0 ? [] : [...new Set(rounds[lastIdx].events.flatMap((e) => alive(e).map((c) => c.team.id)))].filter(Boolean);
+    const ahead = await pool(teamIds, 6, async (id) => {
+      const j = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/teams/${id}/schedule?fixture=true`);
+      return (j?.events ?? []).filter((e) => Date.parse(e?.date) > now).map(cupEvent);
+    });
+    const extra = ahead.flat().filter(Boolean);
+    if (extra.length) rounds = assignRounds(cal, rounds, extra);
     const total = rounds.reduce((a, r) => a + r.events.length, 0);
     if (!total) { console.log(`    ${lg}: 경기 0건 — 저장 안 함`); continue; }
     await save(`cup-${lg}.json`, { league: lg, rounds, codeVersion: CODE_VERSION, fetchedAt: new Date().toISOString() });
-    console.log(`    ${lg}: ${rounds.filter((r) => r.events.length).length}라운드 · ${total}경기 (이번에 ${fetchedDays}일 받음)`);
+    console.log(`    ${lg}: ${rounds.filter((r) => r.events.length).length}라운드 · ${total}경기 (이번에 ${fetchedDays}일 · 팀 ${teamIds.length}곳 일정 받음)`);
   }
 
   if (wants('slow')) for (const lg of [...LEAGUES, ...TABLE_LEAGUES]) {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignRounds, cupEvent, daysToFetch, farRange, mergeRound, roundIndexOf } from './cups.mjs';
+import { assignRounds, cupEvent, daysToFetch, mergeRound, roundIndexOf } from './cups.mjs';
 
 const EV = { id: '9', date: '2026-10-28T20:00Z', competitions: [{
   status: { type: { completed: true, state: 'post', name: 'STATUS_FINAL_PEN', shortDetail: 'FT-Pens' } },
@@ -57,9 +57,3 @@ test('assignRounds: 겹치는 라운드 구간 · 미뤄진 경기 — 한 경�
   assert.equal(got[0].events.find((e) => e.id === '1').v, 'new');
 });
 
-test('farRange: +14일 창 너머 라운드 구간을 범위 하나로 — 8강(12월)은 잡고, 먼 라운드는 아직', () => {
-  const now = Date.parse('2026-10-30T02:00Z');
-  assert.equal(farRange({ start: '2026-11-03T08:00Z', end: '2026-12-29T07:59Z' }, now), '20261114-20261229');
-  assert.equal(farRange({ start: '2026-09-29T07:00Z', end: '2026-11-03T07:59Z' }, now), null);   // 창 안에서 끝남
-  assert.equal(farRange({ start: '2027-02-09T00:00Z', end: '2027-06-01T00:00Z' }, now), null);   // 60일 넘게 남음
-});

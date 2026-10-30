@@ -111,17 +111,3 @@ export function assignRounds(cal, prev, fetched) {
   }));
 }
 
-/**
- * 멀리 있는 경기 찾기 — 하루씩 받는 창(지금+14일) 너머의 라운드 구간을 **범위 한 번**으로 (2026-10-30).
- * 4라운드가 끝나고 8강 대진(12월 중순)이 나와도 +14일 창 밖이라 안 잡혔다.
- * 범위 요청은 경기가 많으면 잘리지만(리그) 다음 라운드는 몇 경기뿐이라 괜찮다 — 잘려도 다음 회차 · 하루 창이 메운다.
- * 시작이 지금+60일 안인 라운드만, 끝은 지금+120일까지. 받을 게 없으면 null.
- * @returns 'YYYYMMDD-YYYYMMDD' | null
- */
-export function farRange(round, now) {
-  const s = Date.parse(round.start), e = Date.parse(round.end);
-  if (!Number.isFinite(s) || !Number.isFinite(e) || s > now + 60 * DAY) return null;
-  const from = Math.max(s, now + 15 * DAY);
-  const to = Math.min(e, now + 120 * DAY);
-  return from <= to ? `${ymd(from)}-${ymd(to)}` : null;
-}
