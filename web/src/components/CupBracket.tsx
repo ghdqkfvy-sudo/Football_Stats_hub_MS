@@ -15,6 +15,13 @@ import { Swap, type SwapDir } from './Swap';
  * 우리 팀(일곱 팀 · 코리안리거 소속팀) 경기는 따로 빼지 않고 제자리에서 팀 컬러로만 표시한다.
  * 넓은 화면은 8강 · 4강 · 결승을 한 장의 대진표(트리)로, 폰은 그것도 라운드마다 ‹ › 로.
  */
+const CLOCK = (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
+
 type Page = { kind: 'list'; round: number } | { kind: 'tree'; rounds: number[] };
 
 export function CupBracket({ rounds, colors, mobile }: {
@@ -137,9 +144,10 @@ function TieCard({ t, tc }: { t: Tie; tc?: string }) {
       <Side t={t} team={t.a} goals={t.agg[0]} />
       <Side t={t} team={t.b} goals={t.agg[1]} />
       {t.state === 'scheduled' && (
+        /* 이달의 경기와 같은 표기 — 위 날짜(작게), 아래 시계 + 시각 */
         <span className="cbr__ko num">
-          <b>{first.timeTBD ? 'TBD' : kstTime(first.kickoffUtc)}</b>
           <span>{kstShortDate(first.kickoffUtc)}</span>
+          <b data-tbd={first.timeTBD || undefined}>{!first.timeTBD && CLOCK}{first.timeTBD ? '시간 미정' : kstTime(first.kickoffUtc)}</b>
         </span>
       )}
       {(live || t.pens || legsLine) && (
