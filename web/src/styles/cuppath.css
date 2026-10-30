@@ -9,15 +9,17 @@
 .cup__note { font-size: 11px; color: var(--text-lo); }
 .cup__path { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; }
 
-/* 라운드 한 칸 — 이달의 경기(MonthList) 카드와 같은 판. 머리 줄(라운드 · 진출 배지) 아래 경기 줄 */
+/* 라운드 한 칸 — 머리 줄(라운드 · 결과 · 진출) 아래 경기 전광판 */
 .cup__r {
-  position: relative; border-radius: 12px; border: 1px solid transparent;
-  background: rgba(6,16,38,.16); box-shadow: inset 0 -1px 0 rgba(150,180,230,.10);
-  padding-top: 11px;
+  position: relative; border-radius: 12px; padding: 12px 16px 14px 18px;
+  background: rgba(6,16,38,.22); box-shadow: inset 0 0 0 1px rgba(150,180,230,.08);
 }
-.cup__r[data-on='false'] { border: 1px dashed var(--line); background: transparent; box-shadow: none; padding: 11px 18px; display: flex; align-items: center; justify-content: space-between; }
+.cup__r[data-on='false'] {
+  display: flex; align-items: center; justify-content: space-between; padding-block: 11px;
+  background: transparent; box-shadow: none; outline: 1px dashed var(--line); outline-offset: -1px;
+}
 .cup__r[data-blocked='true'] { opacity: .4; }
-/* 결과 난 라운드 — 왼쪽 결과 색 띠. 둥근 모서리를 따라 휘면 "(" 처럼 보여서(폰 실측) 곧은 막대를 안쪽에 세운다 */
+/* 결과 난 라운드 — 왼쪽 곧은 결과 색 막대(둥근 모서리를 따라 휘지 않게) */
 .cup__r[data-res]::before {
   content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
   border-radius: 0 3px 3px 0; background: var(--res-c, transparent);
@@ -26,38 +28,67 @@
 .cup__r[data-res='L'] { --res-c: var(--loss); }
 .cup__r[data-res='D'] { --res-c: var(--draw); }
 
-.cup__rh { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 18px; }
-.cup__r[data-on='false'] .cup__rh { padding: 0; }
-.cup__rl { font-size: 12.5px; font-weight: 700; color: var(--text-mid); letter-spacing: .01em; }
-.cup__r[data-res] .cup__rl { color: var(--text-hi); }
+.cup__rh { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; }
+.cup__rl { font-size: 13px; font-weight: 700; color: var(--text-hi); letter-spacing: -.005em; }
+.cup__r[data-on='false'] .cup__rl { color: var(--text-mid); font-weight: 600; }
+.cup__badges { display: inline-flex; align-items: center; gap: 6px; }
+.cup__wdl.fchip { font-style: normal; width: 20px; height: 20px; font-size: 11px; border-radius: 5px; }
 .cup__tbd { font-size: 12px; color: var(--text-lo); }
 .cup__r[data-blocked='true'] .cup__tbd { font-weight: 700; letter-spacing: .1em; }
 
-/* 경기 줄 — .ml__row 그대로(날짜 · 대회 막대 · 대진 · 오른쪽 정보) */
-.cup__games { display: flex; flex-direction: column; }
-.cup__g { cursor: default; grid-template-columns: 50px 3px minmax(0, 1fr) 160px; }
-.cup__g .ml__date i { white-space: nowrap; }
-.cup__g .fchip { font-style: normal; }
-.cup__g .ml__meta { gap: 6px; }
-/* 폰: HOME/AWAY 와 W/D/L(또는 시각)을 오른쪽에 붙여서 — 양 끝으로 벌어져 따로 놀았다 */
-@media (max-width: 640px) {
-  .cup__g .ml__meta { justify-content: flex-end; gap: 8px; }
+/* 경기 — 날짜 줄 + 전광판 */
+.cup__games { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.cup__when { display: block; font-size: 11.5px; color: var(--text-lo); letter-spacing: .01em; }
+.cup__when i { font-style: normal; margin: 0 6px; opacity: .6; }
+.cup__when [data-home] { color: var(--accent); font-weight: 700; }
+.cup__sb {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
+  gap: 14px; margin-top: 8px;
 }
-.cup__ha.ml__ha[data-home] {
-  color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+.cup__team { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.cup__team--home { justify-content: flex-end; }
+.cup__team--home img, .cup__team--home .mono { order: 2; }
+.cup__team > img, .cup__team > .mono { flex: none; }
+.cup__team b {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; font-weight: 600; color: var(--text-mid);
 }
-.cup__res { display: inline-flex; align-items: center; gap: 6px; }
-.ml__ko[data-tbd] { font-size: 12px; font-weight: 600; color: var(--text-lo); text-shadow: none; }
-/* 승부차기 — 작은 글자, 이긴 쪽 초록 · 진 쪽 빨강 */
-.cup__pk {
-  font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
-  color: color-mix(in srgb, var(--loss) 75%, #fff);
+.cup__team[data-ours] b { color: var(--text-hi); font-weight: 800; }
+.cup__team[data-lost] b { color: var(--text-lo); font-weight: 500; }
+.cup__team[data-lost] > img, .cup__team[data-lost] > .mono { opacity: .55; }
+.cup__mid { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; }
+.cup__score {
+  font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1; color: var(--text-hi);
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
 }
+.cup__score i { font-style: normal; margin: 0 6px; color: var(--text-lo); font-weight: 500; }
+.cup__score [data-lost] { color: var(--text-lo); }
+.cup__ko {
+  font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1;
+  color: color-mix(in srgb, var(--accent) 70%, #fff);
+}
+.cup__ko--tbd { font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-lo); }
+.cup__pk { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; color: color-mix(in srgb, var(--loss) 75%, #fff); }
 .cup__pk[data-won] { color: color-mix(in srgb, var(--win) 75%, #fff); }
 
-@media (max-width: 860px) {
-  .cup__g { grid-template-columns: 46px 3px minmax(0, 1fr); }
+/* 넓은 화면 — 한 줄: [라운드] [날짜 · 전광판] [결과 · 진출]. 두 줄로 쌓으면 카드가 길고 가운데가 비었다 */
+@media (min-width: 641px) {
+  .cup__r[data-on='true'] { display: grid; grid-template-columns: 120px minmax(0, 1fr) 220px; align-items: center; column-gap: 18px; padding: 14px 18px 14px 22px; }
+  .cup__r[data-on='true'] .cup__rh { display: contents; }
+  .cup__r[data-on='true'] .cup__rl { grid-column: 1; grid-row: 1; }
+  .cup__r[data-on='true'] .cup__badges { grid-column: 3; grid-row: 1; justify-self: end; }
+  .cup__r[data-on='true'] .cup__games { grid-column: 2; grid-row: 1; margin-top: 0; }
+  .cup__when { text-align: center; }
+  .cup__sb { margin-top: 6px; }
+}
+
+@media (max-width: 640px) {
+  .cup__r { padding: 11px 12px 13px 14px; }
+  .cup__sb { gap: 10px; }
+  .cup__team { gap: 7px; }
+  .cup__team b { font-size: 13.5px; }
+  .cup__score { font-size: 22px; }
+  .cup__mid { min-width: 56px; }
 }
 
 /* 진출 배지 — 사이트의 작은 알약(새벽 배지 · HOME/AWAY 와 같은 무게): 옅은 색 판 + 테두리 + 아이콘 */

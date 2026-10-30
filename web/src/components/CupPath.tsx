@@ -2,7 +2,6 @@ import type { CupRound } from '../lib/api';
 import type { Match } from '../lib/types';
 import { Crest } from './Crest';
 import { kstParts, kstTime } from '../lib/kst';
-import { usePalette } from '../lib/palette';
 import { roundKo } from '../lib/rounds';
 import { fateOf, gameResult, tieOutcome } from '../lib/cupFate';
 
@@ -18,13 +17,6 @@ import { fateOf, gameResult, tieOutcome } from '../lib/cupFate';
  * 있어서, 우리 경기 날짜를 그 구간에 떨어뜨리면 몇 라운드인지 알 수 있다.
  * 그래서 **우리가 처음 등장한 라운드** 앞쪽은 아예 그리지 않는다.
  */
-const CLOCK = (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v5l3 2" />
-  </svg>
-);
-
 /* 라운드 끝 배지 아이콘 — 진출 화살표 · 탈락 X · 우승 트로피 · 준우승/순위 메달 */
 const ICO = (d: string) => <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
 const TROPHY = <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3Zm-1 4v1a2 2 0 0 0 2 2V7H6Zm10 0v3a2 2 0 0 0 2-2V7h-2Z" /></svg>;
@@ -47,7 +39,6 @@ interface Props {
 }
 
 export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props) {
-  const palette = usePalette();
   if (!rounds.length) return null;
 
   // 라운드별로 우리 경기를 떨어뜨린다 (한 라운드에 1·2차전이 있을 수 있다)
@@ -100,13 +91,16 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
               data-on={reached}
               data-blocked={blocked || undefined}
             >
-              {/* 머리 — 라운드 이름 · (끝났으면) 진출 배지. 결승은 CHAMPIONS · RUNNERS-UP, 3위 결정전은 THIRD · FOURTH PLACE */}
+              {/* 머리 — 라운드 이름 … 오른쪽에 결과(W/D/L) + 진출 배지를 한 묶음으로 */}
               <div className="cup__rh">
                 <span className="cup__rl">{roundKo(x.round.label)}</span>
-                {fate && (() => {
-                  const f = fateOf(x.round.label, fate);
-                  return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}<span>{f.label}</span></em>;
-                })()}
+                <span className="cup__badges">
+                  {res && x.games.every((g) => g.status === 'finished') && <i className="fchip cup__wdl" data-r={res}>{res}</i>}
+                  {fate && (() => {
+                    const f = fateOf(x.round.label, fate);
+                    return <em className="cup__fate" data-fate={f.kind}>{FATE_ICON[f.kind]}<span>{f.label}</span></em>;
+                  })()}
+                </span>
               </div>
 
               {x.games.length === 0 ? (
@@ -118,49 +112,48 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
                     const done = m.status === 'finished';
                     const r = done ? gameResult(m, focusTeamId) : null;
                     const kp = kstParts(m.kickoffUtc);
-                    /* 이달의 경기(MonthList) 한 줄과 같은 모양 — [날짜] [대회 막대] [홈 vs 원정] [HOME/AWAY · 시각 또는 결과] */
+                    /* 이긴 쪽 · 진 쪽 — 진 쪽 팀 이름 · 스코어를 흐리게 */
+                    const lostSide = !r ? null : r.wdl === 'D' ? (r.pk ? (r.pk === 'W' ? (home ? 'away' : 'home') : (home ? 'home' : 'away')) : null)
+                      : r.wdl === 'W' ? (home ? 'away' : 'home') : (home ? 'home' : 'away');
+                    const side = (k: 'home' | 'away') => {
+                      const t = m[k];
+                      const ours = t.id === focusTeamId;
+                      return (
+                        <span className={`cup__team cup__team--${k}`} data-ours={ours || undefined} data-lost={lostSide === k || undefined}>
+                          <Crest team={t} size={24} />
+                          <b><span className="m-full">{t.shortName}</span><span className="m-short">{t.abbr}</span></b>
+                        </span>
+                      );
+                    };
                     return (
-                      <div className="ml__row cup__g" key={m.id} style={{ ['--c' as string]: palette.color(m.competition) }}>
-                        <span className="ml__date">
-                          <b className="num">{kp.date}</b>
-                          <i>{kp.month}월 {kp.weekdayKo}</i>
+                      <div className="cup__g" key={m.id}>
+                        {/* 한 줄: 날짜(요일) · 홈/원정 */}
+                        <span className="cup__when num">
+                          {kp.month}.{kp.date} ({kp.weekdayKo})<i>·</i><span data-home={home || undefined}>{home ? '홈' : '원정'}</span>
                         </span>
-                        <span className="ml__tick" aria-hidden="true" />
-                        <span className="ml__match">
-                          <span className="ml__side r">
-                            <Crest team={m.home} size={20} />
-                            <b>{m.home.abbr}</b>
+                        {/* 전광판 — 홈 [스코어 또는 킥오프] 원정 */}
+                        <div className="cup__sb">
+                          {side('home')}
+                          <span className="cup__mid">
+                            {done ? (
+                              <b className="cup__score num">
+                                <span data-lost={lostSide === 'home' || undefined}>{m.homeScore}</span>
+                                <i>:</i>
+                                <span data-lost={lostSide === 'away' || undefined}>{m.awayScore}</span>
+                              </b>
+                            ) : m.timeTBD ? (
+                              <b className="cup__ko cup__ko--tbd">시간 미정</b>
+                            ) : (
+                              <b className="cup__ko num">{kstTime(m.kickoffUtc)}</b>
+                            )}
+                            {r?.pk && (
+                              <em className="cup__pk num" data-won={r.pk === 'W' || undefined}>
+                                {r.pkScore ? `PK ${r.pkScore}` : r.pk === 'W' ? 'PK 승' : 'PK 패'}
+                              </em>
+                            )}
                           </span>
-                          {done ? (
-                            <span className="ml__score num" data-res={r?.wdl}>
-                              <b className={home ? 'ml__su' : 'ml__so'}>{m.homeScore}</b>
-                              <i>-</i>
-                              <b className={home ? 'ml__so' : 'ml__su'}>{m.awayScore}</b>
-                            </span>
-                          ) : <span className="ml__vs">vs</span>}
-                          <span className="ml__side">
-                            <Crest team={m.away} size={20} />
-                            <b>{m.away.abbr}</b>
-                          </span>
-                        </span>
-                        <span className="ml__meta">
-                          <i className="ml__ha cup__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</i>
-                          {done && r ? (
-                            <span className="cup__res">
-                              {r.pk && (
-                                <i className="cup__pk" data-won={r.pk === 'W' || undefined} title={`승부차기 ${r.pk === 'W' ? '승' : '패'}`}>
-                                  {r.pkScore ? `PK ${r.pkScore}` : r.pk === 'W' ? 'PK 승' : 'PK 패'}
-                                </i>
-                              )}
-                              <i className="fchip" data-r={r.wdl} title={r.wdl === 'W' ? '승' : r.wdl === 'D' ? '무' : '패'}>{r.wdl}</i>
-                            </span>
-                          ) : (
-                            <span className="ml__ko num" data-tbd={m.timeTBD || undefined}>
-                              {CLOCK}
-                              {m.timeTBD ? '시간 미정' : kstTime(m.kickoffUtc)}
-                            </span>
-                          )}
-                        </span>
+                          {side('away')}
+                        </div>
                       </div>
                     );
                   })}
