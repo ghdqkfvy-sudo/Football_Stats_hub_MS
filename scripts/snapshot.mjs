@@ -37,7 +37,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
-import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
+import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch, farRange } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
@@ -80,7 +80,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-32';
+const CODE_VERSION = 'snap-33';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2081,8 +2081,10 @@ async function main() {
     const days = new Set();
     for (const r of cal) for (const d of daysToFetch(r, now, !!prevRound(r.label)?.events?.length)) days.add(d);
     const fetchedDays = days.size;
-    const got = await pool([...days], 6, async (d) => {
-      const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}`);
+    /* +14일 창 너머 — 다음 라운드 대진(8강 12월 중순 등)은 범위 한 번으로 찾는다(farRange) */
+    const far = [...new Set(cal.map((r) => farRange(r, now)).filter(Boolean))];
+    const got = await pool([...days, ...far], 6, async (d) => {
+      const j = await get(`${SITE}/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${d}${d.includes('-') ? '&limit=200' : ''}`);
       return (j?.events ?? []).map(cupEvent);
     });
     const rounds = assignRounds(cal, prev?.rounds ?? [], got.flat());
