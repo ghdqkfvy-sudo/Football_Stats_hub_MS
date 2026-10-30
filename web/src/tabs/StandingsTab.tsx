@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { markOf, mobileName, type Target } from '../config/targets';
+import { markOf, mobileName, summaryColor, type Target } from '../config/targets';
 import type { Match, StandingTable } from '../lib/types';
-import { loadLeague, type Source , loadScheduleExtras, type ScheduleExtras } from '../lib/api';
+import { loadCup, loadLeague, type CupRoundData, type Source , loadScheduleExtras, type ScheduleExtras } from '../lib/api';
+import { CupBracket } from '../components/CupBracket';
+import { useIsMobile } from '../lib/useMedia';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { usePalette } from '../lib/palette';
 import { StandingsTable } from '../components/StandingsTable';
@@ -89,6 +91,17 @@ export function StandingsTab({
     [teamMatches, active],
   );
 
+  /* 컵 전체 대진(cup-{대회}.json) — 있는 컵만. 우리 여정 아래에 Summary 와 같은 대진표(8강부터 트리, 이전 라운드는 ‹ ›) */
+  const [cups, setCups] = useState<Record<string, CupRoundData[] | null>>({});
+  useEffect(() => {
+    if (!cupRounds || active in cups) return;
+    let alive = true;
+    loadCup(active).then((r) => { if (alive) setCups((x) => ({ ...x, [active]: r.length ? r : null })); });
+    return () => { alive = false; };
+  }, [cupRounds, active, cups]);
+  const mobile = useIsMobile();
+  const cupColors = useMemo(() => ({ [target.espnTeamId]: summaryColor(target) }), [target]);
+
   const finished = data?.matches.filter((m) => m.status === 'finished').length ?? 0;
   const withGoals = data?.matches.filter((m) => m.goals.length > 0).length ?? 0;
 
@@ -132,6 +145,15 @@ export function StandingsTab({
             focusTeamId={target.espnTeamId}
             competitionName={palette.name(active)}
           />
+          {cups[active] && (
+            <>
+              <div className="sec__head" style={{ marginTop: 22 }}>
+                <h3 className="sec__title">전체 대진</h3>
+                <span className="sec__note">‹ › 로 라운드를 넘겨 봅니다 · {mobile ? '라운드마다 한 장' : '8강부터는 대진표'}</span>
+              </div>
+              <CupBracket key={active} rounds={cups[active]!} colors={cupColors} mobile={mobile} />
+            </>
+          )}
         </section>
       )}
 

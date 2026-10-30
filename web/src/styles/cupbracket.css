@@ -41,11 +41,11 @@
 .cbr__row[data-lost] > img, .cbr__row[data-lost] > .mono { opacity: .5; }
 /* H · A — 홈은 밝게, 원정은 테두리만 */
 .cbr__ha {
-  flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px;
-  font-style: normal; font-family: var(--font-display); font-size: 11px; font-weight: 800; line-height: 1;
-  color: var(--text-lo); box-shadow: inset 0 0 0 1px var(--line-2);
+  flex: none; display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 4px;
+  font-style: normal; font-family: var(--font-display); font-size: 10.5px; font-weight: 700; line-height: 1;
+  letter-spacing: 0; color: var(--text-lo); box-shadow: inset 0 0 0 1px var(--line-2);
 }
-.cbr__ha[data-home] { color: #0A0D16; background: var(--text-mid); box-shadow: none; }
+.cbr__ha[data-home] { color: var(--text-hi); background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
 .cbr__row[data-lost] .cbr__ha, .cbr__mt[data-lost] .cbr__ha { opacity: .5; }
 .cbr__thr {
   flex: none; font-style: normal; font-family: var(--font-display); font-size: 10.5px; font-weight: 800;
@@ -83,9 +83,9 @@
 .cbr__mt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 13px; min-width: 0; }
 .cbr__mt + .cbr__mt { border-top: 1px solid var(--line); }
 .cbr__mt b { flex: 1; min-width: 0; font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cbr__mt i { font-style: normal; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.cbr__mt > i.num { font-style: normal; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
 .cbr__mt[data-win] { background: linear-gradient(90deg, color-mix(in srgb, var(--win) 14%, transparent), transparent); }
-.cbr__mt[data-lost] b, .cbr__mt[data-lost] i { color: var(--text-lo); font-weight: 500; }
+.cbr__mt[data-lost] b, .cbr__mt[data-lost] > i.num { color: var(--text-lo); font-weight: 500; }
 .cbr__when {
   position: absolute; right: 8px; top: -9px; font-family: var(--font-display); font-size: 10.5px; letter-spacing: .06em;
   color: var(--text-mid); background: #0B1630; padding: 0 5px; border-radius: 4px;

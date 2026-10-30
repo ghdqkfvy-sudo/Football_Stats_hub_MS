@@ -131,7 +131,9 @@ export function CupPath({ rounds, matches, focusTeamId, competitionName }: Props
                         <span className="cup__res">
                           {done
                             ? <b className="cup__sc num" data-r={r?.wdl}>{home ? m.homeScore : m.awayScore}<i>:</i>{home ? m.awayScore : m.homeScore}</b>
-                            : <b className="cup__sc cup__sc--ko num">{m.timeTBD ? 'TBD' : kstTime(m.kickoffUtc)}</b>}
+                            : m.timeTBD
+                              ? <b className="cup__sc cup__sc--tbd">시간 미정</b>
+                              : <b className="cup__sc cup__sc--ko num">{kstTime(m.kickoffUtc)}</b>}
                           {r && <i className="cup__wdl" data-r={r.wdl} title={r.wdl === 'W' ? '승' : r.wdl === 'D' ? '무' : '패'}>{r.wdl}</i>}
                         </span>
                       </div>

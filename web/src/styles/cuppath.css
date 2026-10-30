@@ -58,6 +58,8 @@
 .cup__sc i { font-style: normal; margin: 0 4px; color: var(--text-lo); font-weight: 500; }
 .cup__sc[data-r='L'] { color: var(--text-mid); }
 .cup__sc--ko { font-size: 19px; color: color-mix(in srgb, var(--accent) 70%, #fff); }
+/* 킥오프 시각이 아직 안 정해진 경기(ESPN timeValid=false) — 오류처럼 보이지 않게 작고 흐리게 */
+.cup__sc--tbd { font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-lo); }
 
 /* 경기별 W · D · L — 이달의 결과 폼 칩과 같은 글꼴 · 색 */
 .cup__wdl {
