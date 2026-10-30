@@ -603,7 +603,7 @@ const MOBILE_NAME: Record<string, string> = {
   'esp.copa_del_rey': 'CDR',
   'esp.super_cup': 'SUP',
   'eng.fa': 'FA Cup',
-  'eng.league_cup': 'EFL Cup',
+  'eng.league_cup': 'EFL',
   'fifa.world': 'World Cup',
   'fifa.worldq.afc': 'WCQ',
   'afc.asian.cup': 'Asian Cup',
