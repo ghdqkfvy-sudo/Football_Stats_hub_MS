@@ -144,6 +144,7 @@ export function StandingsTab({
             matches={cupMatches}
             focusTeamId={target.espnTeamId}
             competitionName={palette.name(active)}
+            extras={cups[active]?.flatMap((r) => r.matches)}
           />
           {cups[active] && (
             <>
