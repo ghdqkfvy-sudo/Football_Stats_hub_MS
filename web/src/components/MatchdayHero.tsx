@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Match } from '../lib/types';
-import { SUMMARY_OPP, comp, koreansOf, summaryColor, type Target } from '../config/targets';
+import { SUMMARY_OPP, comp, koreansOf, mobileName, summaryColor, type Target } from '../config/targets';
 import { countdown, dayKey, kstFullDate, kstParts, kstTime, todayKey } from '../lib/kst';
 import type { TeamStanding } from './NextMatchHero';
 import { KorFlag } from './KorFlag';
@@ -128,6 +128,25 @@ function Side({
 }
 
 export function MatchdayCard({ target, match, standingOf, hero = false, onSelect, label }: Props) {
+  /* 머리 줄이 실제로 두 줄로 접힐 때만 대회명을 약칭(UCL · EPL)으로 — 접히지 않으면 전체 이름 그대로(2026-11-02).
+     폰에서 "Atlético Madrid" + "Champions League" 가 만나면 HOME 배지가 혼자 둘째 줄로 떨어졌다.
+     폭이 바뀌면(회전 · 창 크기) 전체 이름으로 다시 재 보고 고른다 */
+  const topRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+    const fit = () => {
+      el.dataset.short = '0';
+      const kids = [...el.children] as HTMLElement[];
+      const firstBottom = kids[0] ? kids[0].offsetTop + kids[0].offsetHeight : 0;
+      const wrapped = kids.some((k) => k.offsetTop >= firstBottom);
+      el.dataset.short = wrapped ? '1' : '0';
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [match.competition, target.name, hero]);
   const c = comp(match.competition);
   const home = match.home.id === target.espnTeamId;
   const live = match.status === 'live';
@@ -152,7 +171,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       onClick={onSelect}
       {...(onSelect ? { type: 'button' as const, 'aria-label': label ?? `${target.nameEn} 경기를 크게 보기`, title: label } : {})}
     >
-      <header className="mdh__top">
+      <header className="mdh__top" ref={topRef}>
         <span className="mdh__badge">
           <Crest
             team={{
@@ -170,7 +189,8 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
         </span>
         <span className="mdh__comp">
           <CompCrest k={match.competition} size={hero ? 16 : 13} />
-          {c.name}
+          <span className="mdh__cn" data-v="full">{c.name}</span>
+          <span className="mdh__cn" data-v="short">{mobileName(match.competition)}</span>
         </span>
         {live && <em className="mdh__live">LIVE</em>}
         <span className="mdh__ha" data-home={home || undefined}>{home ? 'HOME' : 'AWAY'}</span>
