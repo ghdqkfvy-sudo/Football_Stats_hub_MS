@@ -603,7 +603,8 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .mdh__cdu { min-width: 0; flex: 1 1 0; }
   .mdh__cdu b { font-size: 25px; }
   .mdh__cdsep { font-size: 19px; left: -2px; top: 2px; }
-  .mdh__ha { margin-left: 0; }
+  /* 한 줄이면 HOME/AWAY 는 오른쪽 끝으로(팀 · 대회 · 배지가 다닥다닥 붙어 보였다), 사이 간격도 조금 넓게 */
+  .mdh__top { gap: 10px; }
   .sum__foot { font-size: 11px; }
 }
 @media (max-width: 420px) {

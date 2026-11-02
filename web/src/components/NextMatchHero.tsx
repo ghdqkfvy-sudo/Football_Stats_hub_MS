@@ -241,6 +241,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
             {!match.timeTBD && <em>KST</em>}
           </div>
         )}
+        {/* 폰에서는 경기장을 머리 줄 대신 여기(시각 아래) — 머리 줄에 두면 거의 모든 팀에서 혼자 둘째 줄로 떨어졌다 */}
+        {match.venue && <div className="when__venue">{PIN}{match.venue}</div>}
       </div>
 
       {showToday && (
