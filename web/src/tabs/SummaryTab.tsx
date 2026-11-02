@@ -84,16 +84,16 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   /** 팀 탭이 있는 일곱 팀 — 팀 비교는 여기만 */
   const teamFeeds = useMemo<TeamFeed[]>(
-    () => TARGETS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [] })),
+    () => TARGETS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId })),
     [feeds],
   );
   /**
    * + 코리안리거 소속팀 — 주간 일정에는 세 클럽 경기가 다 나오고, 다음 경기에서는
    * 대한민국 카드 한 장을 국가대표와 나눠 쓴다(가장 빠른 경기).
-   * 일곱 팀을 앞에 둔다 — 맨유 vs 아틀레티코처럼 겹치는 경기는 맨유 칸으로 남는다.
+   * 우리 팀끼리 겹치는 경기(맨유 vs 아틀레티코 · 뮌헨 vs 아틀레티코)는 **홈팀 칸**으로 남는다(summary.ts homeFirst).
    */
   const allFeeds = useMemo<TeamFeed[]>(
-    () => [...teamFeeds, ...KOREAN_CLUBS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [] }))],
+    () => [...teamFeeds, ...KOREAN_CLUBS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId }))],
     [teamFeeds, feeds],
   );
 
@@ -219,11 +219,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   const league = tables[active];
 
   /**
-   * 팀의 순위·승무패 — 받아 둔 표 어디에 있든 찾는다.
-   * 리그를 먼저 보고(그게 "그 팀 순위"다) 없으면 챔스 같은 대회 표에서.
+   * 팀의 순위·승무패 — **그 경기 대회 표를 먼저**(챔스 경기면 챔스 순위 · 전적), 없으면 리그 → 다른 표.
+   * 리그부터 찾던 때는 뮌헨 vs 아틀레티코(챔스)에서 아틀레티코만 라리가 전적이 붙었다(2026-11-02).
    */
-  const standingOf = useCallback((teamId: string): TeamStanding | undefined => {
-    for (const k of COMPS) {
+  const standingOf = useCallback((teamId: string, comp?: string): TeamStanding | undefined => {
+    const order = comp && (COMPS as string[]).includes(comp) ? [comp, ...COMPS.filter((k) => k !== comp)] : COMPS;
+    for (const k of order) {
       const row = tables[k]?.table?.rows.find((r) => r.team.id === teamId);
       if (row) return { rank: row.rank, win: row.win, draw: row.draw, loss: row.loss };
     }

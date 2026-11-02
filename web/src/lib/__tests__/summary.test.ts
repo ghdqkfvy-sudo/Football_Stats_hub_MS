@@ -200,3 +200,27 @@ describe('monthResults', () => {
     expect(monthResults(feeds, '2026-08').length).toBe(0);
   });
 });
+
+describe('우리 팀끼리 맞대결 — 홈팀 쪽으로 한 번만 (2026-11-02 뮌헨 @ 아틀레티코)', () => {
+  const now = Date.parse('2026-11-02T00:00:00Z');
+  const derby = m('d', '2026-11-04T20:00Z', 'scheduled', 'ATM', 'MUN');
+  const done = m('r', '2026-11-01T20:00Z', 'finished', 'ATM', 'MUN');
+  /* 원정팀(뮌헨) 일정이 먼저 와도 홈팀(아틀레티코) 쪽이 남는다 */
+  const feeds = [
+    { id: 'bayern', espnId: 'MUN', matches: [derby, done] },
+    { id: 'atletico', espnId: 'ATM', matches: [derby, done] },
+  ];
+  it('다음 경기 카드 · 주간 칸 · 이달 결과', () => {
+    expect(nextUpBoard(feeds, now).map((x) => x.teamId)).toEqual(['atletico']);
+    expect([...matchesByDay(feeds).values()].flat().map((x) => x.teamId)).toEqual(['atletico', 'atletico']);
+    expect(monthResults(feeds, '2026-11').map((x) => x.teamId)).toEqual(['atletico']);
+  });
+  it('대한민국 자리 경기가 일곱 팀 카드와 같은 경기면 홈팀 쪽 하나', () => {
+    const board = nextUpBoardShared(
+      [{ id: 'man-united', espnId: 'MAN', matches: [m('x', '2026-11-04T20:00Z', 'scheduled', 'MAN', 'ATM')] }, { id: 'korea', espnId: 'KOR', matches: [] }],
+      [{ id: 'atletico', espnId: 'ATM', matches: [m('x', '2026-11-04T20:00Z', 'scheduled', 'MAN', 'ATM')] }],
+      'korea', now,
+    );
+    expect(board.map((x) => x.teamId)).toEqual(['man-united']);
+  });
+});
