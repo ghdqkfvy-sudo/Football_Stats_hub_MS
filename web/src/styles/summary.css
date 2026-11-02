@@ -603,8 +603,21 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .mdh__cdu { min-width: 0; flex: 1 1 0; }
   .mdh__cdu b { font-size: 25px; }
   .mdh__cdsep { font-size: 19px; left: -2px; top: 2px; }
-  /* 한 줄이면 HOME/AWAY 는 오른쪽 끝으로(팀 · 대회 · 배지가 다닥다닥 붙어 보였다), 사이 간격도 조금 넓게 */
-  .mdh__top { gap: 10px; }
+  /* 히어로 머리 줄(폰) — 2단: 1줄 [팀 배지 ··· HOME/AWAY], 2줄 가는 구분선 아래 가운데 대회명(대문자 · 전체 이름).
+     한 줄에 셋을 넣으면 붙어 보이거나 접혀서 약칭으로 바뀌었다(2026-11-02) */
+  .mdh__card[data-hero] .mdh__top {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 10px; column-gap: 10px;
+  }
+  .mdh__card[data-hero] .mdh__badge { grid-column: 1; grid-row: 1; justify-self: start; min-width: 0; }
+  .mdh__card[data-hero] .mdh__live { grid-column: 2; grid-row: 1; justify-self: end; margin-right: 52px; }
+  .mdh__card[data-hero] .mdh__ha { grid-column: 2; grid-row: 1; margin: 0; }
+  .mdh__card[data-hero] .mdh__comp {
+    grid-column: 1 / -1; grid-row: 2; justify-content: center; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-mid);
+  }
+  .mdh__card[data-hero] .mdh__top .mdh__cn[data-v='full'] { display: inline; }
+  .mdh__card[data-hero] .mdh__top .mdh__cn[data-v='short'] { display: none; }
   .sum__foot { font-size: 11px; }
 }
 @media (max-width: 420px) {
