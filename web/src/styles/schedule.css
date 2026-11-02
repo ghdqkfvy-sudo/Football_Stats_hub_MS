@@ -63,6 +63,16 @@
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
 }
 .hero__venue svg { color: var(--loss); opacity: .95; }
+/* 시각 아래 경기장 — 폰에서만(넓은 화면은 머리 줄 오른쪽) */
+.when__venue { display: none; }
+@media (max-width: 640px) {
+  .hero__top .hero__venue { display: none; }
+  .when__venue {
+    display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 8px;
+    font-size: 12px; color: var(--text-mid); min-width: 0;
+  }
+  .when__venue svg { color: var(--loss); flex: none; }
+}
 
 /* 대진 */
 .hero__fx {
