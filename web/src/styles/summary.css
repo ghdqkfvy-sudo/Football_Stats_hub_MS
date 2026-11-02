@@ -79,6 +79,9 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 
 .mdh__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+/* 대회명 — 머리 줄이 접힐 때만 약칭(MatchdayCard 가 재서 data-short 를 단다) */
+.mdh__top:not([data-short='1']) .mdh__cn[data-v='short'],
+.mdh__top[data-short='1'] .mdh__cn[data-v='full'] { display: none; }
 .mdh__badge {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 12px; font-weight: 700; color: var(--team);
