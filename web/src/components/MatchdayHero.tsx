@@ -59,7 +59,7 @@ interface Props {
   target: Target;
   match: Match;
   /** 우리 팀 기준 순위·승무패 (없으면 줄을 그리지 않는다) */
-  standingOf?: (teamId: string) => TeamStanding | undefined;
+  standingOf?: (teamId: string, competition?: string) => TeamStanding | undefined;
   hero?: boolean;
   onSelect?: () => void;
   /** 누를 수 있는 카드의 설명 (화면 읽기·마우스 툴팁) */
@@ -177,7 +177,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
       </header>
 
       <div className="mdh__fx">
-        <Side team={match.home} focus={home} standing={standingOf?.(match.home.id)} fifa={fifa(match.home)} big={hero} />
+        <Side team={match.home} focus={home} standing={standingOf?.(match.home.id, match.competition)} fifa={fifa(match.home)} big={hero} />
         <div className="mdh__vs">
           {done || live
             ? (
@@ -194,7 +194,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
             )
             : <span className="num">VS</span>}
         </div>
-        <Side team={match.away} focus={!home} standing={standingOf?.(match.away.id)} fifa={fifa(match.away)} big={hero} />
+        <Side team={match.away} focus={!home} standing={standingOf?.(match.away.id, match.competition)} fifa={fifa(match.away)} big={hero} />
       </div>
 
       {hero ? (

@@ -12,6 +12,24 @@ import { dayKey } from './kst';
 export interface TeamFeed {
   id: string;
   matches: Match[];
+  /** 그 팀 ESPN id — 우리 팀끼리 맞붙은 경기를 **홈팀 쪽**으로 남길 때 쓴다 */
+  espnId?: string;
+}
+
+/** 이 팀이 그 경기의 홈인가 */
+const isHome = (f: { espnId?: string }, m: Match) => !!f.espnId && m.home.id === f.espnId;
+
+/**
+ * 같은 경기가 여러 팀 일정에 있으면(우리 팀끼리 맞대결) 한 번만 — **홈팀 쪽**을 남긴다(2026-11-02).
+ * 원정팀 쪽으로 남으면 카드 · 칸이 "AWAY" 로 그 경기를 말했다(뮌헨 @ 아틀레티코).
+ */
+function homeFirst<T extends { match: Match; home: boolean }>(items: T[]): T[] {
+  const by = new Map<string, T>();
+  for (const x of items) {
+    const had = by.get(x.match.id);
+    if (!had || (!had.home && x.home)) by.set(x.match.id, x);
+  }
+  return items.filter((x) => by.get(x.match.id) === x);
 }
 
 /** 화면에 뿌릴 "한 팀의 다음 경기" */
@@ -41,12 +59,14 @@ export function nextUpOf(matches: Match[], now: number = Date.now()): Match | un
  * 맨 앞이 히어로, 나머지가 작은 카드다.
  */
 export function nextUpBoard(feeds: TeamFeed[], now: number = Date.now()): NextUp[] {
-  return feeds
+  const items = feeds
     .map((f) => {
       const match = nextUpOf(f.matches, now);
-      return match ? { teamId: f.id, match } : null;
+      return match ? { teamId: f.id, match, home: isHome(f, match) } : null;
     })
-    .filter((x): x is NextUp => !!x)
+    .filter((x): x is NextUp & { home: boolean } => !!x);
+  return homeFirst(items)
+    .map(({ teamId, match }) => ({ teamId, match }))
     .sort((a, b) => byKickoff(a.match, b.match));
 }
 
@@ -63,7 +83,11 @@ export function nextUpBoardShared(
 ): NextUp[] {
   const rest = nextUpBoard(feeds.filter((f) => f.id !== slotId), now);
   const shared = nextUpBoard(group, now)[0];
-  return shared ? [...rest, shared].sort((a, b) => byKickoff(a.match, b.match)) : rest;
+  if (!shared) return rest;
+  /* 대한민국 자리 경기가 일곱 팀 카드와 같은 경기면(맨유 vs 아틀레티코) 홈팀 쪽 하나만 */
+  const espnOf = new Map([...feeds, ...group].map((f) => [f.id, f.espnId]));
+  const all = [...rest, shared].map((x) => ({ ...x, home: espnOf.get(x.teamId) === x.match.home.id }));
+  return homeFirst(all).map(({ teamId, match }) => ({ teamId, match })).sort((a, b) => byKickoff(a.match, b.match));
 }
 
 /* ── 주간 캘린더 ─────────────────────────────────────── */
@@ -118,16 +142,12 @@ export interface DayMatch {
  */
 export function matchesByDay(feeds: TeamFeed[]): Map<string, DayMatch[]> {
   const out = new Map<string, DayMatch[]>();
-  const seen = new Set<string>();
-  for (const f of feeds) {
-    for (const m of f.matches) {
-      if (seen.has(m.id)) continue;
-      seen.add(m.id);
-      const k = dayKey(m.kickoffUtc);
-      const list = out.get(k);
-      if (list) list.push({ teamId: f.id, match: m });
-      else out.set(k, [{ teamId: f.id, match: m }]);
-    }
+  const all = homeFirst(feeds.flatMap((f) => f.matches.map((m) => ({ teamId: f.id, match: m, home: isHome(f, m) }))));
+  for (const { teamId, match: m } of all) {
+    const k = dayKey(m.kickoffUtc);
+    const list = out.get(k);
+    if (list) list.push({ teamId, match: m });
+    else out.set(k, [{ teamId, match: m }]);
   }
   for (const list of out.values()) list.sort((a, b) => byKickoff(a.match, b.match));
   return out;
@@ -150,16 +170,8 @@ export function cycleIndex(prevKey: string | null, nextKey: string, prevIndex: n
  * 우리 팀끼리의 경기는 한 번만 넣는다(경기 id 기준).
  */
 export function monthResults(feeds: TeamFeed[], monthK: string): DayMatch[] {
-  const out: DayMatch[] = [];
-  const seen = new Set<string>();
-  for (const f of feeds) {
-    for (const m of f.matches) {
-      if (m.status !== 'finished') continue;
-      if (dayKey(m.kickoffUtc).slice(0, 7) !== monthK) continue;
-      if (seen.has(m.id)) continue;
-      seen.add(m.id);
-      out.push({ teamId: f.id, match: m });
-    }
-  }
-  return out.sort((a, b) => byKickoff(b.match, a.match));
+  const all = homeFirst(feeds.flatMap((f) => f.matches
+    .filter((m) => m.status === 'finished' && dayKey(m.kickoffUtc).slice(0, 7) === monthK)
+    .map((m) => ({ teamId: f.id, match: m, home: isHome(f, m) }))));
+  return all.map(({ teamId, match }) => ({ teamId, match })).sort((a, b) => byKickoff(b.match, a.match));
 }
