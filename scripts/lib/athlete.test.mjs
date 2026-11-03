@@ -275,9 +275,12 @@ test('catchUpStats: ESPN 합계가 늦으면 최근 경기를 더하고, 따라�
     { competition: 'ita.1', date: '2026-10-29T19:45Z', started: true, minutes: 89, goals: 0, assists: 0, yellow: false },
   ];
   const line = () => ({ competition: 'ita.1', apps: 9, starts: 9, minutes: 700, goals: 3, assists: 0, yellow: 2, red: 0 });
-  /* 처음 — 지난 파일에도 9경기(syncedAt 없음): 48시간 넘은 10-29 까지 반영, 11-02 를 더한다 */
+  /* 처음(syncedAt 없음) — ESPN 을 믿는다 */
+  const z = [{ id: '1', stats: [line()], recent }];
+  assert.equal(catchUpStats(z, [{ id: '1', stats: [line()] }], now), 0);
+  /* ESPN 9경기가 처음 보인 게 10-30 이면 11-02 경기는 아직 안 들어갔다 — 더한다 */
   const a = [{ id: '1', stats: [line()], recent }];
-  assert.equal(catchUpStats(a, [{ id: '1', stats: [line()] }], now), 1);
+  assert.equal(catchUpStats(a, [{ id: '1', stats: [{ ...line(), espnApps: 9, syncedAt: '2026-10-30T05:35:00Z' }] }], now), 1);
   assert.deepEqual([a[0].stats[0].apps, a[0].stats[0].goals, a[0].stats[0].espnApps], [10, 4, 9]);
   /* 다음 회차 — ESPN 그대로면 계속 더한다 */
   const b = [{ id: '1', stats: [line()], recent }];
