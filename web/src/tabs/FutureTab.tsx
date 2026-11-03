@@ -152,6 +152,8 @@ function FutureCard({
     : [];
   const recent: RecentLine[] = (feed?.recent ?? []).map((gm) => ({
     competition: gm.competition,
+    /* 코리안리거처럼 경기 날짜(KST) — "11.3 (화)" */
+    date: gm.date,
     result: gm.result,
     opponent: gm.opponent,
     opponentId: gm.opponentId,
