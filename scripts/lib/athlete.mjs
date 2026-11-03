@@ -254,7 +254,8 @@ export async function athleteRecent({
  * 줄마다 `espnApps`(ESPN 원래 출전 수) · `syncedAt`(ESPN 합계가 바뀐 걸 본 시각)을 남긴다.
  *  - 지난 파일보다 ESPN 출전 수가 바뀌었으면 → 지금 따라잡은 것(syncedAt = now)
  *  - 그대로면 → 지난 syncedAt 유지
- *  - 처음(지난 값에 syncedAt 없음)이면 → 48시간 넘은 최근 경기까지는 반영됐다고 본다
+ *  - 처음(지난 값에 syncedAt 없음)이면 → ESPN 을 믿는다(syncedAt = now). 예전엔 "48시간 넘은 경기까지 반영" 으로
+ *    추측했다가, 이미 따라잡은 정우영 · 오현규 · 이현주의 11-01 경기를 한 번 더 셌다(2026-11-03)
  *  - 지난 파일에 그 선수 · 대회가 없으면 → ESPN 을 믿는다(syncedAt = now)
  * syncedAt 뒤에 끝난 최근 경기(그 대회)만 더한다. 그래서 ESPN 이 따라잡으면 저절로 원래 값이 된다.
  *
@@ -274,11 +275,7 @@ export function catchUpStats(players, prev, now = Date.now()) {
       let synced;
       if (!old) synced = nowIso;
       else if ((old.espnApps ?? old.apps) !== espnApps) synced = nowIso;
-      else if (old.syncedAt) synced = old.syncedAt;
-      else {
-        const older = games.map((g) => g.date).filter((d) => Date.parse(d) < now - 48 * 3600_000).sort().pop();
-        synced = older ? new Date(Date.parse(older) + 60_000).toISOString() : nowIso;
-      }
+      else synced = old.syncedAt || nowIso;   // 처음 보는 줄은 ESPN 을 믿는다(추측하지 않는다)
       s.espnApps = espnApps;
       s.syncedAt = synced;
       for (const g of games.filter((x) => Date.parse(x.date) > Date.parse(synced))) {
