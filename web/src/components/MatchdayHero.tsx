@@ -188,7 +188,7 @@ export function MatchdayCard({ target, match, standingOf, hero = false, onSelect
           {hero && !live && !done && <span className="mdh__pulse" aria-hidden="true" />}
         </span>
         <span className="mdh__comp">
-          <CompCrest k={match.competition} size={hero ? 16 : 13} />
+          <CompCrest k={match.competition} size={hero ? 22 : 13} />
           <span className="mdh__cn" data-v="full">{c.name}</span>
           <span className="mdh__cn" data-v="short">{mobileName(match.competition)}</span>
         </span>

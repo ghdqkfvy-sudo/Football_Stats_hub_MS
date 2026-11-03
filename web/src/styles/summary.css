@@ -589,6 +589,23 @@ i.ml__res:empty { width: 17px; height: 17px; }
 @media (max-width: 1080px) {
   .mdh__rest { grid-template-columns: repeat(2, 1fr); }
 }
+/* 히어로 머리 줄(넓은 화면) — [팀 배지] [대회 엠블럼 · 대회명(가운데, 대문자)] [HOME/AWAY]. 좌우 대칭으로
+   가운데가 비어 보이던 것(2026-11-03). 대진 · 시각 등 나머지는 그대로 */
+@media (min-width: 721px) {
+  .mdh__card[data-hero] .mdh__top {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 16px;
+  }
+  .mdh__card[data-hero] .mdh__badge { grid-column: 1; grid-row: 1; justify-self: start; }
+  .mdh__card[data-hero] .mdh__comp {
+    grid-column: 2; grid-row: 1; justify-self: center; gap: 9px;
+    font-size: 14px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-hi);
+  }
+  .mdh__card[data-hero] .mdh__live { grid-column: 3; grid-row: 1; justify-self: end; margin-right: 64px; }
+  .mdh__card[data-hero] .mdh__ha { grid-column: 3; grid-row: 1; justify-self: end; margin: 0; }
+  .mdh__card[data-hero] .mdh__top .mdh__cn[data-v='full'] { display: inline; }
+  .mdh__card[data-hero] .mdh__top .mdh__cn[data-v='short'] { display: none; }
+}
+
 @media (max-width: 720px) {
   .mdh__rest { grid-template-columns: 1fr; }
   .mdh__card[data-hero] { padding: 15px 15px 17px; border-radius: 20px; }
