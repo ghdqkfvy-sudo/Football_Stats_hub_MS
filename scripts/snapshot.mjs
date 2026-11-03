@@ -29,6 +29,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   athleteRecent, scheduleMeta, seasonStatsUrl, seasonTotals, teamScheduleUrl,
+  catchUpStats,
 } from './lib/athlete.mjs';
 import {
   betterPhoto, birthYearOf, choosePhoto, dueForReverify, kindFromUrl, matchInRoster,
@@ -80,7 +81,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-34';
+const CODE_VERSION = 'snap-35';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -1780,6 +1781,11 @@ function leagueLogoOf(slug) {
   return p;
 }
 
+/** 지난 파일의 players — 시즌 합계 따라잡기(catchUpStats)가 ESPN 원래 출전 수 · 동기화 시각을 이어받는다 */
+async function prevPlayers(fileName) {
+  try { return JSON.parse(await readFile(join(OUT, fileName), 'utf8'))?.players ?? []; } catch { return []; }
+}
+
 async function koreanPlayer(id, nameKo, carriedPhoto, fallbackLeague = '') {
   const prof = await get(`${CORE}/v2/sports/soccer/athletes/${id}`);
   if (!prof) return null;
@@ -2504,6 +2510,9 @@ async function main() {
     if (players.length) {
       await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
       await attachFotmobRatings(players, 'future.json');
+      /* ESPN 시즌 합계가 늦은 경기(최근 경기에는 있다)를 더한다 — 11-02 마스탄투오노 골이 합계에서 빠졌다 */
+      const caught = catchUpStats(players, await prevPlayers('future.json'));
+      if (caught) console.log(`    퓨처 리소스: ESPN 합계에 아직 없는 경기 ${caught}건 더함`);
       await save('future.json', { format: 2, players, season: SEASON, fetchedAt: new Date().toISOString() });
       console.log(`    퓨처 리소스 ${players.length}/${FUTURE.length}명`);
     } else if (await fileExists('future.json')) {
@@ -2527,6 +2536,8 @@ async function main() {
     if (players.length) {
       await attachSofascore(players.map((p) => ({ id: p.id, name: p.name, age: p.age, target: p })));
       await attachFotmobRatings(players, 'koreans.json');
+      const caught = catchUpStats(players, await prevPlayers('koreans.json'));
+      if (caught) console.log(`    코리안리거: ESPN 합계에 아직 없는 경기 ${caught}건 더함`);
       await save('koreans.json', {
         players, season: SEASON,
         nationalSource: NATIONAL_SOURCE, nationalGames: games,

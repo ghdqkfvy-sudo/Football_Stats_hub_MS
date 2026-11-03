@@ -245,3 +245,52 @@ export async function athleteRecent({
   }
   return out;
 }
+
+/**
+ * 시즌 합계 따라잡기 (2026-11-03 마스탄투오노).
+ * ESPN 시즌 통계는 경기 뒤 몇 시간~하루 넘게 늦게 갱신된다 — 11-02 사수올로전 골이 최근 경기(경기별 통계)에는
+ * 있는데 리그 합계는 9경기 3골 그대로였다. 최근 경기 중 **ESPN 합계가 마지막으로 바뀐 뒤**의 경기를 합계에 더한다.
+ *
+ * 줄마다 `espnApps`(ESPN 원래 출전 수) · `syncedAt`(ESPN 합계가 바뀐 걸 본 시각)을 남긴다.
+ *  - 지난 파일보다 ESPN 출전 수가 바뀌었으면 → 지금 따라잡은 것(syncedAt = now)
+ *  - 그대로면 → 지난 syncedAt 유지
+ *  - 처음(지난 값에 syncedAt 없음)이면 → 48시간 넘은 최근 경기까지는 반영됐다고 본다
+ *  - 지난 파일에 그 선수 · 대회가 없으면 → ESPN 을 믿는다(syncedAt = now)
+ * syncedAt 뒤에 끝난 최근 경기(그 대회)만 더한다. 그래서 ESPN 이 따라잡으면 저절로 원래 값이 된다.
+ *
+ * @param players  [{ id, stats:[{competition, apps, starts, minutes, goals, assists, yellow, red}], recent:[...] }] — 그 자리에서 고친다
+ * @param prev     지난 파일의 players(없으면 [])
+ */
+export function catchUpStats(players, prev, now = Date.now()) {
+  const nowIso = new Date(now).toISOString();
+  const prevLine = new Map();
+  for (const p of prev ?? []) for (const s of p?.stats ?? []) prevLine.set(`${p.id}|${s.competition}`, s);
+  let added = 0;
+  for (const p of players ?? []) {
+    for (const s of p?.stats ?? []) {
+      const espnApps = s.apps;
+      const old = prevLine.get(`${p.id}|${s.competition}`);
+      const games = (p.recent ?? []).filter((g) => g?.competition === s.competition && g?.date && Date.parse(g.date) < now);
+      let synced;
+      if (!old) synced = nowIso;
+      else if ((old.espnApps ?? old.apps) !== espnApps) synced = nowIso;
+      else if (old.syncedAt) synced = old.syncedAt;
+      else {
+        const older = games.map((g) => g.date).filter((d) => Date.parse(d) < now - 48 * 3600_000).sort().pop();
+        synced = older ? new Date(Date.parse(older) + 60_000).toISOString() : nowIso;
+      }
+      s.espnApps = espnApps;
+      s.syncedAt = synced;
+      for (const g of games.filter((x) => Date.parse(x.date) > Date.parse(synced))) {
+        s.apps += 1;
+        if (g.started) s.starts += 1;
+        s.minutes += g.minutes ?? 0;
+        s.goals += g.goals ?? 0;
+        s.assists += g.assists ?? 0;
+        if (g.yellow) s.yellow += 1;
+        added++;
+      }
+    }
+  }
+  return added;
+}

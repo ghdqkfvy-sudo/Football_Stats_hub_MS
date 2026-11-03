@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  catchUpStats,
   appearanceFrom, athleteRecent, eventLogItems, flattenStats,
   scheduleMeta, seasonTotals, subInMinute,
 } from './athlete.mjs';
@@ -265,4 +266,28 @@ test('athleteRecent: 일정에 없는 "선발 0분" 경기와 일정상 미완�
   assert.deepEqual(rows.map((r) => r.eventId), ['7001']);
   // 일정상 미완료 경기는 기록을 부르지도 않는다
   assert.ok(!calls.some((u) => u.includes('/events/7102/')));
+});
+
+test('catchUpStats: ESPN 합계가 늦으면 최근 경기를 더하고, 따라잡으면 원래 값', () => {
+  const now = Date.parse('2026-11-03T05:00Z');
+  const recent = [
+    { competition: 'ita.1', date: '2026-11-02T17:30Z', started: true, minutes: 89, goals: 1, assists: 0, yellow: false },
+    { competition: 'ita.1', date: '2026-10-29T19:45Z', started: true, minutes: 89, goals: 0, assists: 0, yellow: false },
+  ];
+  const line = () => ({ competition: 'ita.1', apps: 9, starts: 9, minutes: 700, goals: 3, assists: 0, yellow: 2, red: 0 });
+  /* 처음 — 지난 파일에도 9경기(syncedAt 없음): 48시간 넘은 10-29 까지 반영, 11-02 를 더한다 */
+  const a = [{ id: '1', stats: [line()], recent }];
+  assert.equal(catchUpStats(a, [{ id: '1', stats: [line()] }], now), 1);
+  assert.deepEqual([a[0].stats[0].apps, a[0].stats[0].goals, a[0].stats[0].espnApps], [10, 4, 9]);
+  /* 다음 회차 — ESPN 그대로면 계속 더한다 */
+  const b = [{ id: '1', stats: [line()], recent }];
+  catchUpStats(b, a, now + 3600_000);
+  assert.equal(b[0].stats[0].goals, 4);
+  /* ESPN 이 따라잡음(10경기 4골) — 더하지 않는다 */
+  const c = [{ id: '1', stats: [{ ...line(), apps: 10, starts: 10, minutes: 789, goals: 4 }], recent }];
+  assert.equal(catchUpStats(c, b, now + 7200_000), 0);
+  assert.equal(c[0].stats[0].goals, 4);
+  /* 새 선수 — ESPN 을 믿는다 */
+  const d = [{ id: '2', stats: [line()], recent }];
+  assert.equal(catchUpStats(d, [], now), 0);
 });
