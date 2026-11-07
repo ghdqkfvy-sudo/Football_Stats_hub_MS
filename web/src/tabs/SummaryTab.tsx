@@ -3,6 +3,7 @@ import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summar
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { loadCup, loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound, type CupRoundData } from '../lib/api';
 import { CupBracket } from '../components/CupBracket';
+import { useKoreanRoster } from '../lib/koreanRoster';
 import { buildTable, deriveLeaders, tableRound } from '../lib/league';
 import { dayKey, kstParts, kstTime, monthKey, todayKey } from '../lib/kst';
 import {
@@ -47,6 +48,8 @@ const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].map((t) => t.id);
 
 export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
   const lives = useLives(LIVE_SLUGS);
+  /* 코리안리거 명단 — 우리 팀 상대가 코리안리거 소속팀이면(뮌헨 vs 마인츠) 상대 쪽 이름표까지 */
+  useKoreanRoster();
   /* 오늘 끝난 경기만 — 경기 중인 경기는 위 매치데이 히어로가 이미 보여 주고 누르면 오늘의 경기로 간다 */
   /* 지켜보는 두 팀끼리의 경기는 카드 하나 — 홈팀 쪽(dedupeToday) */
   const todays = dedupeToday(Object.values(lives).filter((l) => isTodayLive(l) && l.phase === 'done'))
@@ -223,6 +226,9 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
    * 리그부터 찾던 때는 뮌헨 vs 아틀레티코(챔스)에서 아틀레티코만 라리가 전적이 붙었다(2026-11-02).
    */
   const standingOf = useCallback((teamId: string, comp?: string): TeamStanding | undefined => {
+    /* 표가 없는 **리그** 경기(분데스리가 · MLS …)면 다른 대회 성적을 붙이지 않는다 — 뮌헨 vs 마인츠(분데스)에
+       챔스 13위 · 2W 2D 0L 이 붙었다(2026-11-07). 컵 경기는 리그 순위로 대신 보여 준다 */
+    if (comp && !(COMPS as string[]).includes(comp) && /\.\d+$/.test(comp)) return undefined;
     const order = comp && (COMPS as string[]).includes(comp) ? [comp, ...COMPS.filter((k) => k !== comp)] : COMPS;
     for (const k of order) {
       const row = tables[k]?.table?.rows.find((r) => r.team.id === teamId);

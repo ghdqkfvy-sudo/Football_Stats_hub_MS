@@ -184,10 +184,15 @@ export function discipline(
 const REASON: Record<Suspension['reason'], string> = { red: '퇴장', yellow: '경고 누적', fotmob: '징계' };
 const shortDay = (iso: string) => { const p = kstParts(iso); return `${p.month}.${p.date}`; };
 
+/** 징계 사유 조각 — 사유 · 확정/예상 · 복귀(또는 이후 미정). 화면이 조각마다 색을 다르게 칠한다 */
+export const susParts = (s: Suspension) => ({
+  why: `${REASON[s.reason]}${s.yellows ? ` ${s.yellows}장` : ''}`,
+  conf: s.confirmed ? '확정' : '예상',
+  back: s.back ? `${shortDay(s.back.kickoffUtc)} 복귀` : s.confirmed && (s.missed?.length ?? 0) > 1 ? '이후 미정' : '',
+});
+
 /** 징계 사유 한 줄 — "퇴장 · 확정 · 11.8 복귀" (폰에서 줄이 갈리지 않게 짧게) */
-export const susNote = (s: Suspension) =>
-  [
-    `${REASON[s.reason]}${s.yellows ? ` ${s.yellows}장` : ''}`,
-    s.confirmed ? '확정' : '예상',
-    s.back ? `${shortDay(s.back.kickoffUtc)} 복귀` : s.confirmed && (s.missed?.length ?? 0) > 1 ? '이후 미정' : '',
-  ].filter(Boolean).join(' · ');
+export const susNote = (s: Suspension) => {
+  const p = susParts(s);
+  return [p.why, p.conf, p.back].filter(Boolean).join(' · ');
+};

@@ -1,8 +1,7 @@
 import type { PlayerSeason } from '../lib/squad';
 import { Headshot } from './Headshot';
 import { CardShape } from './InjuryMark';
-import { SusWhat } from './DisciplineLines';
-import { susNote } from '../lib/discipline';
+import { SusNote, SusWhat } from './DisciplineLines';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -47,7 +46,7 @@ export function SuspensionList({ players, onOpen }: { players: PlayerSeason[]; o
             </span>
             <span className="injl__ret injl__ret--sus">
               <b><SusWhat s={s} /></b>
-              <small>{susNote(s)}</small>
+              <small><SusNote s={s} /></small>
             </span>
           </li>
         ))}

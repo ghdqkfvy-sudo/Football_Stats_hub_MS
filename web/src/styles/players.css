@@ -398,9 +398,17 @@
 .injl__row[data-doubt] .injl__ret b { color: #F5B544; }
 /* 출전 정지 명단 — 오른쪽 두 줄(대회·기간 / 사유) */
 .injl__ret--sus { flex-direction: column; align-items: flex-end; gap: 2px; }
-.injl__ret--sus { min-width: 0; max-width: 200px; }
+.injl__ret--sus { min-width: 0; max-width: 300px; }
 .injl__ret--sus b { color: #FF8A8E; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .injl__ret--sus small { font-size: 10.5px; color: var(--text-lo); white-space: nowrap; }
+/* 출전 정지 — 대회 · 못 뛰는 경기 · 기한 · 사유 · 복귀를 색으로 가른다 (DisciplineLines SusWhat · SusNote) */
+.sus__comp { color: color-mix(in srgb, var(--c, #FF8A8E) 70%, #fff); font-weight: 800; }
+.sus__match { color: var(--text-hi); font-weight: 700; }
+.sus__until { color: #F5B544; font-weight: 700; }
+.sus__why { color: #FF8A8E; font-weight: 700; }
+.sus__conf { color: var(--text-mid); }
+.sus__sep { color: var(--text-lo); }
+.sus__back { color: color-mix(in srgb, var(--win) 80%, #fff); font-weight: 700; }
 .injl__hs .injb[data-kind='red'] { box-shadow: 0 0 0 1.5px #E5262E, 0 1px 5px rgba(0, 0, 0, .45); }
 .injl--sus { margin-bottom: 0; }
 .injl__row[data-long] .injl__ret b { color: #FF8A8E; }
