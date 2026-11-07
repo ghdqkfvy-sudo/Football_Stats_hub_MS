@@ -631,7 +631,8 @@ function fillByActualSlots(
    * 라비아 1 … 로 흩어져, 시즌 2경기만 뛴 헨더슨이 "CM-R 최다" 로 베스트 11 에
    * 들고 중원 3경기 선발인 라비아의 몫은 반으로 갈렸다 — 결과가 마지막 경기
    * 라인업처럼 보였던 원인이다. 그래서 같은 줄의 좌우 짝은 한 묶음으로 센다:
-   *   · CM-L·CM-R, CD-L·CD-R, CF-L·CF-R, AM-L·AM-R (가운데 CD·AM 은 따로)
+   *   · CM-L·CM-R, CD-L·CD-R, DM-L·DM-R — 중앙 자원만(가운데 CD 는 따로).
+   *     AM-L·AM-R · CF-L·CF-R(2선 좌우)은 묶지 않는다(2026-11-07)
    *   · 두 명뿐인 중원 줄의 LM·RM — ESPN 은 4-2-3-1 의 더블 볼란치를 LM·RM 으로 준다
    * 3-4-2-1 의 LM·RM(윙백)은 네 명 줄이라 묶지 않는다.
    */
@@ -643,7 +644,11 @@ function fillByActualSlots(
     const pivot = row.length === 2 && row.every((a) => /^(LM|RM)$/i.test(a));
     for (const a of row) {
       const base = a.replace(SIDE, '');
-      const mirrored = SIDE.test(a) && row.some((b) => b !== a && SIDE.test(b) && b.replace(SIDE, '') === base);
+      /* 좌우를 합쳐 세는 건 **중앙 자원만** — 센터백(CD) · 중앙 미드(CM) · 수비형 미드(DM).
+         2선 좌우(AM-L · AM-R)나 CF-L · CF-R 은 윙 · 하프스페이스로 자리가 달라 따로 센다(2026-11-07 요청 —
+         AM-L · AM-R 을 묶어 레알 2선 오른쪽에 귈러(AM-R 8) 대신 디아망데(AM-R 4 + AM-L 4)가 들었다) */
+      const central = /^(CD|CM|DM)$/i.test(base);
+      const mirrored = central && SIDE.test(a) && row.some((b) => b !== a && SIDE.test(b) && b.replace(SIDE, '') === base);
       groupOf.set(a, pivot ? `${ri}:pivot` : mirrored ? `${ri}:${base}` : a);
     }
   });
