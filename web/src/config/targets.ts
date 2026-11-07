@@ -434,11 +434,23 @@ export const KOREAN_CLUBS: KoreanClub[] = [
 export const ALL_TARGETS: Target[] = [...TARGETS, ...KOREAN_CLUBS];
 
 const KOREANS_BY_TEAM = new Map(KOREAN_CLUBS.map((c) => [c.espnTeamId, c.koreans.map((k) => k.nameKo)]));
-/** 이 경기에 나오는 코리안리거 소속팀의 선수 이름들 (양쪽 다 본다 — 맨유 vs 아틀레티코) */
-/** 이 팀(코리안리거 소속팀)의 코리안리거 이름 — 아니면 빈 배열 */
-export const koreansOf = (teamId: string): string[] => KOREANS_BY_TEAM.get(teamId) ?? [];
-export const koreansIn = (homeId: string, awayId: string): string[] =>
-  [...(KOREANS_BY_TEAM.get(homeId) ?? []), ...(KOREANS_BY_TEAM.get(awayId) ?? [])];
+/**
+ * 코리안리거 명단(koreans.json)의 소속팀 → 이름 (2026-11-07). 소속팀 탭이 있는 세 클럽 밖의 팀도 —
+ * 뮌헨 vs 마인츠면 마인츠 쪽에 이재성. 앱이 명단을 받으면 setKoreanRoster 로 채운다(lib/koreanRoster.ts).
+ */
+let ROSTER = new Map<string, string[]>();
+export const setKoreanRoster = (players: { clubId?: string; nameKo?: string }[]) => {
+  const m = new Map<string, string[]>();
+  for (const p of players) {
+    if (!p.clubId || !p.nameKo) continue;
+    m.set(String(p.clubId), [...(m.get(String(p.clubId)) ?? []), p.nameKo]);
+  }
+  ROSTER = m;
+};
+/** 이 팀의 코리안리거 이름 — 소속팀 탭 클럽(고정 명단)이 먼저, 없으면 코리안리거 명단. 아니면 빈 배열 */
+export const koreansOf = (teamId: string): string[] => KOREANS_BY_TEAM.get(teamId) ?? ROSTER.get(teamId) ?? [];
+/** 이 경기에 나오는 코리안리거 이름들 (양쪽 다 본다 — 맨유 vs 아틀레티코) */
+export const koreansIn = (homeId: string, awayId: string): string[] => [...koreansOf(homeId), ...koreansOf(awayId)];
 export const isKoreanClub = (id: string): boolean => KOREAN_CLUBS.some((c) => c.id === id);
 
 /** 팀 테마 → 화면 CSS 변수 (앱 루트와 소속팀 패널이 같이 쓴다) */

@@ -1,5 +1,5 @@
 import type { Discipline, Suspension } from '../lib/discipline';
-import { CARD_RULES, susNote } from '../lib/discipline';
+import { CARD_RULES, susParts } from '../lib/discipline';
 import { comp, mobileName } from '../config/targets';
 import { kstParts } from '../lib/kst';
 import { CardShape } from './InjuryMark';
@@ -12,15 +12,31 @@ export function CompName({ k }: { k: string }) {
   return <><span className="m-full">{comp(k).name}</span><span className="m-short">{mobileName(k)}</span></>;
 }
 
-/** "La Liga 3경기 (~ 11.2)" · "EPL 10.19 (월) vs Arsenal" */
+/**
+ * "La Liga 3경기 (~ 11.2)" · "EPL 10.19 (월) vs Arsenal" — 대회 · 못 뛰는 경기 · 기한을 색으로 가른다(2026-11-07).
+ * 대회는 대회 색, 못 뛰는 경기는 흰색, 기한(~ 날짜)은 주황.
+ */
 export function SusWhat({ s }: { s: Suspension }) {
   const n = s.missed?.length ?? 0;
   return (
     <>
-      <CompName k={s.competition} />
+      <span className="sus__comp" style={{ ['--c' as string]: comp(s.competition).color }}><CompName k={s.competition} /></span>
       {n > 1
-        ? ` ${n}경기 (~ ${day(s.missed![n - 1].kickoffUtc)})`
-        : s.match ? ` ${when(s.match.kickoffUtc)}${s.opp ? ` vs ${s.opp}` : ''}` : ''}
+        ? <> <span className="sus__match">{n}경기</span> <span className="sus__until">~ {day(s.missed![n - 1].kickoffUtc)}</span></>
+        : s.match ? <> <span className="sus__match">{when(s.match.kickoffUtc)}{s.opp ? ` vs ${s.opp}` : ''}</span></> : null}
+    </>
+  );
+}
+
+/** "퇴장 · 확정 · 11.8 복귀" — 사유(빨강) · 확정/예상(흐리게) · 복귀(초록) */
+export function SusNote({ s }: { s: Suspension }) {
+  const parts = susParts(s);
+  return (
+    <>
+      <span className="sus__why">{parts.why}</span>
+      <span className="sus__sep"> · </span>
+      <span className="sus__conf">{parts.conf}</span>
+      {parts.back && <><span className="sus__sep"> · </span><span className="sus__back">{parts.back}</span></>}
     </>
   );
 }
@@ -42,7 +58,7 @@ export function DisciplineLines({ d }: { d?: Discipline }) {
           <div>
             <b>출전 정지</b>
             <span className="pdis__what"><SusWhat s={s} /></span>
-            <small>{susNote(s)}</small>
+            <small><SusNote s={s} /></small>
           </div>
         </div>
       ))}
