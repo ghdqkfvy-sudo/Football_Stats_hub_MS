@@ -117,7 +117,7 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
    * 폰에서는 표를 **요약**해서 보여 준다 — 스무 줄(챔스는 서른여섯 줄)을
    * 다 그리면 표 하나가 화면 한 장을 넘는다. 남기는 줄:
    *   · 1–4위 (선두권)
-   *   · 우리 팀 — Summary 는 일곱 팀 전부, 팀 탭은 그 팀과 앞뒤 두 팀
+   *   · 우리 팀 — Summary 는 일곱 팀 전부, 팀 탭은 그 팀과 앞뒤 두 팀 (선두권이면 아래로 다섯 줄)
    *   · 지금 펼쳐 둔 팀
    * 사이에 빠진 줄은 "··· N팀" 한 줄로 접고, 누르면 전체가 펼쳐진다.
    * 넓은 화면에서는 늘 전체다.
@@ -125,10 +125,14 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
   const mobile = useIsMobile();
   const [full, setFull] = useState(false);
   const focusRank = table.rows.find((r) => r.team.id === focusTeamId)?.rank;
+  /* 우리 팀 앞뒤로 다섯 줄 — 선두권이라 위가 잘리면 그만큼 아래로 더 보여 준다
+     (2위 팀이면 1–5위). 위쪽이 잘려 네 줄만 남는 일이 없게. */
+  const winLo = focusRank === undefined ? 0 : Math.max(1, focusRank - 2);
+  const winHi = winLo + 4;
   const keepRow = (r: StandingTable['rows'][number]) =>
     r.rank <= 4
     || !!focusTeams?.[r.team.id]
-    || (!focusTeams && focusRank !== undefined && Math.abs(r.rank - focusRank) <= 2)
+    || (!focusTeams && focusRank !== undefined && r.rank >= winLo && r.rank <= winHi)
     || open === r.team.id;
   type Row = StandingTable['rows'][number];
   type Item = { kind: 'row'; r: Row } | { kind: 'gap'; n: number; key: string };
