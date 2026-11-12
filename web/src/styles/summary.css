@@ -15,8 +15,8 @@
 
 .hdr__crest--sum {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 52px; height: 52px; border-radius: 14px; flex: none;
-  font-size: 22px; color: var(--accent);
+  width: 52px; height: 52px; border-radius: var(--r-lg); flex: none;
+  font-size: var(--fs-d2); color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
 }
@@ -35,7 +35,7 @@
   position: relative; isolation: isolate; display: block; width: 100%;
   text-align: left; color: inherit; font: inherit;
   border: 1px solid color-mix(in srgb, var(--team) 34%, transparent);
-  border-radius: 20px; padding: 13px 15px 14px;
+  border-radius: var(--r-xl); padding: 13px 15px 14px;
 }
 .mdh__card::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
@@ -50,7 +50,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 
 .mdh__card[data-hero] {
-  border-radius: 26px; padding: 17px 22px 20px;
+  border-radius: var(--r-xl); padding: 17px 22px 20px;
   border-color: color-mix(in srgb, var(--team) 46%, transparent);
   /* 팀 탭 히어로(.hero)와 같은 글로우를 준다. 배경 사진을 가리지 않으려고
      한동안 뺐었는데, 빼고 보니 카드가 그냥 어두운 상자였다.
@@ -85,7 +85,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .mdh__badge {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: var(--fs-sm); font-weight: 700; color: var(--team);
-  padding: 4px 11px 4px 6px; border-radius: 999px;
+  padding: 4px 11px 4px 6px; border-radius: var(--r-pill);
   border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
   background: color-mix(in srgb, var(--team) 12%, transparent);
   white-space: nowrap;
@@ -99,12 +99,12 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .mdh__card[data-hero] .mdh__comp { font-size: var(--fs-base); color: var(--text-hi); }
 .mdh__live {
   font-style: normal; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .06em;
-  color: #fff; background: var(--loss); padding: 2px 7px; border-radius: 4px;
+  color: #fff; background: var(--loss); padding: 2px 7px; border-radius: var(--r-xs);
   animation: pulse 1.7s ease-in-out infinite;
 }
 .mdh__ha {
   margin-left: auto; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .07em;
-  padding: 3px 7px; border-radius: 5px; white-space: nowrap;
+  padding: 3px 7px; border-radius: var(--r-xs); white-space: nowrap;
   color: var(--text-lo); border: 1px solid var(--line-2);
 }
 .mdh__ha[data-home] {
@@ -118,11 +118,11 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 
 .mdt { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
 .mdt__tile {
-  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px;
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: var(--r-lg);
   border: 1px solid var(--line-2);
   background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(6,16,38,.42));
 }
-.mdt[data-big] .mdt__tile { width: 78px; height: 78px; border-radius: 20px; }
+.mdt[data-big] .mdt__tile { width: 78px; height: 78px; border-radius: var(--r-xl); }
 .mdt[data-focus] .mdt__tile {
   border-color: color-mix(in srgb, var(--team) 62%, transparent);
   box-shadow: 0 0 20px color-mix(in srgb, var(--team) 22%, transparent);
@@ -137,7 +137,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 /* 순위 · 승무패 — 팀 탭 히어로의 .fxt__rec 와 같은 알약 */
 .mdt__rec {
   font-size: var(--fs-micro); color: var(--text-mid); white-space: nowrap;
-  padding: 2px 7px; border-radius: 999px;
+  padding: 2px 7px; border-radius: var(--r-pill);
   background: rgba(6,16,38,.5); border: 1px solid var(--line);
 }
 .mdt[data-big] .mdt__rec { font-size: var(--fs-xs); padding: 3px 10px; }
@@ -159,7 +159,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .mdh__card[data-hero] .mdh__vs .num { text-shadow: none; }
 .mdh__vs .num > i { color: var(--text-lo); opacity: 1; }
 .mdh__card[data-hero] .mdh__vs {
-  font-size: 30px; margin-top: 22px;
+  font-size: var(--fs-d5); margin-top: 22px;
   text-shadow: 0 0 22px color-mix(in srgb, var(--team) 50%, transparent);
 }
 /* 경기 중 — 스코어 아래 빨간 경기 시간 칩(깜빡이는 점). 스코어가 VS 자리를 맡는다 */
@@ -167,7 +167,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .mdh__clock {
   display: inline-flex; align-items: center; gap: 5px;
   font-style: normal; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .04em; line-height: 1;
-  padding: 3px 8px; border-radius: 999px; color: #fff; text-shadow: none;
+  padding: 3px 8px; border-radius: var(--r-pill); color: #fff; text-shadow: none;
   background: color-mix(in srgb, var(--loss) 85%, transparent);
   box-shadow: 0 0 14px color-mix(in srgb, var(--loss) 45%, transparent);
 }
@@ -184,7 +184,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 /* 팀 탭 히어로와 같은 알람 아이콘 — 시각 왼쪽에서 붉게 받쳐 준다 */
 .mdh__ico { color: var(--loss); display: grid; place-items: center; }
 .mdh__time b {
-  font-family: var(--font-display); font-size: 42px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d7); font-weight: 700; line-height: 1;
   color: var(--team); letter-spacing: 0;
   /* 팀 탭 .when__time b 와 같은 2단 글로우. 한 겹(28px/48%)만으로는
      큰 배경 사진 위에서 빛으로 읽히지 않고 그냥 색 글자로 보인다. */
@@ -207,21 +207,21 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 /* 카운트다운 스트립 */
 .mdh__cd {
   display: flex; align-items: flex-start; justify-content: center; margin-top: 14px;
-  padding: 12px 10px 10px; border-radius: 16px;
+  padding: 12px 10px 10px; border-radius: var(--r-lg);
   border: 1px solid color-mix(in srgb, var(--team) 18%, var(--line));
   background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(6,16,38,.34));
 }
 .mdh__cdu { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 68px; }
 .mdh__cdu b {
-  font-family: var(--font-display); font-size: 32px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d5); font-weight: 700; line-height: 1;
   color: var(--team); text-shadow: 0 0 20px color-mix(in srgb, var(--team) 42%, transparent);
 }
 .mdh__cdu i { font-style: normal; font-size: var(--fs-micro); color: var(--text-mid); margin-top: 4px; letter-spacing: .08em; }
 .mdh__cdsep {
   position: absolute; left: -4px; top: 1px;
-  font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text-lo);
+  font-family: var(--font-display); font-size: var(--fs-d3); font-weight: 600; color: var(--text-lo);
 }
-.mdh__soon { font-family: var(--font-display); font-size: 22px; color: var(--team); }
+.mdh__soon { font-family: var(--font-display); font-size: var(--fs-d2); color: var(--team); }
 
 /* 끝난 경기가 히어로에 올라왔을 때 — 카운트다운 자리에 결과 한 줄 */
 .mdh__cd[data-done] { justify-content: center; }
@@ -230,7 +230,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   font-size: var(--fs-sm); font-weight: 700; letter-spacing: .08em; color: var(--text-mid);
 }
 .mdh__fin b {
-  font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d5); font-weight: 700; line-height: 1;
   letter-spacing: 0; color: var(--team);
   text-shadow: 0 0 24px color-mix(in srgb, var(--team) 45%, transparent);
 }
@@ -267,14 +267,14 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 
 .mdh__kick {
   display: flex; align-items: center; justify-content: center; gap: 9px;
-  padding: 7px 10px; border-radius: 11px;
+  padding: 7px 10px; border-radius: var(--r-md);
   background: color-mix(in srgb, var(--team) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--team) 26%, transparent);
 }
 /* D-day 칩 — 임박할수록 팀 컬러가 진해진다 */
 .mdh__dday {
   font-style: normal; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .04em;
-  padding: 2.5px 7px; border-radius: 7px; flex: none;
+  padding: 2.5px 7px; border-radius: var(--r-sm); flex: none;
   color: var(--team);
   background: color-mix(in srgb, var(--team) 20%, transparent);
   border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
@@ -314,7 +314,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 .wcal__nav, .wcal__today {
   border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
-  border-radius: 7px; cursor: pointer; font: inherit;
+  border-radius: var(--r-sm); cursor: pointer; font: inherit;
 }
 .wcal__nav { width: 26px; height: 26px; font-size: var(--fs-xl); line-height: 1; }
 .wcal__today { padding: 4px 10px; font-size: var(--fs-xs); }
@@ -364,7 +364,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .wcal__list { display: flex; flex-direction: column; gap: 4px; }
 .wcal__m {
   display: grid; grid-template-columns: minmax(0,1fr); gap: 2px;
-  border: 0; border-left: 3px solid var(--team); border-radius: 5px;
+  border: 0; border-left: 3px solid var(--team); border-radius: var(--r-xs);
   padding: 5px 6px; cursor: pointer; text-align: left; font: inherit;
   background: color-mix(in srgb, var(--team) 20%, transparent);
   color: var(--text-mid);
@@ -401,7 +401,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 .wcal__mine, .wcal__opp { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .wcal__mine b { font-size: var(--fs-xs); font-weight: 700; color: var(--text-hi); }
 .wcal__mine i {
-  font-style: normal; font-size: var(--fs-micro); font-weight: 800; padding: 0 3px; border-radius: 3px;
+  font-style: normal; font-size: var(--fs-micro); font-weight: 800; padding: 0 3px; border-radius: var(--r-xs);
   background: rgba(255,255,255,.14); color: var(--text-mid);
 }
 .wcal__opp span {
@@ -479,7 +479,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
 }
 .sum__jump {
   border: 1px solid var(--line-2); background: transparent; color: var(--text-mid);
-  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: var(--fs-sm); cursor: pointer;
+  border-radius: var(--r-pill); padding: 4px 11px; font: inherit; font-size: var(--fs-sm); cursor: pointer;
 }
 .sum__jump:hover { color: var(--text-hi); border-color: var(--accent); }
 
@@ -500,7 +500,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
    (색이 다른 것만으로 홈·원정은 충분히 갈린다) */
 .ml__ha {
   font-style: normal; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .06em;
-  padding: 2px 6px; border-radius: 4px; flex: none;
+  padding: 2px 6px; border-radius: var(--r-xs); flex: none;
   color: var(--text-hi);
   border: 1px solid color-mix(in srgb, var(--text-hi) 26%, transparent);
   background: rgba(255, 255, 255, .07);
@@ -579,7 +579,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .ml__match[data-ours] .ml__side b { font-size: var(--fs-base); }
   .ml__match[data-ours] .ml__score { font-size: var(--fs-xl); }
   .ml__ha { font-size: var(--fs-micro); padding: 1px 3px; letter-spacing: 0; }
-  .ml__res.fchip { width: 15px; height: 15px; font-size: var(--fs-micro); border-radius: 3px; }
+  .ml__res.fchip { width: 15px; height: 15px; font-size: var(--fs-micro); border-radius: var(--r-xs); }
   i.ml__res:empty { width: 15px; height: 15px; }
 }
 
@@ -608,18 +608,18 @@ i.ml__res:empty { width: 17px; height: 17px; }
 
 @media (max-width: 720px) {
   .mdh__rest { grid-template-columns: 1fr; }
-  .mdh__card[data-hero] { padding: 15px 15px 17px; border-radius: 20px; }
+  .mdh__card[data-hero] { padding: 15px 15px 17px; border-radius: var(--r-xl); }
   .mdh__card[data-hero] .mdh__fx { gap: 8px; }
-  .mdt[data-big] .mdt__tile { width: 60px; height: 60px; border-radius: 16px; }
+  .mdt[data-big] .mdt__tile { width: 60px; height: 60px; border-radius: var(--r-lg); }
   .mdt[data-big] .mdt__name { font-size: var(--fs-base); }
-  .mdh__card[data-hero] .mdh__vs { font-size: 22px; margin-top: 16px; }
-  .mdh__time b { font-size: 34px; }
+  .mdh__card[data-hero] .mdh__vs { font-size: var(--fs-d2); margin-top: 16px; }
+  .mdh__time b { font-size: var(--fs-d6); }
   /* 팀 탭 히어로(.cdu)와 같은 규칙 — 네 칸을 **똑같은 폭**으로 나눈다.
      min-width 만 주면 칸이 내용 크기대로 잡혀("1" 과 "09" 는 폭이 다르다)
      칸마다 왼쪽에 절대 배치된 ':' 가 제각각인 자리에 찍힌다. */
   .mdh__cdu { min-width: 0; flex: 1 1 0; }
-  .mdh__cdu b { font-size: 24px; }
-  .mdh__cdsep { font-size: 20px; left: -2px; top: 2px; }
+  .mdh__cdu b { font-size: var(--fs-d3); }
+  .mdh__cdsep { font-size: var(--fs-d1); left: -2px; top: 2px; }
   /* 히어로 머리 줄(폰) — 2단: 1줄 [팀 배지 ··· HOME/AWAY], 2줄 가는 구분선 아래 가운데 대회명(대문자 · 전체 이름).
      한 줄에 셋을 넣으면 붙어 보이거나 접혀서 약칭으로 바뀌었다(2026-11-02) */
   .mdh__card[data-hero] .mdh__top {
@@ -638,10 +638,10 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .sum__foot { font-size: var(--fs-xs); }
 }
 @media (max-width: 420px) {
-  .mdh__cdu b { font-size: 22px; }
+  .mdh__cdu b { font-size: var(--fs-d2); }
   .mdh__cdu i { font-size: var(--fs-micro); }
   .mdh__cdsep { font-size: var(--fs-2xl); left: -1px; }
-  .mdh__time b { font-size: 28px; }
+  .mdh__time b { font-size: var(--fs-d4); }
   .mdt[data-big] .mdt__tile { width: 52px; height: 52px; }
   .wcal__cell { min-height: 96px; }
 }
@@ -744,7 +744,7 @@ i.ml__res:empty { width: 17px; height: 17px; }
   .ml__row[data-ours] .ml__score {
     --r: var(--text-lo);
     justify-self: stretch; display: flex; align-items: center; justify-content: center;
-    height: 34px; padding-inline: 30px; border-radius: 10px;
+    height: 34px; padding-inline: 30px; border-radius: var(--r-md);
     border: 1px solid color-mix(in srgb, var(--r) 30%, transparent);
     background: color-mix(in srgb, var(--r) 7%, rgba(255, 255, 255, .02));
     transition: border-color .18s, background .18s;

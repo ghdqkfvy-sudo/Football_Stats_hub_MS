@@ -3,6 +3,8 @@
  *
  *   #/                     Summary
  *   #/chelsea/standings    첼시 · 팀 순위
+ *   #/chelsea/schedule/m/{경기 id}   그 경기가 히어로에 뜬 일정 탭
+ *   #/chelsea/players/p/{선수 id}    그 선수 상세가 열린 선수 탭
  *
  * 왜 필요한가
  *  · 친구에게 "첼시 순위" 화면을 그대로 보낼 수 있다(링크를 열면 그 화면).
@@ -10,18 +12,31 @@
  *  · 폰의 뒤로 가기가 **앱을 닫지 않고** 직전 화면으로 돌아간다.
  * 해시만 쓰므로 GitHub Pages 에서 서버 설정 없이 동작한다.
  */
+import { TARGETS } from '../config/targets';
+import { getPrefs, startRoute } from './prefs';
+
 export interface Route {
   targetId: string | null;   // null = Summary
   tab: string | null;
+  /** 그 탭에서 바로 열 것 — #/chelsea/schedule/m/12345(경기) · #/chelsea/players/p/678(선수) */
+  sub?: { kind: 'm' | 'p'; id: string };
 }
 
 export function parseRoute(hash: string = typeof location !== 'undefined' ? location.hash : ''): Route {
-  const [team, tab] = hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
-  return { targetId: team || null, tab: tab || null };
+  const [team, tab, kind, id] = hash.replace(/^#\/?/, '').split('/').map((x) => decodeURIComponent(x || ''));
+  const sub = (kind === 'm' || kind === 'p') && id ? { kind, id } as const : undefined;
+  return { targetId: team || null, tab: tab || null, ...(sub ? { sub } : {}) };
 }
 
-export function formatRoute(targetId: string | null, tab: string | null): string {
-  return targetId ? `#/${targetId}${tab ? `/${tab}` : ''}` : '#/';
+export function formatRoute(targetId: string | null, tab: string | null, sub?: Route['sub']): string {
+  if (!targetId) return '#/';
+  return `#/${targetId}${tab ? `/${tab}${sub ? `/${sub.kind}/${encodeURIComponent(sub.id)}` : ''}` : ''}`;
+}
+
+/** 보낼 수 있는 전체 주소 — 그 팀 일정의 그 경기 / 선수 스탯의 그 선수 */
+export function shareUrl(targetId: string, kind: 'm' | 'p', id: string): string {
+  const base = typeof location !== 'undefined' ? `${location.origin}${location.pathname}` : '';
+  return base + formatRoute(targetId, kind === 'm' ? 'schedule' : 'players', { kind, id });
 }
 
 /*
@@ -40,5 +55,8 @@ export function rememberRoute(hash: string): void {
 export function startHash(): string {
   if (typeof location === 'undefined') return '';
   if (location.hash && location.hash !== '#') return location.hash;
+  /* 설정에서 시작 화면을 골랐으면 그쪽(lib/prefs) — "마지막 화면" 이면 아래 규칙 그대로 */
+  const fixed = startRoute(getPrefs(), TARGETS.map((t) => t.id));
+  if (fixed) return fixed;
   try { return localStorage.getItem(LAST_KEY) ?? ''; } catch { return ''; }
 }

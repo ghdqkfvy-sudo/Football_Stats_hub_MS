@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FEED_POLL_MS, LIVE_POLL_MS, inMatchWindow, mergeMatches, pollDelay } from '../refresh';
+import { FEED_POLL_MS, LIVE_POLL_MS, inMatchWindow, mergeMatches, pollDelay , isStale } from '../refresh';
 import type { Match } from '../types';
 
 const team = (id: string) => ({ id, name: id, shortName: id, abbr: id, logo: '' });
@@ -47,5 +47,17 @@ describe('mergeMatches', () => {
     const prev = [mk({ status: 'live', goals: [goal], goalsLoaded: true })];
     const next = [mk({ status: 'finished' })];
     expect(mergeMatches(prev, next)[0].goalsLoaded).toBe(false);
+  });
+});
+
+describe('isStale', () => {
+  const now = Date.parse('2026-11-12T12:00:00Z');
+  it('정적 피드가 한 시간 넘게 그대로면 지연', () => {
+    expect(isStale('feed', '2026-11-12T10:59:00Z', now)).toBe(true);
+    expect(isStale('feed', '2026-11-12T11:30:00Z', now)).toBe(false);
+  });
+  it('실시간 · 시각 없음은 지연이 아니다', () => {
+    expect(isStale('live', '2026-11-12T01:00:00Z', now)).toBe(false);
+    expect(isStale('feed', '', now)).toBe(false);
   });
 });

@@ -20,7 +20,7 @@
    배경 아트워크가 카드 안쪽까지 그대로 비쳐야 한다. */
 
 .hero {
-  position: relative; border-radius: 26px; isolation: isolate;
+  position: relative; border-radius: var(--r-xl); isolation: isolate;
   border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
   background: transparent;
   padding: 17px 22px 20px;
@@ -41,7 +41,7 @@
 .hero__spacer { flex: 1 1 auto; }
 .hero__tag {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 13px; border-radius: 999px;
+  padding: 5px 13px; border-radius: var(--r-pill);
   border: 1px solid color-mix(in srgb, var(--accent) 52%, transparent);
   color: var(--accent); font-size: var(--fs-sm); font-weight: 700; letter-spacing: -.01em;
   white-space: nowrap;
@@ -81,7 +81,7 @@
 }
 .fxt { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 176px; text-align: center; }
 .fxt__tile {
-  display: grid; place-items: center; width: 80px; height: 80px; border-radius: 20px;
+  display: grid; place-items: center; width: 80px; height: 80px; border-radius: var(--r-xl);
   border: 1px solid var(--line-2);
   background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(6,16,38,.42));
 }
@@ -97,12 +97,12 @@
 .fxt[data-focus='true'] .fxt__name { color: var(--accent); }
 .fxt__rec {
   font-size: var(--fs-xs); color: var(--text-mid); letter-spacing: .01em;
-  padding: 3px 10px; border-radius: 999px;
+  padding: 3px 10px; border-radius: var(--r-pill);
   background: rgba(6,16,38,.42); border: 1px solid var(--line);
 }
 .fxt__rec b { color: var(--text-hi); font-weight: 700; }
 .fxvs {
-  font-family: var(--font-display); font-size: 32px; font-weight: 600;
+  font-family: var(--font-display); font-size: var(--fs-d5); font-weight: 600;
   color: var(--accent); letter-spacing: .06em; margin-top: 24px;
   text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 2px 16px rgba(4,12,28,.9);
 }
@@ -123,7 +123,7 @@
 .hgoals__side[data-side='home'] .hg__t { order: 2; }
 .hgoals__side[data-side='home'] .hg__body { order: 1; align-items: flex-end; text-align: right; }
 .hg__t {
-  justify-self: stretch; text-align: center; padding: 2px 0; border-radius: 5px;
+  justify-self: stretch; text-align: center; padding: 2px 0; border-radius: var(--r-xs);
   font-family: var(--font-display); font-size: var(--fs-base); font-weight: 700; line-height: 1.25;
   color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent);
 }
@@ -138,7 +138,7 @@
 }
 .hgoals__tag {
   font-style: normal; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .05em; flex: none;
-  padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.1); color: var(--text-mid);
+  padding: 1px 4px; border-radius: var(--r-xs); background: rgba(255,255,255,.1); color: var(--text-mid);
 }
 .hgoals__tag[data-og] { background: rgba(255,92,113,.16); color: #FF8A99; }
 .hg__a {
@@ -148,7 +148,7 @@
 .hgoals__side[data-side='home'] .hg__a { flex-direction: row-reverse; }
 .hg__a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .hg__a i {
-  flex: none; font-style: normal; font-size: var(--fs-micro); font-weight: 800; padding: 1px 4px; border-radius: 3px;
+  flex: none; font-style: normal; font-size: var(--fs-micro); font-weight: 800; padding: 1px 4px; border-radius: var(--r-xs);
   color: #7FE3FF; background: rgba(127,227,255,.12); border: 1px solid rgba(127,227,255,.32);
 }
 .hg__a[data-guess] { opacity: .7; }
@@ -171,7 +171,7 @@
 }
 .when__ico { color: var(--loss); display: grid; place-items: center; }
 .when__time b {
-  font-family: var(--font-display); font-size: 46px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d7); font-weight: 700; line-height: 1;
   color: var(--accent); letter-spacing: 0;
   text-shadow: 0 0 30px color-mix(in srgb, var(--accent) 55%, transparent),
                0 2px 22px color-mix(in srgb, var(--accent) 30%, transparent);
@@ -184,7 +184,7 @@
 /* 카운트다운 — 하나의 얇은 스트립 */
 .hero__cd {
   display: flex; align-items: flex-start; justify-content: center; gap: 0;
-  padding: 13px 10px 11px; border-radius: 16px;
+  padding: 13px 10px 11px; border-radius: var(--r-lg);
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
   background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(6,16,38,.30));
 }
@@ -193,20 +193,20 @@
   min-width: 74px;
 }
 .cdu b {
-  font-family: var(--font-display); font-size: 34px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d6); font-weight: 700; line-height: 1;
   color: var(--accent);
   text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .cdu i { font-style: normal; font-size: var(--fs-xs); color: var(--text-mid); margin-top: 4px; letter-spacing: .06em; }
 .cdu__sep {
   position: absolute; left: -4px; top: 2px;
-  font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--text-lo);
+  font-family: var(--font-display); font-size: var(--fs-d4); font-weight: 600; color: var(--text-lo);
 }
 
 /* 대회 배지 */
 .cbadge {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .01em;
+  padding: 4px 10px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .01em;
   background: color-mix(in srgb, var(--c) 16%, transparent);
   color: color-mix(in srgb, var(--c) 82%, white);
   border: 1px solid color-mix(in srgb, var(--c) 32%, transparent);
@@ -218,7 +218,7 @@
    .cdot 은 어디에 놓이든 보이도록 기본형을 갖는다(맥락별 규칙이 덮어쓴다). */
 .cdot {
   display: inline-block; flex: none;
-  width: 14px; height: 5px; border-radius: 3px; background: var(--c, var(--accent));
+  width: 14px; height: 5px; border-radius: var(--r-xs); background: var(--c, var(--accent));
 }
 .clogo {
   flex: none; object-fit: contain;
@@ -233,7 +233,7 @@
 
 /* 폼 점 */
 .fchip {
-  width: 17px; height: 17px; border-radius: 4px; font-size: var(--fs-micro); font-weight: 700;
+  width: 17px; height: 17px; border-radius: var(--r-xs); font-size: var(--fs-micro); font-weight: 700;
   display: grid; place-items: center; color: #06090F;
 }
 .fchip[data-r='W'] { background: var(--win); }
@@ -244,7 +244,7 @@
 /* 새벽 경기 배지 */
 .dawn {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: var(--fs-xs); font-weight: 600; padding: 3px 8px; border-radius: 999px;
+  font-size: var(--fs-xs); font-weight: 600; padding: 3px 8px; border-radius: var(--r-pill);
   background: rgba(124,110,255,.15); color: #A99BFF; border: 1px solid rgba(124,110,255,.3);
 }
 
@@ -253,7 +253,7 @@
    날짜 숫자(왼쪽 위)와 대회 컬러 막대(아래)만 떠 있다. */
 
 .cal {
-  border: 1px solid var(--line); border-radius: 24px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--panel);
   overflow: visible; padding: 14px 16px 18px; backdrop-filter: var(--panel-blur);
 }
 .cal__bar {
@@ -267,7 +267,7 @@
 }
 .cal__nav { display: contents; }
 .cal__nav button {
-  width: 30px; height: 30px; border-radius: 8px; border: 0;
+  width: 30px; height: 30px; border-radius: var(--r-md); border: 0;
   color: var(--text-mid); display: grid; place-items: center; transition: .16s;
 }
 .cal__nav button:first-child { grid-column: 1; grid-row: 1; justify-self: start; }
@@ -279,7 +279,7 @@
 
 /* 선택 하이라이트 — 칸에서 칸으로 미끄러진다 */
 .cal__marker {
-  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none; border-radius: 12px;
+  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none; border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--accent) 9%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
   transition: transform .34s cubic-bezier(.22,.7,.3,1), width .34s cubic-bezier(.22,.7,.3,1),
@@ -315,7 +315,7 @@
   position: relative; min-height: 86px; padding: 9px 10px 10px;
   border: 0; background: transparent;
   display: flex; flex-direction: column; gap: 4px;
-  cursor: pointer; z-index: 1; border-radius: 12px;
+  cursor: pointer; z-index: 1; border-radius: var(--r-lg);
 }
 /* 지난달·다음달 날짜는 흐리게. 단 opacity 를 칸 전체에 걸면 그 위에 뜨는
    미리보기 카드까지 같이 흐려져 글씨가 안 읽힌다 — 칸 안의 내용만 흐린다. */
@@ -338,11 +338,11 @@
 /* 다음 경기 = 채워진 골드 원 / 오늘 = 얇은 링 */
 .day[data-today='true'] .day__n {
   color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 999px; width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: var(--r-pill); width: 22px; height: 22px; display: grid; place-items: center;
 }
 .day[data-next='true'] .day__n {
   color: var(--on-accent); background: var(--accent); border-color: transparent;
-  border-radius: 999px; width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: var(--r-pill); width: 22px; height: 22px; display: grid; place-items: center;
   box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
   text-shadow: none;
 }
@@ -353,7 +353,7 @@
 .day__bars { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
 .barwrap { position: relative; z-index: 2; }
 .bar {
-  display: block; width: 100%; height: 6px; border-radius: 999px; padding: 0;
+  display: block; width: 100%; height: 6px; border-radius: var(--r-pill); padding: 0;
   border: 0; background: var(--c);
   box-shadow: 0 1px 10px color-mix(in srgb, var(--c) 45%, transparent);
   transition: transform .15s, box-shadow .15s, opacity .15s;
@@ -391,7 +391,7 @@
 .bar__info { display: none; }
 @media (min-width: 900px) {
   .bar {
-    height: 22px; border-radius: 6px; padding: 0 6px;
+    height: 22px; border-radius: var(--r-sm); padding: 0 6px;
     display: flex; align-items: center;
     background: color-mix(in srgb, var(--c) 30%, rgba(6,16,38,.6));
     box-shadow: inset 3px 0 0 var(--c);
@@ -440,9 +440,9 @@
   font-size: var(--fs-xs); color: var(--text-mid); letter-spacing: -.005em;
   text-shadow: 0 1px 10px rgba(4,12,28,.85);
 }
-.cal__lg i { width: 16px; height: 5px; border-radius: 3px; background: var(--c); }
+.cal__lg i { width: 16px; height: 5px; border-radius: var(--r-xs); background: var(--c); }
 .cal__lgnote { color: var(--text-lo); margin-left: auto; }
-.cal__lgh { width: 16px; height: 5px; border-radius: 3px; border: 1.5px solid var(--text-lo); }
+.cal__lgh { width: 16px; height: 5px; border-radius: var(--r-xs); border: 1.5px solid var(--text-lo); }
 
 /* 호버 팝오버 (데스크톱) */
 .pop {
@@ -457,7 +457,7 @@
 /* 미리보기 닫기 단추 — 카드는 pointer-events:none 이라 이 단추만 살린다 */
 .pop__x, .pcard__x {
   position: absolute; top: 8px; right: 8px; z-index: 2;
-  width: 26px; height: 26px; border-radius: 8px;
+  width: 26px; height: 26px; border-radius: var(--r-md);
   display: none; place-items: center;
   border: 1px solid var(--line-2); background: rgba(255,255,255,.06);
   color: var(--text-mid); font-size: var(--fs-xs); pointer-events: auto;
@@ -470,7 +470,7 @@
 .pop__h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .pop__row { display: flex; align-items: center; gap: 8px; font-size: var(--fs-base); padding: 3px 0; }
 .pop__row img { width: 18px; height: 18px; object-fit: contain; }
-.pop__row b { margin-left: auto; font-family: var(--font-display); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pop__row b { margin-left: auto; font-family: var(--font-display); font-size: var(--fs-d1); font-weight: 600; font-variant-numeric: tabular-nums; }
 .pop__row[data-lost='true'] { color: var(--text-lo); }
 .pop__g { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .pop__gi { display: flex; gap: 7px; font-size: var(--fs-sm); color: var(--text-mid); align-items: baseline; }
@@ -500,11 +500,11 @@
   font-size: var(--fs-sm); color: var(--text-mid);
   text-shadow: 0 1px 10px rgba(4,12,28,.85);
 }
-.ml__legend i { width: 16px; height: 5px; border-radius: 3px; background: var(--c); }
+.ml__legend i { width: 16px; height: 5px; border-radius: var(--r-xs); background: var(--c); }
 
 /* 행은 거의 투명하다. 구분은 아주 얇은 선 하나로만 한다. */
 .ml__item {
-  border: 1px solid transparent; border-radius: 12px;
+  border: 1px solid transparent; border-radius: var(--r-lg);
   background: rgba(6,16,38,.16);
   box-shadow: inset 0 -1px 0 rgba(150,180,230,.10);
   transition: background .18s, border-color .18s;
@@ -529,14 +529,14 @@
 
 .ml__date { text-align: center; line-height: 1; }
 .ml__date b {
-  font-family: var(--font-body); font-size: 20px; font-weight: 700; display: block;
+  font-family: var(--font-body); font-size: var(--fs-d1); font-weight: 700; display: block;
   letter-spacing: -.02em; text-shadow: 0 1px 12px rgba(4,12,28,.95);
 }
 .ml__date i { font-style: normal; font-size: var(--fs-xs); color: var(--text-mid); display: block; margin-top: 3px; }
 
 /* 참가 대회 구별 택 */
 .ml__tick {
-  display: block; width: 3px; height: 32px; border-radius: 2px; background: var(--c);
+  display: block; width: 3px; height: 32px; border-radius: var(--r-2xs); background: var(--c);
   box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
 }
 
@@ -581,7 +581,7 @@
   font-size: var(--fs-sm); color: var(--text-mid); white-space: nowrap;
   text-shadow: 0 1px 10px rgba(4,12,28,.9);
 }
-.ml__comp i { width: 9px; height: 9px; border-radius: 2px; background: var(--c); flex: none; }
+.ml__comp i { width: 9px; height: 9px; border-radius: var(--r-2xs); background: var(--c); flex: none; }
 .ml__status {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: var(--fs-base); font-weight: 600; color: var(--text-hi);
@@ -600,7 +600,7 @@
 .ml__panelIn { overflow: hidden; }
 .ml__goals {
   margin: 0 16px 15px; padding: 13px 15px;
-  border: 1px solid var(--line); border-radius: 10px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
   background: rgba(6,16,38,.28);
 }
 
@@ -615,10 +615,10 @@
 .gl__a { font-size: var(--fs-sm); color: var(--text-lo); display: inline-flex; align-items: baseline; gap: 5px; }
 .gl__a i {
   font-style: normal; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .05em;
-  color: var(--text-mid); border: 1px solid var(--line-2); border-radius: 3px; padding: 0 3px;
+  color: var(--text-mid); border: 1px solid var(--line-2); border-radius: var(--r-xs); padding: 0 3px;
 }
 .gl__tag {
-  font-style: normal; font-size: var(--fs-micro); margin-left: 6px; padding: 1px 5px; border-radius: 3px;
+  font-style: normal; font-size: var(--fs-micro); margin-left: 6px; padding: 1px 5px; border-radius: var(--r-xs);
   border: 1px solid var(--line-2); color: var(--text-lo); vertical-align: 1px;
 }
 .nogoal { font-size: var(--fs-base); color: var(--text-lo); padding: 2px 0; margin: 0; }
@@ -654,16 +654,16 @@
 .sheet__panel {
   position: absolute; left: 0; right: 0; bottom: 0;
   background: var(--ink-850); border-top: 1px solid var(--line-2);
-  border-radius: 18px 18px 0 0; padding: 8px 18px calc(20px + env(safe-area-inset-bottom));
+  border-radius: var(--r-xl) var(--r-xl) 0 0; padding: 8px 18px calc(20px + env(safe-area-inset-bottom));
   max-height: 78vh; overflow-y: auto; animation: rise .24s cubic-bezier(.2,.8,.3,1);
 }
 @keyframes rise { from { transform: translateY(18px); opacity: .4; } }
-.sheet__grab { width: 38px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 6px auto 14px; }
+.sheet__grab { width: 38px; height: 4px; border-radius: var(--r-2xs); background: var(--line-2); margin: 6px auto 14px; }
 
 /* 캘린더 내보내기 링크 — 섹션 머리 오른쪽 (ScheduleTab IcsLinks) */
 .icsbar { margin-left: auto; display: inline-flex; gap: 6px; flex: none; }
 .icsbar a {
-  padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line);
+  padding: 4px 11px; border-radius: var(--r-pill); border: 1px solid var(--line);
   font-size: var(--fs-sm); font-weight: 600; color: var(--text-mid); text-decoration: none;
   background: color-mix(in srgb, var(--ink-900) 60%, transparent);
   transition: color .15s, border-color .15s;

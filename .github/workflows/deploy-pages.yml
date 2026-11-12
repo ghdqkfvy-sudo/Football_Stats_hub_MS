@@ -50,6 +50,8 @@ jobs:
         env:
           # 프로젝트 페이지(https://<user>.github.io/<repo>/)용 서브패스.
           BASE_PATH: /${{ github.event.repository.name }}/
+          # 공유 미리보기 그림(og:image)의 절대 주소 — vite.config.ts 가 index.html 에 채운다
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           # Cloudflare Worker 를 배포했다면 저장소 Settings → Secrets and
           # variables → Actions → Variables 에 VITE_API_BASE 를 등록해 두면
           # 실시간 프록시 티어가 켜진다. 비워 두면 정적 피드 티어만으로 동작한다.

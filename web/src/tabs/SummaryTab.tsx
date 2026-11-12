@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
+import { usePrefs, visibleTeams } from '../lib/prefs';
+import { PrefsSheet } from '../components/PrefsSheet';
 import { loadCup, loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound, type CupRoundData } from '../lib/api';
 import { CupBracket } from '../components/CupBracket';
 import { useKoreanRoster } from '../lib/koreanRoster';
@@ -44,10 +46,45 @@ const EUROPE: CompetitionKey[] = ['uefa.champions', 'uefa.europa', 'uefa.europa.
 
 /** 오늘의 경기 파일을 받는 팀 — 클럽 전부(대표팀은 라이브 수집이 없다) */
 /* 대표팀(korea)도 — 라이브 파일이 있을 때만 잡힌다(2026-10-20 대표팀 라이브 수집) */
-const LIVE_SLUGS = [...TARGETS, ...KOREAN_CLUBS].map((t) => t.id);
 
-export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: { matchId: string; today?: boolean }) => void }) {
-  const lives = useLives(LIVE_SLUGS);
+export function SummaryTab({ onOpenTeam }: { onOpenTeam: OpenTeam }) {
+  /* 관심 팀(lib/prefs) — 끈 팀은 다음 경기 · 주간 일정 · 팀 비교 · 경기 결과에서 빠진다.
+     대한민국을 끄면 코리안리거 소속팀 경기도 함께 빠진다(대한민국 칸의 일부라서). */
+  const prefs = usePrefs();
+  const mine = useMemo(() => visibleTeams(TARGETS, prefs), [prefs]);
+  const kclubs = useMemo(() => (mine.some((t) => t.id === 'korea') ? KOREAN_CLUBS : []), [mine]);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const closePrefs = useCallback(() => setPrefsOpen(false), []);
+  return (
+    <>
+      {/* key — 팀 구성이 바뀌면 처음부터 다시 받고 다시 그린다(받아 둔 일정 · 고른 경기가 섞이지 않게) */}
+      <SummaryBody
+        key={mine.map((t) => t.id).join(',')}
+        onOpenTeam={onOpenTeam}
+        mine={mine}
+        kclubs={kclubs}
+        hidden={TARGETS.length - mine.length}
+        onPrefs={() => setPrefsOpen(true)}
+      />
+      <PrefsSheet open={prefsOpen} onClose={closePrefs} />
+    </>
+  );
+}
+
+type OpenTeam = (id: TargetId, focus?: { matchId: string; today?: boolean }) => void;
+
+function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
+  onOpenTeam: OpenTeam;
+  /** Summary 에 보일 팀 */
+  mine: Target[];
+  /** 코리안리거 소속팀 — 대한민국을 껐으면 빈 배열 */
+  kclubs: Target[];
+  /** 끈 팀 수 — 설정 단추에 적는다 */
+  hidden: number;
+  onPrefs: () => void;
+}) {
+  const liveSlugs = useMemo(() => [...mine, ...kclubs].map((t) => t.id), [mine, kclubs]);
+  const lives = useLives(liveSlugs);
   /* 코리안리거 명단 — 우리 팀 상대가 코리안리거 소속팀이면(뮌헨 vs 마인츠) 상대 쪽 이름표까지 */
   useKoreanRoster();
   /* 오늘 끝난 경기만 — 경기 중인 경기는 위 매치데이 히어로가 이미 보여 주고 누르면 오늘의 경기로 간다 */
@@ -73,7 +110,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
    */
   useEffect(() => {
     let alive = true;
-    const all = [...TARGETS, ...KOREAN_CLUBS];
+    const all = [...mine, ...kclubs];
     let left = all.length;
     const done = () => { if (alive && --left === 0) setLoading(false); };
     for (const t of all) {
@@ -83,12 +120,12 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
     }
     const cap = setTimeout(() => { if (alive) setLoading(false); }, 2500);
     return () => { alive = false; clearTimeout(cap); };
-  }, []);
+  }, [mine, kclubs]);
 
   /** 팀 탭이 있는 일곱 팀 — 팀 비교는 여기만 */
   const teamFeeds = useMemo<TeamFeed[]>(
-    () => TARGETS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId })),
-    [feeds],
+    () => mine.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId })),
+    [feeds, mine],
   );
   /**
    * + 코리안리거 소속팀 — 주간 일정에는 세 클럽 경기가 다 나오고, 다음 경기에서는
@@ -96,8 +133,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
    * 우리 팀끼리 겹치는 경기(맨유 vs 아틀레티코 · 뮌헨 vs 아틀레티코)는 **홈팀 칸**으로 남는다(summary.ts homeFirst).
    */
   const allFeeds = useMemo<TeamFeed[]>(
-    () => [...teamFeeds, ...KOREAN_CLUBS.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId }))],
-    [teamFeeds, feeds],
+    () => [...teamFeeds, ...kclubs.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId }))],
+    [teamFeeds, feeds, kclubs],
   );
 
   const targetOf = (id: string) => getTarget(id as TargetId);
@@ -106,8 +143,8 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
 
   /* ── 매치데이 히어로 ──────────────────────────────── */
   const board = useMemo(
-    () => nextUpBoardShared(teamFeeds, allFeeds.filter((f) => f.id === 'korea' || KOREAN_CLUBS.some((c) => c.id === f.id)), 'korea'),
-    [teamFeeds, allFeeds],
+    () => nextUpBoardShared(teamFeeds, allFeeds.filter((f) => f.id === 'korea' || kclubs.some((c) => c.id === f.id)), 'korea'),
+    [teamFeeds, allFeeds, kclubs],
   );
 
   /*
@@ -132,7 +169,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   const hero = pickedUp ?? board[0] ?? null;
   /* 히어로로 올라간 팀은 아래 카드에서 뺀다 — 같은 팀이 두 번 나오면 헷갈린다.
      대한민국 자리(국가대표 + 소속팀)는 한 덩어리로 본다 */
-  const slotOf = (id: string) => (id === 'korea' || KOREAN_CLUBS.some((c) => c.id === id) ? 'korea' : id);
+  const slotOf = (id: string) => (id === 'korea' || kclubs.some((c) => c.id === id) ? 'korea' : id);
   const rest = board.filter((b) => slotOf(b.teamId) !== slotOf(hero?.teamId ?? ''));
 
   /* ── 주간 캘린더 ──────────────────────────────────── */
@@ -248,14 +285,14 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   /** 컵 대진의 우리 팀 — 일곱 팀 + 코리안리거 소속팀 */
   const cupColors = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const t of [...TARGETS, ...KOREAN_CLUBS]) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
+    for (const t of [...mine, ...kclubs]) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
     return out;
-  }, []);
+  }, [mine, kclubs]);
   const clubColors = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const t of TARGETS) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
+    for (const t of mine) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
     return out;
-  }, []);
+  }, [mine]);
 
   /*
    * 선수 순위는 경기별 선수 기록(__stats)에서 만든다. 순위표 경량 파일
@@ -286,19 +323,19 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
   const [cupRounds, setCupRounds] = useState<Record<string, Record<string, CupRound[]>>>({});
   useEffect(() => {
     let alive = true;
-    for (const t of TARGETS) {
+    for (const t of mine) {
       if (t.kind !== 'club') continue;
       loadScheduleExtras(t.espnTeamId).then((e) => {
         if (alive) setCupRounds((r) => ({ ...r, [t.id]: e.rounds }));
       });
     }
     return () => { alive = false; };
-  }, []);
+  }, [mine]);
 
   /* ── 팀 비교 ─────────────────────────────────────────
      리그 순위·승점·전적(그 팀 리그 표) + 챔스 단계·전적 + 최근 5경기(모든 대회).
      리그가 달라 승점을 그대로 견줄 수 없어 줄은 경기당 승점으로 세운다(lib/compare). */
-  const compare = useMemo(() => TARGETS.filter((t) => t.kind === 'club').map((t) => {
+  const compare = useMemo(() => mine.filter((t) => t.kind === 'club').map((t) => {
     const row = t.league ? tables[t.league]?.table?.rows.find((r) => r.team.id === t.espnTeamId) : undefined;
     /* 유럽대항전 — 챔스 → 유로파 → 컨퍼런스 중 이 팀이 뛰는 첫 대회 */
     const mine = feeds[t.id] ?? [];
@@ -318,7 +355,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
         ? euroStage(mine.filter((m) => m.competition === euro), t.espnTeamId, cupRounds[t.id]?.[euro] ?? [], euroRank)
         : null,
     };
-  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds]);
+  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds, mine]);
 
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
@@ -431,7 +468,7 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
                 ? { matchId: hero.match.id, today: true }
                 : { matchId: hero.match.id })}
               /* 코리안리거 소속팀 경기면 대한민국 › 소속팀 의 그 클럽으로 간다(App.openTeam) */
-              label={KOREAN_CLUBS.some((c) => c.id === hero.teamId)
+              label={kclubs.some((c) => c.id === hero.teamId)
                 ? `대한민국 소속팀에서 ${targetOf(hero.teamId).name} 보기`
                 : `${targetOf(hero.teamId).name} 일정에서 이 경기 보기`}
             />
@@ -647,8 +684,11 @@ export function SummaryTab({ onOpenTeam }: { onOpenTeam: (id: TargetId, focus?: 
       </section>
 
       <p className="sum__foot">
+        <button className="sum__prefs" onClick={onPrefs}>
+          ⚙ 관심 팀 설정{hidden > 0 && <span className="num"> · {hidden}팀 숨김</span>}
+        </button>
         팀 이름을 누르면 그 팀 화면으로 이동합니다.
-        {TARGETS.map((t) => (
+        {mine.map((t) => (
           <button key={t.id} className="sum__jump" onClick={() => onOpenTeam(t.id)}>
             {t.name}
           </button>

@@ -10,7 +10,7 @@ import { KOREAN_CLUBS, OUR_TEAM_IDS, TARGETS, getTarget, isKoreanClub, subtitleP
 import type { Match } from './lib/types';
 import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
 import { invalidateFeeds } from './lib/feed';
-import { mergeMatches, pollDelay } from './lib/refresh';
+import { isStale, mergeMatches, pollDelay } from './lib/refresh';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { StandingsTab } from './tabs/StandingsTab';
 import { PlayersTab } from './tabs/PlayersTab';
@@ -162,7 +162,15 @@ export default function App() {
    * 일정 탭에서 바로 띄울 경기 — Summary 의 매치데이 히어로를 누르면 그 팀 일정 탭으로
    * 넘어가 **그 경기**가 히어로·캘린더에 선택된 채로 열린다. 일정 탭이 받아 쓰면 지운다.
    */
-  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
+  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(
+    /* 경기 링크(#/chelsea/schedule/m/123)로 열었으면 그 경기부터 */
+    () => (START.sub?.kind === 'm' && START.targetId ? { team: START.targetId as TargetId, id: START.sub.id } : null),
+  );
+  /** 선수 링크(#/chelsea/players/p/678)로 열었을 때 바로 띄울 선수 — 선수 탭이 받아 쓰면 지운다 */
+  const [focusPlayer, setFocusPlayer] = useState<{ team: TargetId; id: string } | null>(
+    () => (START.sub?.kind === 'p' && START.targetId ? { team: START.targetId as TargetId, id: START.sub.id } : null),
+  );
+  const clearFocusPlayer = useCallback(() => setFocusPlayer(null), []);
   const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
 
   /** 소속팀 탭에서 고른 클럽 — Summary 에서 그 클럽 경기를 누르면 그 클럽으로 열린다 */
@@ -246,6 +254,9 @@ export default function App() {
         setTargetId(r.targetId as TargetId);
         setView('team');
         if (r.tab) setTab(r.tab as TabId);
+        /* 앱을 켜 둔 채 경기 · 선수 링크를 붙여 넣었을 때 */
+        if (r.sub?.kind === 'm') setFocusMatch({ team: r.targetId as TargetId, id: r.sub.id });
+        if (r.sub?.kind === 'p') setFocusPlayer({ team: r.targetId as TargetId, id: r.sub.id });
       } else {
         setView('summary');
       }
@@ -264,6 +275,17 @@ export default function App() {
   const [sched, setSched] = useState<{ team: string; matches: Match[] }>({ team: '', matches: [] });
   const [source, setSource] = useState<Source>('none');
   const [fetchedAt, setFetchedAt] = useState<string>('');
+  /*
+   * 수집이 멈췄는지 — 정적 피드는 20분마다 새로 뜬다. 한 시간 넘게 그대로면 봇이 멈춘 것이라
+   * 배지를 경고색으로 바꾼다(예전에는 몇 시간째 낡은 값이어도 "자동 갱신" 그대로였다).
+   * 화면을 켜 둔 채로도 바뀌도록 1분마다 시각을 다시 본다.
+   */
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const stale = isStale(source, fetchedAt, nowTick);
   const loading = sched.team !== target.espnTeamId;
   const rawMatches = loading ? NO_MATCHES : sched.matches;
   /* 오늘의 경기 스코어 · 시간을 일정 위에 덮는다 — 히어로가 오늘의 경기보다 늦지 않게 */
@@ -504,6 +526,7 @@ export default function App() {
             <span
               className="srcbadge"
               data-src={source}
+              data-stale={stale || undefined}
               {...refreshPress}
               title={
                 fetchedAt
@@ -513,7 +536,7 @@ export default function App() {
             >
               <span className="srcbadge__dot" />
               <span className="srcbadge__label">
-                {source === 'live' ? '실시간' : source === 'feed' ? '자동 갱신' : '데이터 없음'}
+                {source === 'live' ? '실시간' : source === 'feed' ? (stale ? '갱신 지연' : '자동 갱신') : '데이터 없음'}
               </span>
               {source !== 'live' && fetchedAt && (
                 <em className="srcbadge__at num">{ago(fetchedAt)}</em>
@@ -620,7 +643,15 @@ export default function App() {
             <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={target.espnTeamId} matches={matches} />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
-          {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}
+          {!summary && tab === 'players' && (
+            <PlayersTab
+              target={target}
+              matches={matches}
+              matchesLoading={loading}
+              openPlayerId={focusPlayer?.team === target.id ? focusPlayer.id : null}
+              onOpened={clearFocusPlayer}
+            />
+          )}
           {!summary && tab === 'koreans' && <KoreansTab />}
           {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} onToday={(id) => { setTodayPick(id); goTab('today'); }} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}

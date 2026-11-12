@@ -11,6 +11,7 @@ import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { PlayerDetail } from '../components/PlayerDetail';
 import { InjuryList } from '../components/InjuryList';
+import { shareUrl } from '../lib/route';
 import { SuspensionList } from '../components/SuspensionList';
 import { CompareBar, PlayerCompare } from '../components/PlayerCompare';
 import { rivalsOf } from '../lib/playerCompare';
@@ -18,12 +19,15 @@ import type { PlayerSeason } from '../lib/squad';
 import { KorFlag } from '../components/KorFlag';
 
 export function PlayersTab({
-  target, matches, embedded = false, marks, matchesLoading = false,
+  target, matches, embedded = false, marks, matchesLoading = false, openPlayerId, onOpened,
 }: {
   target: Target;
   matches: Match[];
   /** 다른 탭 안에 들어갈 때(대한민국 › 소속팀) — 바깥 .page 를 두르지 않는다 */
   embedded?: boolean;
+  /** 선수 링크로 열었을 때 바로 띄울 선수 id — 띄우고 나면 onOpened */
+  openPlayerId?: string | null;
+  onOpened?: () => void;
   /** 코리안리거(id → 한국어 이름) — 베스트 11·목록에 태극기로 표시 */
   marks?: ReadonlyMap<string, string>;
   /** 일정(matches)을 아직 받는 중 — 그동안은 "기록 없음" 이 아니라 불러오는 중으로 그린다 */
@@ -109,6 +113,15 @@ export function PlayersTab({
       setCmpA(null);
     } else setDetail(p);
   };
+  /* 선수 링크(#/…/players/p/{id}) — 명단이 온 뒤 그 선수 상세를 한 번 띄운다.
+     없는 선수(이적 · 잘못된 주소)면 조용히 선수 탭만 보여 준다 */
+  useEffect(() => {
+    if (!openPlayerId || !players.length) return;
+    const p = players.find((x) => x.id === openPlayerId);
+    if (p) setDetail(p);
+    onOpened?.();
+  }, [openPlayerId, players, onOpened]);
+
   const startCompare = (p: PlayerSeason) => { setHoverId(null); setDetail(null); setCmpPair(null); setCmpA(p); };
   const rivals = useMemo(() => (cmpA ? rivalsOf(cmpA, ordered) : []), [cmpA, ordered]);
 
@@ -198,7 +211,14 @@ export function PlayersTab({
             onLongPress={startCompare}
             pinnedId={cmpA?.id ?? null}
           />
-          <PlayerDetail p={detail} onClose={closeDetail} onCompare={startCompare} players={players} />
+          <PlayerDetail
+            p={detail}
+            onClose={closeDetail}
+            onCompare={startCompare}
+            players={players}
+            /* 소속팀 탭 안(embedded)의 클럽은 자기 주소가 없다 — 링크를 만들지 않는다 */
+            shareHref={detail && !embedded ? shareUrl(target.id, 'p', detail.id) : undefined}
+          />
           <PlayerCompare pair={cmpPair} onClose={closeCompare} onChange={startCompare} />
           <CompareBar a={cmpA} rivals={rivals} onPick={pick} onCancel={cancelCompare} />
         </div>

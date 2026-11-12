@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { RatingBadge } from './RatingBadge';
 import { seasonRatingTitle } from '../lib/rating';
 import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
@@ -42,7 +42,11 @@ export function Cards({ yellow, red, zero = false }: { yellow: number; red: numb
 }
 
 /** 카드 본체 — 이름·포지션, 출전/선발/골/도움, 출전 시간·공격 포인트, 카드, 대회별 */
-export function PlayerSummary({ p }: { p: PlayerSeason }) {
+export function PlayerSummary({ p, hero }: {
+  p: PlayerSeason;
+  /** 숫자 칸을 대신할 요약(폰 시트의 SeasonHero) — 주면 아래 네 칸 · 출전 시간 · 공격 포인트 상자를 그리지 않는다 */
+  hero?: ReactNode;
+}) {
   const palette = usePalette();
   return (
     <>
@@ -62,6 +66,8 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
     <InjuryLine inj={p.inj} />
     <DisciplineLines d={p.disc} />
 
+    {hero ?? (
+    <>
     {/* 숫자 네 칸은 있는 그대로 — 강조 상자는 공격 포인트 하나만 쓴다 */}
     <div className="pcard__stats">
       {([
@@ -90,6 +96,8 @@ export function PlayerSummary({ p }: { p: PlayerSeason }) {
         <span>공격 포인트</span>
       </div>
     </div>
+    </>
+    )}
 
     <div className="pcard__cards">
       <span>카드</span>

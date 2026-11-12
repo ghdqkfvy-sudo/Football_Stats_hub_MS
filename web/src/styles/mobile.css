@@ -28,8 +28,8 @@
   .hdr__id { gap: 11px; }
   .hdr__name { padding-right: 84px; }
   .hdr__crest, .hdr__crest--sum { width: 38px; height: 38px; }
-  .hdr__crest--sum { border-radius: 11px; font-size: var(--fs-2xl); }
-  .hdr__name { font-size: 22px; line-height: 1.15; }
+  .hdr__crest--sum { border-radius: var(--r-md); font-size: var(--fs-2xl); }
+  .hdr__name { font-size: var(--fs-d2); line-height: 1.15; }
 
   /* 출처 배지 — 줄 하나를 먹던 것을 헤더 오른쪽 위 구석으로.
      "자동 갱신" 이라는 말은 점 색이 이미 한다. 남기는 것은 "얼마나 됐나" 다. */
@@ -199,7 +199,7 @@
   .hdr__switches .pill, .hdr__switches .switch[data-scroll] > .pill {
     flex: 1 1 0; max-width: 50px; min-width: 0; height: 40px;
     justify-content: center; gap: 0; padding: 0;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
   }
   .hdr__switches .pill img, .hdr__switches .pill .chipcrest { width: 26px; height: 26px; }
   .hdr__switches .pill .chipcrest { font-size: 8.5px; }
@@ -243,12 +243,12 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .ngrid { gap: 8px; margin-top: 10px; }
-  .ngrid .ncard { flex-direction: row; align-items: stretch; min-height: 92px; border-radius: 12px; }
+  .ngrid .ncard { flex-direction: row; align-items: stretch; min-height: 92px; border-radius: var(--r-lg); }
   .ngrid .ncard__ph { width: 108px; aspect-ratio: auto; }
   .ngrid .ncard__body { padding: 10px 12px; gap: 5px; justify-content: center; }
   .ngrid .ncard__h { font-size: var(--fs-md); line-height: 1.36; }
   .ngrid .ncard__d, .ngrid .ncard__by { display: none; }
-  .ngrid .ncard__noimg { font-size: 24px; }
+  .ngrid .ncard__noimg { font-size: var(--fs-d3); }
   .ngrid .ncard__play { left: 7px; bottom: 7px; width: 22px; height: 22px; font-size: var(--fs-micro); }
   .ngrid .ncard:hover { transform: none; }
   /* 사진 없는 기사 — 행 카드에서는 위쪽 선 대신 왼쪽 선, 사진 칸 높이를 따를 필요가 없다 */
@@ -276,7 +276,7 @@
     width: 100%; min-height: 64px; padding: 10px 12px 10px 10px; text-align: left;
     font: inherit; color: var(--text-mid); cursor: pointer;
     border: 1px solid color-mix(in srgb, var(--team) 30%, var(--line));
-    border-left: 3px solid var(--team); border-radius: 14px;
+    border-left: 3px solid var(--team); border-radius: var(--r-lg);
     background:
       linear-gradient(90deg, color-mix(in srgb, var(--team) 16%, transparent), transparent 55%),
       rgba(6, 16, 38, .42);
@@ -284,7 +284,7 @@
   }
   .mdr:active { background: color-mix(in srgb, var(--team) 22%, rgba(6,16,38,.5)); }
   .mdr__us {
-    display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px;
+    display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md);
     background: rgba(255,255,255,.05); border: 1px solid color-mix(in srgb, var(--team) 40%, transparent);
   }
   .mdr__mid { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -298,7 +298,7 @@
   .mdr__comp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mdr__ha {
     flex: none; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .06em;
-    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--text-mid);
+    padding: 1px 5px; border-radius: var(--r-xs); border: 1px solid var(--line-2); color: var(--text-mid);
   }
   .mdr__ha[data-home] { color: var(--team); border-color: color-mix(in srgb, var(--team) 50%, transparent); }
   /* 오른쪽 칸: 1줄 = D-day 칩(끝난 경기는 스코어), 2줄 = 날짜·요일 · 킥오프 시각 */
@@ -308,19 +308,19 @@
   }
   .mdr__when > :first-child { grid-row: 1; grid-column: 1 / -1; }
   .mdr__dday {
-    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: var(--r-sm);
     color: var(--team); background: color-mix(in srgb, var(--team) 20%, transparent);
     border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
   }
   .mdr__dday[data-tone='now'] { color: #07101F; background: var(--team); }
   .mdr__dday[data-tone='far'] { color: var(--text-mid); background: transparent; border-color: var(--line-2); }
   .mdr__live {
-    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: var(--r-sm);
     color: #fff; background: var(--loss);
     display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   }
   /* 경기 중 — 1줄 스코어(크게, 흰색), 2줄 LIVE · 경기 시간 */
-  .mdr__score[data-live] { font-size: 20px; color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--loss) 55%, transparent); }
+  .mdr__score[data-live] { font-size: var(--fs-d1); color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--loss) 55%, transparent); }
   .mdr__score[data-live] + .mdr__live { grid-row: 2; grid-column: 1 / -1; justify-self: end; font-size: var(--fs-xs); }
   .mdr__score { font-family: var(--font-display); font-size: var(--fs-2xl); color: var(--text-hi); }
   .mdr__score i { font-style: normal; opacity: .5; margin: 0 2px; }
@@ -377,7 +377,7 @@
   }
   .wcal__m {
     grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 10px;
-    padding: 10px 12px; border-radius: 8px;
+    padding: 10px 12px; border-radius: var(--r-md);
   }
   .wcal__m[data-on] { transform-origin: center; }
   .wcal__opp::before { content: 'vs'; font-size: var(--fs-xs); color: var(--text-lo); margin-right: 2px; }
@@ -410,7 +410,7 @@
   .mbar[data-show] { transform: none; }
   .mbar__id, .mbar__top {
     flex: none; display: grid; place-items: center; width: 40px; height: 40px;
-    border-radius: 11px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+    border-radius: var(--r-md); border: 1px solid var(--line); background: rgba(255,255,255,.03);
     color: var(--text-mid); font: inherit; cursor: pointer;
   }
   .mbar__id img { width: 24px; height: 24px; object-fit: contain; }
@@ -425,7 +425,7 @@
   }
   .mbar__b[aria-selected='true'] { color: var(--text-hi); }
   .mbar__b[aria-selected='true']::after {
-    content: ''; position: absolute; left: 18%; right: 18%; bottom: 3px; height: 2.5px; border-radius: 2px;
+    content: ''; position: absolute; left: 18%; right: 18%; bottom: 3px; height: 2.5px; border-radius: var(--r-2xs);
     background: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
   }
   /* Summary 구역으로 뛰었을 때 제목이 막대 밑에 깔리지 않게 */
@@ -497,7 +497,7 @@
 @media (max-width: 640px) {
   .page { padding-block: 16px 40px; gap: 22px; }
   .sec__head { margin-bottom: 10px; }
-  .hero, .mdh__card[data-hero] { padding: 15px 16px 17px; border-radius: 22px; }
+  .hero, .mdh__card[data-hero] { padding: 15px 16px 17px; border-radius: var(--r-xl); }
   .krc { padding: 12px 13px; }
 }
 

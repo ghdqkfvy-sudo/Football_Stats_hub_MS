@@ -63,6 +63,12 @@ export function returnKo(text) {
   if (/^doubtful/i.test(t)) return { ko: '출전 불투명', doubtful: true };
   /* 2026-10-17 레알 멘디 — 다 나아 훈련에 돌아왔지만 아직 경기엔 안 나온 단계 */
   if (/back in training/i.test(t)) return { ko: '훈련 복귀', doubtful: false };
+  /* "About 1-2 weeks" · "About 3 months" (2026-11-12 — 영어 그대로 나왔다) */
+  const about = t.match(/^(?:about|around)\s+(\d+)(?:\s*[-–]\s*(\d+))?\s+(day|week|month)s?$/i);
+  if (about) {
+    const unit = { day: '일', week: '주', month: '개월' }[about[3].toLowerCase()];
+    return { ko: `약 ${about[1]}${about[2] ? `~${about[2]}` : ''}${unit} 뒤 복귀 예상`, doubtful: false };
+  }
   if (/few days/i.test(t)) return { ko: '며칠 뒤 복귀 예상', doubtful: false };
   if (/few weeks/i.test(t)) return { ko: '몇 주 뒤 복귀 예상', doubtful: false };
   if (/few months/i.test(t)) return { ko: '몇 달 뒤 복귀 예상', doubtful: false };
@@ -97,6 +103,9 @@ export const LONG_DAYS = 28;
 export function isLongTerm(text, now = new Date()) {
   const t = String(text ?? '').trim();
   if (/few months|season/i.test(t)) return true;
+  /* "About 1-2 weeks" — 긴 쪽 기준으로 4주를 넘으면 장기 */
+  const about = t.match(/^(?:about|around)\s+(\d+)(?:\s*[-–]\s*(\d+))?\s+(day|week|month)s?$/i);
+  if (about) return Number(about[2] ?? about[1]) * { day: 1, week: 7, month: 30 }[about[3].toLowerCase()] > LONG_DAYS;
   const m = t.match(/^(early|mid|late)\s+([a-z]+)(?:\s+(\d{4}))?$/i);
   if (!m) return false;
   const mon = MONTH[m[2].toLowerCase()];
@@ -118,7 +127,22 @@ export const INJURY_KO = {
   73: '아킬레스건', 74: '다리', 76: '십자인대', 83: '팔', 92: '질병', 104: '복부',
   121: '컨디션 난조', 122: '정강이', 130: '타박상',
 };
-export const injuryName = (injury) => INJURY_KO[Number(injury?.id)] ?? (injury?.name ? String(injury.name) : null);
+/* 번호 표에 없는 부상은 선수 API 의 영어 이름으로 온다 — 자주 보이는 부위는 이름으로도 옮긴다
+   (2026-11-12: "Muscle injury" · "Heel injury" · "Hip injury" 가 영어 그대로 화면에 나왔다) */
+const INJURY_NAME_KO = {
+  muscle: '근육', heel: '발뒤꿈치', hip: '고관절', groin: '사타구니', calf: '종아리', shoulder: '어깨',
+  achilles: '아킬레스건', back: '허리', knee: '무릎', ankle: '발목', foot: '발', thigh: '허벅지',
+  hamstring: '햄스트링', head: '머리', hand: '손', wrist: '손목', rib: '갈비뼈', toe: '발가락',
+  illness: '질병', concussion: '뇌진탕',
+};
+export const injuryName = (injury) => {
+  const byId = INJURY_KO[Number(injury?.id)];
+  if (byId) return byId;
+  if (!injury?.name) return null;
+  const name = String(injury.name);
+  const key = name.toLowerCase().replace(/\s+(injury|problem|strain)$/, '').trim();
+  return INJURY_NAME_KO[key] ?? name;
+};
 
 /** 수집기가 저장하는 부상 한 건 */
 export function injuryRecord(m, now = new Date()) {

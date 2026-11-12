@@ -47,3 +47,13 @@ export function mergeMatches(prev: Match[], next: Match[]): Match[] {
     return { ...m, goals: o.goals, goalsLoaded: true };
   });
 }
+
+/** 정적 피드가 이보다 오래 그대로면 수집이 멈춘 것으로 본다 — 봇은 20분마다 뜬다 */
+export const STALE_MS = 60 * 60_000;
+
+/** 배지를 경고색으로 바꿀지 — 정적 피드일 때만(실시간은 늘 방금 값이다) */
+export function isStale(source: string, fetchedAt: string, now: number = Date.now()): boolean {
+  if (source !== 'feed') return false;
+  const t = Date.parse(fetchedAt);
+  return Number.isFinite(t) && now - t > STALE_MS;
+}

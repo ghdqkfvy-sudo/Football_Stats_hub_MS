@@ -5,14 +5,14 @@
 /* 태극기 — 이름 옆에 붙는 작은 국기 (3:2) */
 .korflag {
   display: inline-block; flex: none; width: 13px; height: 9px;
-  border-radius: 1.5px; object-fit: cover; vertical-align: -1px;
+  border-radius: var(--r-2xs); object-fit: cover; vertical-align: -1px;
   box-shadow: 0 0 0 .5px rgba(0, 0, 0, .4);
 }
 
 /* 이름표 — 🇰🇷 손흥민 */
 .kortag {
   display: inline-flex; align-items: center; gap: 3px; flex: none;
-  padding: 1px 6px 1px 3px; border-radius: 999px;
+  padding: 1px 6px 1px 3px; border-radius: var(--r-pill);
   font-size: var(--fs-micro); font-weight: 800; line-height: 1.5; white-space: nowrap; color: #fff;
   background: linear-gradient(90deg, #CD2E3A, #8E1B26);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .18) inset;
@@ -75,7 +75,7 @@
 /* 베스트 11 밖 코리안리거 */
 .squad__kor {
   display: flex; align-items: center; gap: 7px; margin: 0 0 12px;
-  padding: 9px 12px; border-radius: 11px;
+  padding: 9px 12px; border-radius: var(--r-md);
   border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   font-size: var(--fs-base); color: var(--text-mid);
@@ -90,7 +90,7 @@
 .kclub__sw { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .kclub__b {
   display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0;
-  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  padding: 10px 12px; border-radius: var(--r-lg); cursor: pointer;
   border: 1px solid var(--line); background: rgba(6, 16, 38, .3);
   color: var(--text-mid); font: inherit; text-align: left;
   transition: color .15s, border-color .15s, background .15s;
@@ -115,7 +115,7 @@
   margin-bottom: 22px;
 }
 .kclub__hero, .kclub__table {
-  border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px;
   background: color-mix(in srgb, var(--ink-900) 82%, transparent);
 }
 .kclub__hero {
@@ -129,10 +129,10 @@
 
 .kclub__kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 4px; }
 .kclub__kpi div {
-  border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center;
+  border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px 4px; text-align: center;
   background: rgba(255, 255, 255, .02);
 }
-.kclub__kpi b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-hi); }
+.kclub__kpi b { display: block; font-family: var(--font-display); font-size: var(--fs-d1); font-weight: 700; color: var(--text-hi); }
 .kclub__kpi span { display: block; margin-top: 2px; font-size: var(--fs-xs); color: var(--text-lo); }
 .kclub__kpi [data-hl] b { color: var(--accent); }
 
@@ -159,7 +159,7 @@
   .kclub__recent ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
   .kclub__recent li {
     display: grid; grid-template-columns: 20px 36px 18px 16px minmax(0, 1fr) 14px 52px; align-items: center; gap: 8px;
-    padding: 5px 6px; border-radius: 8px; font-size: var(--fs-base); color: var(--text-mid);
+    padding: 5px 6px; border-radius: var(--r-md); font-size: var(--fs-base); color: var(--text-mid);
   }
   .kclub__recent li:nth-child(odd) { background: rgba(255, 255, 255, .025); }
   .kclub__recent li b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--text-hi); }
@@ -170,7 +170,7 @@
   /* 코리안리거 — 박스 맨 아래에 붙인다(남는 높이는 목록과 이 줄 사이로) */
   .kclub__kor { display: grid; gap: 6px; margin-top: auto; padding-top: 10px; }
   .kclub__korrow {
-    display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px;
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--r-lg);
     background: color-mix(in srgb, var(--brand) 14%, rgba(255, 255, 255, .03)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, var(--line));
   }
   .kclub__korname { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: var(--fs-md); font-weight: 800; color: var(--text-hi); }
@@ -203,7 +203,7 @@
 .kclub__tn b { font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kclub__pts { text-align: right; font-family: var(--font-display); font-size: var(--fs-lg); color: var(--text-hi); }
 .kclub__tr[data-me] {
-  border-radius: 8px; border-top-color: transparent;
+  border-radius: var(--r-md); border-top-color: transparent;
   background: color-mix(in srgb, var(--accent) 13%, transparent);
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -221,12 +221,12 @@
 /* 순위 카드의 리그 / 챔스 전환 */
 .kclub__seg {
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  padding: 3px; margin-bottom: 10px; border-radius: 10px;
+  padding: 3px; margin-bottom: 10px; border-radius: var(--r-md);
   background: rgba(255,255,255,.04); border: 1px solid var(--line);
 }
 .kclub__seg button {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 7px 8px; border: 0; border-radius: 7px; background: transparent;
+  padding: 7px 8px; border: 0; border-radius: var(--r-sm); background: transparent;
   font: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--text-lo); cursor: pointer;
 }
 .kclub__seg button[data-on] {
@@ -238,11 +238,11 @@
 /* 토너먼트 — 지금 라운드 */
 .kclub__ko {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 12px 12px; margin-bottom: 4px; border-radius: 10px;
+  padding: 12px 12px; margin-bottom: 4px; border-radius: var(--r-md);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   box-shadow: inset 3px 0 0 var(--accent);
 }
-.kclub__ko b { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent); }
+.kclub__ko b { font-family: var(--font-display); font-size: var(--fs-d2); font-weight: 700; color: var(--accent); }
 .kclub__ko span { font-size: var(--fs-base); font-weight: 700; color: var(--text-hi); }
 .kclub__ko[data-st='out'] { background: rgba(255,255,255,.04); box-shadow: inset 3px 0 0 var(--text-lo); }
 .kclub__ko[data-st='out'] b { color: var(--text-mid); }
