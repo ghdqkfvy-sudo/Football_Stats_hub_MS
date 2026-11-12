@@ -26,7 +26,7 @@
  */
 .hdr__sub {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px;
-  font-size: 11.5px; color: var(--text-mid); margin-top: 5px; letter-spacing: .02em;
+  font-size: var(--fs-sm); color: var(--text-mid); margin-top: 5px; letter-spacing: .02em;
   text-shadow: 0 1px 10px rgba(4,12,28,.85);
 }
 .hdr__sub > span { white-space: nowrap; }
@@ -49,7 +49,7 @@
   /* 앱 이름은 폰에서 뺀다 — 대회 칩과 시즌만 남겨 한 줄로 */
   .hdr__sub > .hdr__brand { display: none; }
   .hdr__sub > span:not(:first-child) {
-    padding: 2px 6px; border-radius: 999px; font-size: 11px;
+    padding: 2px 6px; border-radius: 999px; font-size: var(--fs-xs);
     border: 1px solid var(--line-2); background: rgba(255, 255, 255, .05);
   }
   .hdr__sub > span:nth-child(2) {
@@ -89,14 +89,14 @@
 /* 라벨도 줄어들지 않게 — 안 그러면 좁은 화면에서 CLUB 글자가 0폭으로 눌린다 */
 .switch[data-scroll] > .switch__label { flex: 0 0 auto; }
 .switch__label {
-  font-size: 9.5px; letter-spacing: .16em; color: var(--text-lo);
+  font-size: var(--fs-micro); letter-spacing: .16em; color: var(--text-lo);
   text-transform: uppercase; margin-right: 2px;
 }
 .pill {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 13px; border-radius: 999px;
   border: 1px solid var(--line); background: rgba(255,255,255,.02);
-  font-size: 12.5px; font-weight: 550; letter-spacing: -.01em; color: var(--text-mid);
+  font-size: var(--fs-base); font-weight: 550; letter-spacing: -.01em; color: var(--text-mid);
   transition: background .18s, color .18s, border-color .18s;
   white-space: nowrap;
 }
@@ -118,7 +118,7 @@
 /* 시즌 토글 */
 .season { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
 .season button {
-  padding: 6px 14px; font-size: 11.5px; font-weight: 600;
+  padding: 6px 14px; font-size: var(--fs-sm); font-weight: 600;
   color: var(--text-lo); font-variant-numeric: tabular-nums;
 }
 .season button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
@@ -131,7 +131,7 @@
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
   position: relative; padding: 12px 14px 13px;
-  font-size: 13.5px; font-weight: 500; color: var(--text-lo);
+  font-size: var(--fs-md); font-weight: 500; color: var(--text-lo);
   white-space: nowrap; transition: color .18s;
 }
 .tab:hover { color: var(--text-mid); }
@@ -147,7 +147,7 @@
 /* 데이터 출처 배지 */
 .srcbadge {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 10.5px; color: var(--text-lo); letter-spacing: .04em;
+  font-size: var(--fs-xs); color: var(--text-lo); letter-spacing: .04em;
   padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px;
 }
 .srcbadge__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-lo); }
@@ -173,8 +173,8 @@
     border: 1px solid var(--line-2); border-radius: 18px;
   }
 }
-.rf__title { font-size: 17px; font-weight: 800; color: var(--text-hi); margin: 0; }
-.rf__sub { font-size: 12.5px; color: var(--text-mid); margin: -6px 0 2px; line-height: 1.5; }
+.rf__title { font-size: var(--fs-2xl); font-weight: 800; color: var(--text-hi); margin: 0; }
+.rf__sub { font-size: var(--fs-base); color: var(--text-mid); margin: -6px 0 2px; line-height: 1.5; }
 
 .rf__jobs { display: grid; gap: 8px; }
 .rf__job {
@@ -187,10 +187,10 @@
 .rf__job:disabled { opacity: .55; cursor: default; }
 .rf__job[data-busy] { opacity: 1; border-color: var(--accent); }
 .rf__jh { display: flex; align-items: baseline; gap: 8px; }
-.rf__jh b { font-size: 15px; font-weight: 800; color: var(--text-hi); }
-.rf__jh em { font-style: normal; font-size: 11.5px; color: var(--text-lo); margin-left: auto; }
-.rf__jd { font-size: 12px; color: var(--text-mid); }
-.rf__js { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-lo); margin-top: 2px; }
+.rf__jh b { font-size: var(--fs-lg); font-weight: 800; color: var(--text-hi); }
+.rf__jh em { font-style: normal; font-size: var(--fs-sm); color: var(--text-lo); margin-left: auto; }
+.rf__jd { font-size: var(--fs-sm); color: var(--text-mid); }
+.rf__js { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-lo); margin-top: 2px; }
 .rf__js i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-lo); flex: none; }
 .rf__js[data-tone='ok'] i { background: var(--win); }
 .rf__js[data-tone='bad'] { color: var(--loss); }
@@ -198,31 +198,31 @@
 .rf__js[data-tone='busy'] { color: var(--text-mid); }
 .rf__js[data-tone='busy'] i { background: var(--draw); animation: pulse 1.6s ease-in-out infinite; }
 
-.rf__msg { margin: 0; font-size: 12.5px; line-height: 1.5; padding: 9px 12px; border-radius: 10px;
+.rf__msg { margin: 0; font-size: var(--fs-base); line-height: 1.5; padding: 9px 12px; border-radius: 10px;
   background: color-mix(in srgb, var(--win) 10%, transparent); color: var(--text-hi); }
 .rf__msg[data-tone='bad'] { background: color-mix(in srgb, var(--loss) 12%, transparent); }
 
-.rf__label { font-size: 12px; font-weight: 700; color: var(--text-mid); }
+.rf__label { font-size: var(--fs-sm); font-weight: 700; color: var(--text-mid); }
 .rf__row { display: flex; gap: 8px; margin-top: -4px; }
 .rf__input {
   flex: 1 1 auto; min-width: 0; padding: 11px 12px; border-radius: 10px;
   border: 1px solid var(--line-2); background: rgba(255, 255, 255, .04);
-  color: var(--text-hi); font-size: 16px; /* 16px 미만이면 iOS 가 화면을 확대한다 */
+  color: var(--text-hi); font-size: var(--fs-xl); /* 16px 미만이면 iOS 가 화면을 확대한다 */
 }
 .rf__input:focus { outline: none; border-color: var(--accent); }
 .rf__save {
-  flex: none; padding: 0 16px; border-radius: 10px; font-weight: 700; font-size: 13.5px;
+  flex: none; padding: 0 16px; border-radius: 10px; font-weight: 700; font-size: var(--fs-md);
   background: var(--accent); color: var(--on-accent);
 }
 .rf__save:disabled { opacity: .45; }
 
-.rf__how { font-size: 12.5px; color: var(--text-mid); line-height: 1.6;
+.rf__how { font-size: var(--fs-base); color: var(--text-mid); line-height: 1.6;
   border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .rf__how summary { cursor: pointer; font-weight: 700; color: var(--text-hi); }
 .rf__how ol { margin: 8px 0 6px; padding-left: 18px; display: grid; gap: 4px; }
 .rf__how a { color: var(--accent); }
-.rf__how code { font-size: 11.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255, 255, 255, .07); }
-.rf__how p { margin: 0; color: var(--text-lo); font-size: 11.5px; }
+.rf__how code { font-size: var(--fs-sm); padding: 1px 5px; border-radius: 4px; background: rgba(255, 255, 255, .07); }
+.rf__how p { margin: 0; color: var(--text-lo); font-size: var(--fs-sm); }
 
 /* 사진 소스 점검 (TheSportsDB 키) */
 .tsc { display: grid; gap: 8px; }
@@ -234,7 +234,7 @@
 .tsc__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .tsc__line {
   display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px;
-  font-size: 12.5px; color: var(--text-mid);
+  font-size: var(--fs-base); color: var(--text-mid);
 }
 .tsc__line i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-lo); flex: none; align-self: center; }
 .tsc__line[data-tone='ok'] i { background: var(--win); }
@@ -243,35 +243,35 @@
 .tsc__line b { color: var(--text-hi); font-weight: 800; min-width: 42px; }
 .tsc__v { font-weight: 700; color: var(--text-hi); }
 .tsc__line[data-tone='bad'] .tsc__v { color: var(--loss); }
-.tsc__d { flex: 1 0 100%; padding-left: 15px; font-size: 11.5px; color: var(--text-lo); word-break: break-word; }
+.tsc__d { flex: 1 0 100%; padding-left: 15px; font-size: var(--fs-sm); color: var(--text-lo); word-break: break-word; }
 .tsc__d a { color: var(--accent); }
-.tsc__line em { font-style: normal; font-size: 11px; color: var(--text-lo); margin-left: auto; }
-.tsc__sub { font-size: 11.5px; color: var(--text-lo); line-height: 1.5; word-break: break-all; }
-.tsc__sum { color: var(--text-hi) !important; font-size: 12.5px !important; }
+.tsc__line em { font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); margin-left: auto; }
+.tsc__sub { font-size: var(--fs-sm); color: var(--text-lo); line-height: 1.5; word-break: break-all; }
+.tsc__sum { color: var(--text-hi) !important; font-size: var(--fs-base) !important; }
 
 /* 사진 소스 비교 (시험) */
 .pp { display: grid; gap: 8px; }
 .pp__run { justify-self: start; padding: 9px 16px; }
-.pp__sum { margin: 0; font-size: 12px !important; color: var(--text-mid) !important; }
+.pp__sum { margin: 0; font-size: var(--fs-sm) !important; color: var(--text-mid) !important; }
 .pp__sum b { color: var(--text-hi); }
 .pp__sum em { font-style: normal; color: var(--text-lo); }
 .pp__grid, .pp__row { display: grid; grid-template-columns: minmax(0, 1fr) 46px 46px 46px; gap: 6px; align-items: center; }
 .pp__row { grid-column: 1 / -1; padding: 4px 0; border-top: 1px solid var(--line); }
-.pp__h { font-size: 10.5px; color: var(--text-lo); text-align: center; }
+.pp__h { font-size: var(--fs-xs); color: var(--text-lo); text-align: center; }
 .pp__h:first-child { text-align: left; }
-.pp__nm { font-size: 12.5px; color: var(--text-hi); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pp__nm i { display: block; font-style: normal; font-size: 10px; color: var(--text-lo); }
+.pp__nm { font-size: var(--fs-base); color: var(--text-hi); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp__nm i { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); }
 .pp__img {
   width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; overflow: hidden;
-  background: rgba(255, 255, 255, .05); border: 1px solid var(--line); font-size: 11px; color: var(--text-lo);
+  background: rgba(255, 255, 255, .05); border: 1px solid var(--line); font-size: var(--fs-xs); color: var(--text-lo);
 }
 .pp__img img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .pp__img[data-st='ok'] { border-color: color-mix(in srgb, var(--win) 55%, transparent); }
 .pp__img[data-st='fail'] { border-color: color-mix(in srgb, var(--loss) 55%, transparent); }
 .pp__img[data-st='fail'] img { opacity: .15; }
 
-.rf__forget { align-self: center; font-size: 11.5px; color: var(--text-lo); text-decoration: underline; padding: 2px 6px; }
+.rf__forget { align-self: center; font-size: var(--fs-sm); color: var(--text-lo); text-decoration: underline; padding: 2px 6px; }
 .rf__close {
   width: 100%; padding: 12px; border-radius: 10px; margin-top: 2px;
-  border: 1px solid var(--line-2); color: var(--text-mid); font-size: 13px;
+  border: 1px solid var(--line-2); color: var(--text-mid); font-size: var(--fs-base);
 }

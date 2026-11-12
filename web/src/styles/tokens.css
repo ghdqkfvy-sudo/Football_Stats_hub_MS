@@ -36,6 +36,20 @@
   --on-accent: #1A1300;
   --glow: radial-gradient(90rem 40rem at 50% -18rem, rgba(254,190,16,.20), transparent 60%);
 
+  /* 글자 크기 — 본문·라벨은 이 여덟 단계만 쓴다(2026-11-12).
+     예전에는 9.5 / 10.5 / 11.5 / 12.5px 같은 반 픽셀 값까지 37가지가 섞여 위계가 흐렸고,
+     폰에서는 글자의 3분의 1이 11px 아래였다. 읽는 글의 하한은 --fs-xs(11px).
+     --fs-micro 는 고정 크기 배지 안의 글자(W/D/L 칩 · 포지션 태그)에만 쓴다.
+     20px 이상(스코어 · 카운트다운 · 제목)은 자리마다 값이 달라 숫자로 둔다. */
+  --fs-micro: 10px;
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 13px;
+  --fs-md:   14px;
+  --fs-lg:   15px;
+  --fs-xl:   16px;
+  --fs-2xl:  18px;
+
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 16px;
@@ -60,7 +74,7 @@ body {
   background: var(--ink-1000);
   color: var(--text-hi);
   font-family: var(--font-body);
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   line-height: 1.5;
   letter-spacing: -.005em;
   -webkit-font-smoothing: antialiased;
@@ -101,7 +115,7 @@ img { -webkit-user-drag: none; user-select: none; }
 /* 공용 유틸 */
 .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
 .eyebrow {
-  font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
+  font-size: var(--fs-xs); font-weight: 600; letter-spacing: .14em;
   text-transform: uppercase; color: var(--text-lo);
 }
 .shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: 20px; }

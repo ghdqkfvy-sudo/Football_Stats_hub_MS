@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { markOf, mobileName, summaryColor, type Target } from '../config/targets';
+import { KOREAN_CLUBS, OUR_TEAM_IDS, markOf, mobileName, summaryColor, type Target } from '../config/targets';
 import type { Match, StandingTable } from '../lib/types';
 import { loadCup, loadLeague, type CupRoundData, type Source , loadScheduleExtras, type ScheduleExtras } from '../lib/api';
 import { CupBracket } from '../components/CupBracket';
@@ -10,9 +10,13 @@ import { StandingsTable } from '../components/StandingsTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { CompCrest } from '../components/CompCrest';
 import { CupPath } from '../components/CupPath';
+import { TrendChart } from '../components/TrendChart';
 import { Swap, dirOf, type SwapDir } from '../components/Swap';
 
 /** 순위가 안 맞아 보일 때 제일 먼저 필요한 정보는 "언제 뜬 값인가" 다 */
+/* 추이 그래프에 회색 선으로 함께 그릴 팀 — 우리 팀들 + 코리안리거 소속팀 */
+const WATCHED: ReadonlySet<string> = new Set([...OUR_TEAM_IDS, ...KOREAN_CLUBS.map((c) => c.espnTeamId)]);
+
 const SRC: Record<Source, string> = {
   live: '실시간',
   feed: '자동 갱신',
@@ -102,6 +106,10 @@ export function StandingsTab({
   const mobile = useIsMobile();
   const cupColors = useMemo(() => ({ [target.espnTeamId]: summaryColor(target) }), [target]);
 
+  /* 우리 팀이 이 대회에서 두 경기 이상 치렀을 때만 추이를 그린다 */
+  const trendOn = !!table && !!data && data.matches.filter((m) => m.status === 'finished'
+    && (m.home.id === target.espnTeamId || m.away.id === target.espnTeamId)).length >= 2
+    && table.rows.some((r) => r.team.id === target.espnTeamId);
   const finished = data?.matches.filter((m) => m.status === 'finished').length ?? 0;
   const withGoals = data?.matches.filter((m) => m.goals.length > 0).length ?? 0;
 
@@ -201,6 +209,24 @@ export function StandingsTab({
             />
             <p className="tbl__hint">팀을 누르면 홈·원정 경기 결과가 펼쳐집니다.</p>
           </section>
+
+          {/* 순위표가 "지금 몇 위" 라면 이건 "어떻게 여기까지 왔나" — 표 바로 아래에 잇는다.
+              두 경기는 치러야 선이 된다(그 전에는 그리지 않는다 — TrendChart 가 null) */}
+          {trendOn && (
+            <section>
+              <div className="sec__head">
+                <h2 className="sec__title">시즌 추이</h2>
+                <span className="sec__note">라운드별 순위 · 승점 — 그래프에 올리면 그 라운드 경기가 뜹니다</span>
+              </div>
+              <TrendChart
+                table={table}
+                matches={data.matches}
+                focusTeamId={target.espnTeamId}
+                focusColor={markOf(target)}
+                others={WATCHED}
+              />
+            </section>
+          )}
 
           <section>
             <div className="sec__head">

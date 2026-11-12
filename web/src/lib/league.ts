@@ -9,7 +9,7 @@
  * 결과로 표를 다시 만든다. 단, 우리가 가진 경기 기록이 ESPN이 집계한
  * 범위를 전부 덮을 때만 그렇게 한다(부분 데이터로 표를 망치지 않도록).
  */
-import type { Match, ResultOf, StandingRow, StandingTable, TeamRef } from './types';
+import type { Match, ResultOf, StandingRow, StandingTable, StandingZone, TeamRef } from './types';
 
 export interface TeamResults {
   home: Match[];
@@ -223,4 +223,39 @@ export function deriveLeaders(matches: Match[]): LeaderRow[] {
   return [...byName.values()]
     .map((r) => ({ ...r, points: r.goals + r.assists, team: teamById.get(r.teamId) }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
+}
+
+/* ── 진출 · 강등 구간 ───────────────────────────────── */
+
+/**
+ * ESPN 이 순위마다 붙여 준 구분에서 **이어진 구간만** 남긴다(순위표 띠 · 범례 · 추이 그래프 공용).
+ * 같은 구분이 떨어진 순위에 한 번 더 붙어 오는 응답이 있다("6위 · 10위 유로파") —
+ * 첫 구간만 쓴다. 떨어져 있는 순위가 유일한 경우(컵 우승팀 자리)는 그대로 남긴다.
+ */
+export function zoneRuns(all: Record<number, StandingZone> | undefined): {
+  zones: Record<number, StandingZone>;
+  legend: { text: string; color: string; ranks: number[] }[];
+} {
+  const by = new Map<string, { color: string; ranks: number[] }>();
+  for (const [rank, z] of Object.entries(all ?? {})) {
+    const hit = by.get(z.text) ?? { color: z.color, ranks: [] };
+    hit.ranks.push(Number(rank));
+    by.set(z.text, hit);
+  }
+
+  const zones: Record<number, StandingZone> = {};
+  const legend: { text: string; color: string; ranks: number[] }[] = [];
+  for (const [text, v] of by) {
+    const sorted = [...v.ranks].sort((a, b) => a - b);
+    const run = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] !== run[run.length - 1] + 1) break;
+      run.push(sorted[i]);
+    }
+    const keep = sorted.length === 1 ? sorted : run;
+    for (const r of keep) zones[r] = { color: v.color, text };
+    legend.push({ text, color: v.color, ranks: keep });
+  }
+  legend.sort((a, b) => Math.min(...a.ranks) - Math.min(...b.ranks));
+  return { zones, legend };
 }

@@ -170,6 +170,8 @@ export function StatCard({
   return (
     <article
       className="krc"
+      /* 폰에서는 접힌 카드가 기본이다 — 이 값으로 펼친다(styles/koreans.css) */
+      data-open={open}
       style={{ ['--club' as string]: bg, ['--clubfg' as string]: fg }}
       {...(HAS_HOVER
         ? {

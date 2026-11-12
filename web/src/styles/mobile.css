@@ -28,7 +28,7 @@
   .hdr__id { gap: 11px; }
   .hdr__name { padding-right: 84px; }
   .hdr__crest, .hdr__crest--sum { width: 38px; height: 38px; }
-  .hdr__crest--sum { border-radius: 11px; font-size: 18px; }
+  .hdr__crest--sum { border-radius: 11px; font-size: var(--fs-2xl); }
   .hdr__name { font-size: 22px; line-height: 1.15; }
 
   /* 출처 배지 — 줄 하나를 먹던 것을 헤더 오른쪽 위 구석으로.
@@ -82,32 +82,32 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   /* 매치데이 히어로 */
-  .mdh__venue, .mdh__foot .mdh__venue { font-size: 12px; }
-  .mdh__dday { font-size: 11px; padding: 3px 8px; }
-  .mdh__ha { font-size: 10px; }
-  .mdh__cdu i { font-size: 9.5px; }
-  .mdt__rec { font-size: 11px; }
+  .mdh__venue, .mdh__foot .mdh__venue { font-size: var(--fs-sm); }
+  .mdh__dday { font-size: var(--fs-xs); padding: 3px 8px; }
+  .mdh__ha { font-size: var(--fs-xs); }
+  .mdh__cdu i { font-size: var(--fs-micro); }
+  .mdt__rec { font-size: var(--fs-xs); }
 
   /* 헤더 */
-  .switch__label { font-size: 10px; }
-  .srcbadge__at { font-size: 11px; }
+  .switch__label { font-size: var(--fs-xs); }
+  .srcbadge__at { font-size: var(--fs-xs); }
 
   /* 주간 캘린더 */
-  .wcal__dow { font-size: 11px; }
-  .wcal__mine b { font-size: 11px; }
-  .wcal__opp span { font-size: 11px; }
-  .wcal__mine i { font-size: 9px; }
+  .wcal__dow { font-size: var(--fs-xs); }
+  .wcal__mine b { font-size: var(--fs-xs); }
+  .wcal__opp span { font-size: var(--fs-xs); }
+  .wcal__mine i { font-size: var(--fs-micro); }
 
   /* 이달의 경기 결과 — 날짜 아래 요일 */
-  .ml__date i { font-size: 11px; }
+  .ml__date i { font-size: var(--fs-xs); }
 
   /* 팀 탭 · 일정 */
-  .fxt__rec { font-size: 11px; }
-  .eyebrow { font-size: 11px; }
-  .mprev__side { font-size: 10px; }
-  .mprev__note { font-size: 11px; }
-  .mprev__md { font-size: 11px; }
-  .mprev__mw { font-size: 10px; }
+  .fxt__rec { font-size: var(--fs-xs); }
+  .eyebrow { font-size: var(--fs-xs); }
+  .mprev__side { font-size: var(--fs-xs); }
+  .mprev__note { font-size: var(--fs-xs); }
+  .mprev__md { font-size: var(--fs-xs); }
+  .mprev__mw { font-size: var(--fs-xs); }
 
   /* 선수 스탯 · 포메이션 칩 — 칸이 88px 로 좁아 반 단계씩만 */
   .chipbox__name { font-size: 10.5px; }
@@ -115,16 +115,16 @@
   .chipbox__stat { font-size: 10px; }
 
   /* Future Resources */
-  .krc__lg { font-size: 11px; }
-  .krc__label { font-size: 11px; }
-  .krc__tag { font-size: 10px; }
-  .krcc__a { font-size: 11px; }
-  .krr__m { font-size: 11px; }
-  .krr__cl { font-size: 10px; }
+  .krc__lg { font-size: var(--fs-xs); }
+  .krc__label { font-size: var(--fs-xs); }
+  .krc__tag { font-size: var(--fs-xs); }
+  .krcc__a { font-size: var(--fs-xs); }
+  .krr__m { font-size: var(--fs-xs); }
+  .krr__cl { font-size: var(--fs-xs); }
 
   /* 뉴스 */
-  .ncard__kind { font-size: 10.5px; }
-  .ncard__by { font-size: 11px; }
+  .ncard__kind { font-size: var(--fs-xs); }
+  .ncard__by { font-size: var(--fs-xs); }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -154,6 +154,14 @@
   .pt__filters button::after { inset: -8px 0; }
   /* 정렬 머리글 19px → 39px (머리 줄 여백 안에서, 열 간격의 절반까지만 옆으로) */
   .pt__sort::after { inset: -10px -3px; }
+  /* 위 묶음에서 빠져 있던 네 곳(2026-11-12) — 캘린더 구독 28px · 코리안리거 정렬 28px ·
+     리그 필터 34px · 소속팀 순위 대회 고르기 32px → 모두 42~44px. 한 줄 가로 묶음이라 세로로만 넓힌다. */
+  .icsbar a, .kr__sort button, .kr__filters button, .kclub__seg button { position: relative; }
+  .icsbar a::after, .kr__sort button::after, .kr__filters button::after, .kclub__seg button::after {
+    content: ''; position: absolute;
+  }
+  .icsbar a::after, .kr__sort button::after { inset: -8px 0; }
+  .kr__filters button::after, .kclub__seg button::after { inset: -5px 0; }
 
   /* Summary 아래 팀 바로가기 27px → 38px */
   .sum__foot { gap: 8px; }
@@ -196,7 +204,7 @@
   .hdr__switches .pill img, .hdr__switches .pill .chipcrest { width: 26px; height: 26px; }
   .hdr__switches .pill .chipcrest { font-size: 8.5px; }
   .hdr__switches .pill__name { display: none; }
-  .hdr__switches .pill--sum { font-size: 17px; letter-spacing: 0; color: var(--text-mid); }
+  .hdr__switches .pill--sum { font-size: var(--fs-2xl); letter-spacing: 0; color: var(--text-mid); }
   /* 고른 팀 — 팀 컬러 테두리 + 은은한 글로우 */
   .hdr__switches .pill[aria-pressed='true'] {
     border-color: color-mix(in srgb, var(--accent) 70%, transparent);
@@ -220,9 +228,9 @@
   .m-short { display: inline; }
   /* 순위표 진출권 범례 — 약칭으로 줄인 네 칸이 한 줄에 들어가게 간격을 줄인다 */
   .tbl__legend { gap: 6px 11px; padding: 10px 12px; }
-  .tbl__lg { gap: 5px; font-size: 11px; }
+  .tbl__lg { gap: 5px; font-size: var(--fs-xs); }
   .tabs { gap: 0; }
-  .tab { flex: 1 1 0; min-width: 0; padding-inline: 4px; text-align: center; font-size: 14px; }
+  .tab { flex: 1 1 0; min-width: 0; padding-inline: 4px; text-align: center; font-size: var(--fs-md); }
   .tab[aria-selected='true']::after { left: 14%; right: 14%; }
 }
 
@@ -238,10 +246,10 @@
   .ngrid .ncard { flex-direction: row; align-items: stretch; min-height: 92px; border-radius: 12px; }
   .ngrid .ncard__ph { width: 108px; aspect-ratio: auto; }
   .ngrid .ncard__body { padding: 10px 12px; gap: 5px; justify-content: center; }
-  .ngrid .ncard__h { font-size: 13.5px; line-height: 1.36; }
+  .ngrid .ncard__h { font-size: var(--fs-md); line-height: 1.36; }
   .ngrid .ncard__d, .ngrid .ncard__by { display: none; }
   .ngrid .ncard__noimg { font-size: 24px; }
-  .ngrid .ncard__play { left: 7px; bottom: 7px; width: 22px; height: 22px; font-size: 9px; }
+  .ngrid .ncard__play { left: 7px; bottom: 7px; width: 22px; height: 22px; font-size: var(--fs-micro); }
   .ngrid .ncard:hover { transform: none; }
   /* 사진 없는 기사 — 행 카드에서는 위쪽 선 대신 왼쪽 선, 사진 칸 높이를 따를 필요가 없다 */
   .ngrid .ncard[data-noimg] { min-height: 0; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -252,7 +260,7 @@
     width: 100%; min-height: 46px; margin-top: 12px;
     border: 1px solid var(--line); border-radius: var(--r-lg);
     background: rgba(6,16,38,.3); color: var(--text-mid);
-    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    font: inherit; font-size: var(--fs-base); font-weight: 700; cursor: pointer;
   }
   .nmore .num { color: var(--text-lo); font-weight: 600; }
 }
@@ -281,15 +289,15 @@
   }
   .mdr__mid { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .mdr__vs { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .mdr__vs i { font-style: normal; font-size: 11px; color: var(--text-lo); }
+  .mdr__vs i { font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); }
   .mdr__vs b {
-    font-size: 14.5px; font-weight: 700; color: var(--opp); letter-spacing: -.01em;
+    font-size: var(--fs-lg); font-weight: 700; color: var(--opp); letter-spacing: -.01em;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .mdr__meta { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 11px; color: var(--text-lo); }
+  .mdr__meta { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: var(--fs-xs); color: var(--text-lo); }
   .mdr__comp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mdr__ha {
-    flex: none; font-size: 9.5px; font-weight: 800; letter-spacing: .06em;
+    flex: none; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .06em;
     padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--text-mid);
   }
   .mdr__ha[data-home] { color: var(--team); border-color: color-mix(in srgb, var(--team) 50%, transparent); }
@@ -300,21 +308,21 @@
   }
   .mdr__when > :first-child { grid-row: 1; grid-column: 1 / -1; }
   .mdr__dday {
-    font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: 7px;
     color: var(--team); background: color-mix(in srgb, var(--team) 20%, transparent);
     border: 1px solid color-mix(in srgb, var(--team) 44%, transparent);
   }
   .mdr__dday[data-tone='now'] { color: #07101F; background: var(--team); }
   .mdr__dday[data-tone='far'] { color: var(--text-mid); background: transparent; border-color: var(--line-2); }
   .mdr__live {
-    font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 7px;
+    font-style: normal; font-size: var(--fs-xs); font-weight: 800; padding: 2px 8px; border-radius: 7px;
     color: #fff; background: var(--loss);
     display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   }
   /* 경기 중 — 1줄 스코어(크게, 흰색), 2줄 LIVE · 경기 시간 */
   .mdr__score[data-live] { font-size: 20px; color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--loss) 55%, transparent); }
-  .mdr__score[data-live] + .mdr__live { grid-row: 2; grid-column: 1 / -1; justify-self: end; font-size: 10.5px; }
-  .mdr__score { font-family: var(--font-display); font-size: 17px; color: var(--text-hi); }
+  .mdr__score[data-live] + .mdr__live { grid-row: 2; grid-column: 1 / -1; justify-self: end; font-size: var(--fs-xs); }
+  .mdr__score { font-family: var(--font-display); font-size: var(--fs-2xl); color: var(--text-hi); }
   .mdr__score i { font-style: normal; opacity: .5; margin: 0 2px; }
   .mdr__score[data-r='L'] { color: var(--text-mid); }
   .mdr__dt { display: contents; }
@@ -328,7 +336,7 @@
      (날짜 흰색 · 요일 회색, 토 파랑 · 일 빨강 · 시각 팀 컬러) */
   /* 본문 글꼴(Archivo)에는 한글이 없어 요일만 다른 글꼴로 떨어졌다 — 셋 다 Noto Sans KR */
   .mdr__date b, .mdr__date i, .mdr__time {
-    font-family: 'Noto Sans KR', var(--font-body); font-size: 13px; font-weight: 700;
+    font-family: 'Noto Sans KR', var(--font-body); font-size: var(--fs-base); font-weight: 700;
     font-style: normal; letter-spacing: 0; line-height: 1;
   }
   .mdr__date b { color: var(--text-hi); }
@@ -359,27 +367,27 @@
   .wcal__cell[data-empty] { opacity: .75; }
   .wcal__head { flex: 0 0 34px; flex-direction: column; align-items: center; gap: 3px; padding-top: 6px; }
   .wcal__spread { display: none; }
-  .wcal__head .wcal__date { order: 1; font-size: 18px; }
+  .wcal__head .wcal__date { order: 1; font-size: var(--fs-2xl); }
   .wcal__head .wcal__dow { order: 0; }
   .wcal__head .wcal__pulse { order: 2; margin: 3px 0 0; }
-  .wcal__date[data-today] { width: 28px; height: 28px; font-size: 15px; }
+  .wcal__date[data-today] { width: 28px; height: 28px; font-size: var(--fs-lg); }
   .wcal__list { flex: 1 1 auto; min-width: 0; gap: 6px; }
   .wcal__cell[data-empty] .wcal__list::after {
-    content: '경기 없음'; font-size: 12px; color: var(--text-lo); padding-top: 12px;
+    content: '경기 없음'; font-size: var(--fs-sm); color: var(--text-lo); padding-top: 12px;
   }
   .wcal__m {
     grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 10px;
     padding: 10px 12px; border-radius: 8px;
   }
   .wcal__m[data-on] { transform-origin: center; }
-  .wcal__opp::before { content: 'vs'; font-size: 11px; color: var(--text-lo); margin-right: 2px; }
-  .wcal__mine b { font-size: 13px; }
-  .wcal__opp span { font-size: 13px; }
-  .wcal__t { font-size: 15px; }
-  .wcal__t[data-done] { font-size: 16px; }
+  .wcal__opp::before { content: 'vs'; font-size: var(--fs-xs); color: var(--text-lo); margin-right: 2px; }
+  .wcal__mine b { font-size: var(--fs-base); }
+  .wcal__opp span { font-size: var(--fs-base); }
+  .wcal__t { font-size: var(--fs-lg); }
+  .wcal__t[data-done] { font-size: var(--fs-xl); }
   /* 이번 주에 경기가 하나도 없고 오늘도 이 주가 아니면 빈 상자만 남는다 */
   .wcal__grid:not(:has(.wcal__cell:not([data-empty]))):not(:has(.wcal__cell[data-today]))::after {
-    content: '이번 주에는 경기가 없습니다'; padding: 18px 14px; font-size: 12.5px; color: var(--text-lo);
+    content: '이번 주에는 경기가 없습니다'; padding: 18px 14px; font-size: var(--fs-base); color: var(--text-lo);
   }
 }
 
@@ -407,12 +415,12 @@
   }
   .mbar__id img { width: 24px; height: 24px; object-fit: contain; }
   .mbar__id .chipcrest { width: 24px; height: 24px; font-size: 8px; }
-  .mbar__star { font-size: 17px; color: var(--accent); }
-  .mbar__top { font-size: 17px; font-weight: 700; }
+  .mbar__star { font-size: var(--fs-2xl); color: var(--accent); }
+  .mbar__top { font-size: var(--fs-2xl); font-weight: 700; }
   .mbar__nav { flex: 1 1 auto; min-width: 0; display: flex; }
   .mbar__b {
     position: relative; flex: 1 1 0; min-width: 0; height: 44px; padding: 0 2px;
-    font: inherit; font-size: 13px; font-weight: 600; color: var(--text-lo);
+    font: inherit; font-size: var(--fs-base); font-weight: 600; color: var(--text-lo);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
   }
   .mbar__b[aria-selected='true'] { color: var(--text-hi); }
@@ -435,7 +443,7 @@
 @media (max-width: 640px) {
   .tbl__gap {
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; min-height: 34px; font: inherit; font-size: 12px; font-weight: 600;
+    width: 100%; min-height: 34px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
     color: var(--text-lo); cursor: pointer;
     border-bottom: 1px solid var(--line);
     background: repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 6px, transparent 6px 12px);
@@ -443,7 +451,7 @@
   .tbl__gap i { font-style: normal; letter-spacing: .2em; color: var(--text-mid); }
   .tbl__all {
     display: flex; align-items: center; justify-content: center;
-    width: 100%; min-height: 44px; font: inherit; font-size: 12.5px; font-weight: 700;
+    width: 100%; min-height: 44px; font: inherit; font-size: var(--fs-base); font-weight: 700;
     color: var(--text-mid); cursor: pointer;
   }
 }
@@ -456,7 +464,7 @@
   .comps > * { flex: 1 1 0; min-width: 0; }
   .comps__b {
     justify-content: center; gap: 6px; padding: 8px 8px; min-height: 44px;
-    white-space: normal; line-height: 1.18; text-align: left; font-size: 12px;
+    white-space: normal; line-height: 1.18; text-align: left; font-size: var(--fs-sm);
   }
   /* Summary 대회 순위 — 리그 3 · 컵 3 을 3열 두 줄로. 한 줄에 여섯 개를 같은 폭으로 넣으면
      "La / Liga" · "EFL / Cup" 처럼 이름이 버튼 안에서 꺾였다(2026-10-26). 윗줄 리그 · 아랫줄 컵 */
@@ -469,7 +477,7 @@
   .krr__h { cursor: pointer; }
   .krr:not([data-open='true']) .krr__h { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
   .krr__h::after {
-    content: '▾'; margin-left: auto; padding-left: 8px; color: var(--text-lo); font-size: 12px;
+    content: '▾'; margin-left: auto; padding-left: 8px; color: var(--text-lo); font-size: var(--fs-sm);
     transition: transform .18s;
   }
   .krr[data-open='true'] .krr__h::after { transform: rotate(180deg); }
@@ -529,5 +537,5 @@
 /* 360px 대 좁은 폰 — "Rog…" 처럼 성마저 잘리지 않게 간격·배지만 조금 줄인다 */
 @media (max-width: 380px) {
   .pt__who { gap: 7px; }
-  .pt__who em { min-width: 22px; padding: 1px 2px; font-size: 9px; letter-spacing: .04em; }
+  .pt__who em { min-width: 22px; padding: 1px 2px; font-size: var(--fs-micro); letter-spacing: .04em; }
 }

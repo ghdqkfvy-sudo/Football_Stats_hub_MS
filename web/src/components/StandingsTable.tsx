@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { Match, StandingTable, StandingZone } from '../lib/types';
+import type { Match, StandingTable } from '../lib/types';
 import { kstShortDate } from '../lib/kst';
-import { resultOf, teamResults } from '../lib/league';
+import { resultOf, teamResults, zoneRuns } from '../lib/league';
 import { Crest } from './Crest';
 import { useIsMobile } from '../lib/useMedia';
 
@@ -171,30 +171,7 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
    * 아는 사람일수록 더 헷갈린다. 떨어져 있는 순위가 **유일한** 경우
    * (컵 우승팀 자리처럼 진짜로 하나만 있는 경우)는 그대로 남긴다.
    */
-  const { zones, legend } = (() => {
-    const by = new Map<string, { color: string; ranks: number[] }>();
-    for (const [rank, z] of Object.entries(table.zones ?? {})) {
-      const hit = by.get(z.text) ?? { color: z.color, ranks: [] };
-      hit.ranks.push(Number(rank));
-      by.set(z.text, hit);
-    }
-
-    const keptZones: Record<number, StandingZone> = {};
-    const rows: { text: string; color: string; ranks: number[] }[] = [];
-    for (const [text, v] of by) {
-      const sorted = [...v.ranks].sort((a, b) => a - b);
-      const run = [sorted[0]];
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i] !== run[run.length - 1] + 1) break;
-        run.push(sorted[i]);
-      }
-      const keep = sorted.length === 1 ? sorted : run;
-      for (const r of keep) keptZones[r] = { color: v.color, text };
-      rows.push({ text, color: v.color, ranks: keep });
-    }
-    rows.sort((a, b) => Math.min(...a.ranks) - Math.min(...b.ranks));
-    return { zones: keptZones, legend: rows };
-  })();
+  const { zones, legend } = zoneRuns(table.zones);
 
   const zoneOf = (rank: number) => zones[rank];
 
