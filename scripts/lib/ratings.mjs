@@ -134,3 +134,38 @@ export function ratingAt(date, rows, tolMs = 3 * 3600_000) {
   }
   return best?.r ?? null;
 }
+
+/**
+ * 시즌 평점이 비어 온 선수를 경기별 평점의 평균으로 채운다.
+ *
+ * FotMob 팀 응답이 부상 · 스쿼드는 주면서 선수 `rating` 만 통째로 비워 보내는 때가 있다
+ * (2026-11-12 바이에른 — 서른 명 전원. 응답은 성공이라 "지난 회차 값 유지" 도 타지 않아 화면의 평점이 다 사라졌다).
+ * 경기별 평점은 우리가 경기마다 받아 쌓아 둔 값이라 그대로 남아 있다 — 그 평균을 쓴다.
+ * FotMob 시즌 평점은 리그 경기 기준이고 이 값은 받아 둔 모든 대회 평균이라 소수 첫째 자리에서 조금 다를 수 있다.
+ * 표본이 적으면(min 경기 미만) 채우지 않는다 — 한두 경기 평점을 "시즌 평점" 이라 부를 수 없다.
+ *
+ * @param athletes     { [espnId]: { rating? } } — 비어 있는 선수만 채운다(이미 있으면 그대로)
+ * @param matchRatings { [eventId]: { r: { [espnId]: 평점 } } }
+ * @returns 채운 선수 수
+ */
+export function fillSeasonFromMatches(athletes, matchRatings, min = 3) {
+  const sum = new Map();
+  for (const m of Object.values(matchRatings ?? {})) {
+    for (const [id, v] of Object.entries(m?.r ?? {})) {
+      const r = num(v);
+      if (!r) continue;
+      const a = sum.get(id) ?? { t: 0, n: 0 };
+      a.t += r; a.n += 1;
+      sum.set(id, a);
+    }
+  }
+  let filled = 0;
+  for (const [id, a] of Object.entries(athletes ?? {})) {
+    if (!a || num(a.rating)) continue;
+    const s = sum.get(id);
+    if (!s || s.n < min) continue;
+    a.rating = Math.round((s.t / s.n) * 100) / 100;
+    filled++;
+  }
+  return filled;
+}

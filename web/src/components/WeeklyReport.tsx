@@ -166,7 +166,10 @@ async function exportImage(w: Weekly): Promise<void> {
   const file = new File([blob], name, { type: 'image/png' });
   const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
   if (touch && navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: '코리안리거 주간 리포트' }); return; } catch { /* 닫았다 — 내려받기로 */ }
+    try { await navigator.share({ files: [file], title: '코리안리거 주간 리포트' }); return; } catch (e) {
+      /* 사용자가 공유 창을 닫았으면 끝 — 닫았는데 파일이 내려받아지면 안 된다. 그 밖의 실패만 내려받기로 */
+      if ((e as DOMException)?.name === 'AbortError') return;
+    }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

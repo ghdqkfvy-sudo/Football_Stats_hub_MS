@@ -41,7 +41,7 @@ import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs
 import { slimFeed } from './lib/slim.mjs';
 import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
-import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
+import { fillSeasonFromMatches, finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
 
@@ -2460,6 +2460,9 @@ async function main() {
           for (const [id, sus] of prev.susById) if (athletes[id]) athletes[id].sus = sus;
           injuries = prev.list;
         }
+        /* 시즌 평점이 비어 온 선수는 경기별 평점 평균으로 — FotMob 이 응답은 주면서 rating 만 비운 회차(lib/ratings.mjs) */
+        const filled = fillSeasonFromMatches(athletes, matchRatings);
+        if (filled) console.log(`    평점: 시즌 평점이 빈 ${filled}명을 경기별 평점 평균으로 채움`);
       }
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
