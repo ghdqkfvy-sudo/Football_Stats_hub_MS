@@ -6,8 +6,8 @@
   display: flex; align-items: baseline; gap: 4px 10px; margin-bottom: 12px; flex-wrap: wrap;
   text-shadow: 0 1px 12px rgba(4,12,28,.9), 0 0 4px rgba(4,12,28,.75);
 }
-.sec__title { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.015em; white-space: nowrap; }
-.sec__note { font-size: 11px; color: var(--text-lo); }
+.sec__title { font-size: var(--fs-lg); font-weight: 600; margin: 0; letter-spacing: -.015em; white-space: nowrap; }
+.sec__note { font-size: var(--fs-xs); color: var(--text-lo); }
 /* 월 경기 설명 — PC 는 한 줄(가운뎃점), 폰은 문장마다 한 줄씩. 낱말 중간에서 끊기지 않게 */
 .sch__note > span + span::before { content: ' · '; }
 @media (max-width: 640px) {
@@ -43,7 +43,7 @@
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 13px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 52%, transparent);
-  color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--accent); font-size: var(--fs-sm); font-weight: 700; letter-spacing: -.01em;
   white-space: nowrap;
 }
 .hero__clock { font-style: normal; font-weight: 800; padding-left: 7px; margin-left: 1px; border-left: 1px solid currentColor; }
@@ -54,12 +54,12 @@
 }
 .hero__comp {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 600; color: var(--text-hi);
+  font-size: var(--fs-base); font-weight: 600; color: var(--text-hi);
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
 }
-.hero__comp em { font-style: normal; color: var(--text-lo); font-weight: 500; font-size: 11.5px; }
+.hero__comp em { font-style: normal; color: var(--text-lo); font-weight: 500; font-size: var(--fs-sm); }
 .hero__venue {
-  font-size: 12px; color: var(--text-hi); display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-sm); color: var(--text-hi); display: inline-flex; align-items: center; gap: 6px;
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
 }
 .hero__venue svg { color: var(--loss); opacity: .95; }
@@ -69,7 +69,7 @@
   .hero__top .hero__venue { display: none; }
   .when__venue {
     display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 8px;
-    font-size: 12px; color: var(--text-mid); min-width: 0;
+    font-size: var(--fs-sm); color: var(--text-mid); min-width: 0;
   }
   .when__venue svg { color: var(--loss); flex: none; }
 }
@@ -91,12 +91,12 @@
 }
 .fxt__tile img, .fxt__tile .mono { filter: drop-shadow(0 4px 14px rgba(0,0,0,.55)); }
 .fxt__name {
-  font-size: 15px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2;
+  font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.02em; line-height: 1.2;
   text-shadow: 0 1px 14px rgba(4,12,28,.95);
 }
 .fxt[data-focus='true'] .fxt__name { color: var(--accent); }
 .fxt__rec {
-  font-size: 11px; color: var(--text-mid); letter-spacing: .01em;
+  font-size: var(--fs-xs); color: var(--text-mid); letter-spacing: .01em;
   padding: 3px 10px; border-radius: 999px;
   background: rgba(6,16,38,.42); border: 1px solid var(--line);
 }
@@ -124,7 +124,7 @@
 .hgoals__side[data-side='home'] .hg__body { order: 1; align-items: flex-end; text-align: right; }
 .hg__t {
   justify-self: stretch; text-align: center; padding: 2px 0; border-radius: 5px;
-  font-family: var(--font-display); font-size: 12.5px; font-weight: 700; line-height: 1.25;
+  font-family: var(--font-display); font-size: var(--fs-base); font-weight: 700; line-height: 1.25;
   color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .hg--left .hg__t { background: none; }
@@ -132,23 +132,23 @@
 .hg__s { display: flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0; }
 .hgoals__side[data-side='home'] .hg__s { flex-direction: row-reverse; }
 .hg__s b {
-  font-size: 14px; font-weight: 700; color: var(--text-hi); line-height: 1.25;
+  font-size: var(--fs-md); font-weight: 700; color: var(--text-hi); line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
 }
 .hgoals__tag {
-  font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .05em; flex: none;
+  font-style: normal; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .05em; flex: none;
   padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,.1); color: var(--text-mid);
 }
 .hgoals__tag[data-og] { background: rgba(255,92,113,.16); color: #FF8A99; }
 .hg__a {
   display: flex; align-items: center; gap: 5px; max-width: 100%; min-width: 0;
-  font-size: 11.5px; color: var(--text-mid); line-height: 1.2;
+  font-size: var(--fs-sm); color: var(--text-mid); line-height: 1.2;
 }
 .hgoals__side[data-side='home'] .hg__a { flex-direction: row-reverse; }
 .hg__a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .hg__a i {
-  flex: none; font-style: normal; font-size: 8.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;
+  flex: none; font-style: normal; font-size: var(--fs-micro); font-weight: 800; padding: 1px 4px; border-radius: 3px;
   color: #7FE3FF; background: rgba(127,227,255,.12); border: 1px solid rgba(127,227,255,.32);
 }
 .hg__a[data-guess] { opacity: .7; }
@@ -158,12 +158,12 @@
   display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-lo);
 }
 .hgoals__mid::after { content: ''; flex: 1; width: 1px; background: var(--line); }
-.hgoals__none { margin: -2px 0 0; text-align: center; font-size: 12px; color: var(--text-lo); }
+.hgoals__none { margin: -2px 0 0; text-align: center; font-size: var(--fs-sm); color: var(--text-lo); }
 
 /* 킥오프 */
 .hero__when { text-align: center; }
 .when__date {
-  font-size: 14px; font-weight: 700; color: var(--text-hi);
+  font-size: var(--fs-md); font-weight: 700; color: var(--text-hi);
   text-shadow: 0 1px 14px rgba(4,12,28,.95);
 }
 .when__time {
@@ -177,7 +177,7 @@
                0 2px 22px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .when__time em {
-  font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  font-style: normal; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .1em;
   color: var(--text-mid); align-self: flex-end; padding-bottom: 5px;
 }
 
@@ -197,7 +197,7 @@
   color: var(--accent);
   text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
 }
-.cdu i { font-style: normal; font-size: 10px; color: var(--text-mid); margin-top: 4px; letter-spacing: .06em; }
+.cdu i { font-style: normal; font-size: var(--fs-xs); color: var(--text-mid); margin-top: 4px; letter-spacing: .06em; }
 .cdu__sep {
   position: absolute; left: -4px; top: 2px;
   font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--text-lo);
@@ -206,7 +206,7 @@
 /* 대회 배지 */
 .cbadge {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+  padding: 4px 10px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .01em;
   background: color-mix(in srgb, var(--c) 16%, transparent);
   color: color-mix(in srgb, var(--c) 82%, white);
   border: 1px solid color-mix(in srgb, var(--c) 32%, transparent);
@@ -233,7 +233,7 @@
 
 /* 폼 점 */
 .fchip {
-  width: 17px; height: 17px; border-radius: 4px; font-size: 9.5px; font-weight: 700;
+  width: 17px; height: 17px; border-radius: 4px; font-size: var(--fs-micro); font-weight: 700;
   display: grid; place-items: center; color: #06090F;
 }
 .fchip[data-r='W'] { background: var(--win); }
@@ -244,7 +244,7 @@
 /* 새벽 경기 배지 */
 .dawn {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+  font-size: var(--fs-xs); font-weight: 600; padding: 3px 8px; border-radius: 999px;
   background: rgba(124,110,255,.15); color: #A99BFF; border: 1px solid rgba(124,110,255,.3);
 }
 
@@ -262,7 +262,7 @@
 }
 .cal__title {
   grid-column: 2; grid-row: 1; text-align: center;
-  font-family: var(--font-body); font-size: 17px; font-weight: 700; letter-spacing: -.02em;
+  font-family: var(--font-body); font-size: var(--fs-2xl); font-weight: 700; letter-spacing: -.02em;
   text-shadow: 0 2px 16px rgba(4,12,28,.95);
 }
 .cal__nav { display: contents; }
@@ -304,7 +304,7 @@
 }
 
 .cal__dow div {
-  padding: 4px 0 10px; text-align: center; font-size: 11px; font-weight: 600;
+  padding: 4px 0 10px; text-align: center; font-size: var(--fs-xs); font-weight: 600;
   color: var(--text-mid); letter-spacing: .06em; border-bottom: 0; background: transparent;
   text-shadow: 0 1px 12px rgba(4,12,28,.9);
 }
@@ -329,7 +329,7 @@
 
 /* 날짜 숫자는 칸 왼쪽 위 — 레퍼런스와 같다 */
 .day__n {
-  font-size: 13px; font-weight: 700; color: var(--text-hi);
+  font-size: var(--fs-base); font-weight: 700; color: var(--text-hi);
   font-variant-numeric: tabular-nums; align-self: flex-start;
   text-shadow: 0 1px 12px rgba(4,12,28,.95);
 }
@@ -411,13 +411,13 @@
   .bar[data-sel='true'] { animation: chipPulse 1.9s cubic-bezier(.4,0,.6,1) infinite; }
   .bar__info {
     display: flex; align-items: center; gap: 4px; min-width: 0; width: 100%;
-    font-size: 11px; color: var(--text-hi); white-space: nowrap;
+    font-size: var(--fs-xs); color: var(--text-hi); white-space: nowrap;
   }
   .bar__info b { font-weight: 700; letter-spacing: .02em; margin-left: auto; }
   .bar__info[data-r='W'] b { color: #4ADE80; }
   .bar__info[data-r='L'] b { color: #FF7A85; }
   .bar__info[data-r='D'] b { color: #FBBF24; }
-  .bar__at { font-style: normal; font-size: 9.5px; color: var(--text-lo); }
+  .bar__at { font-style: normal; font-size: var(--fs-micro); color: var(--text-lo); }
   .bar__opp { font-weight: 600; color: var(--text-mid); overflow: hidden; text-overflow: ellipsis; }
   /* 엠블럼이 약어 배지로 떨어지면 같은 약어가 두 번 — 글자를 뺀다 */
   .bar__info .mono + .bar__opp { display: none; }
@@ -437,7 +437,7 @@
 }
 .cal__lg, .cal__lgnote {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11px; color: var(--text-mid); letter-spacing: -.005em;
+  font-size: var(--fs-xs); color: var(--text-mid); letter-spacing: -.005em;
   text-shadow: 0 1px 10px rgba(4,12,28,.85);
 }
 .cal__lg i { width: 16px; height: 5px; border-radius: 3px; background: var(--c); }
@@ -460,7 +460,7 @@
   width: 26px; height: 26px; border-radius: 8px;
   display: none; place-items: center;
   border: 1px solid var(--line-2); background: rgba(255,255,255,.06);
-  color: var(--text-mid); font-size: 11px; pointer-events: auto;
+  color: var(--text-mid); font-size: var(--fs-xs); pointer-events: auto;
 }
 .pop__x:hover, .pcard__x:hover { color: var(--text-hi); background: rgba(255,255,255,.12); }
 
@@ -468,19 +468,19 @@
   margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line);
 }
 .pop__h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
-.pop__row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 3px 0; }
+.pop__row { display: flex; align-items: center; gap: 8px; font-size: var(--fs-base); padding: 3px 0; }
 .pop__row img { width: 18px; height: 18px; object-fit: contain; }
 .pop__row b { margin-left: auto; font-family: var(--font-display); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pop__row[data-lost='true'] { color: var(--text-lo); }
 .pop__g { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
-.pop__gi { display: flex; gap: 7px; font-size: 11.5px; color: var(--text-mid); align-items: baseline; }
+.pop__gi { display: flex; gap: 7px; font-size: var(--fs-sm); color: var(--text-mid); align-items: baseline; }
 /* 시각은 정보의 뼈대일 뿐이라 회색으로 눕히고, 눈은 팀·이름으로 간다 */
 .pop__gt { color: var(--text-lo); min-width: 30px; }
 /* 팀 약어 — 우리 팀은 팀 컬러, 상대 팀은 흰색. 색만으로 편이 갈린다 */
-.pop__gteam { min-width: 30px; font-weight: 700; font-size: 10.5px; letter-spacing: .02em; color: var(--accent); }
+.pop__gteam { min-width: 30px; font-weight: 700; font-size: var(--fs-xs); letter-spacing: .02em; color: var(--accent); }
 .pop__gteam[data-opp='true'] { color: var(--opp, #fff); }
 .pop__gn { color: var(--text-hi); }
-.pop__ga { display: block; font-style: normal; font-size: 10.5px; color: var(--text-lo); }
+.pop__ga { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); }
 
 /* 추론으로 붙인 도움은 살짝 흐리게만 — 점선을 그었더니 말줄임표처럼 보였다 */
 .gl__a[data-guess='true'] { opacity: .66; }
@@ -497,7 +497,7 @@
 }
 .ml__legend span {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11.5px; color: var(--text-mid);
+  font-size: var(--fs-sm); color: var(--text-mid);
   text-shadow: 0 1px 10px rgba(4,12,28,.85);
 }
 .ml__legend i { width: 16px; height: 5px; border-radius: 3px; background: var(--c); }
@@ -529,10 +529,10 @@
 
 .ml__date { text-align: center; line-height: 1; }
 .ml__date b {
-  font-family: var(--font-body); font-size: 19px; font-weight: 700; display: block;
+  font-family: var(--font-body); font-size: 20px; font-weight: 700; display: block;
   letter-spacing: -.02em; text-shadow: 0 1px 12px rgba(4,12,28,.95);
 }
-.ml__date i { font-style: normal; font-size: 10.5px; color: var(--text-mid); display: block; margin-top: 3px; }
+.ml__date i { font-style: normal; font-size: var(--fs-xs); color: var(--text-mid); display: block; margin-top: 3px; }
 
 /* 참가 대회 구별 택 */
 .ml__tick {
@@ -551,7 +551,7 @@
 .ml__side.r { justify-content: flex-end; }
 .ml__side:not(.r) { justify-content: flex-start; }
 .ml__side b {
-  font-size: 14px; font-weight: 700; letter-spacing: .02em;
+  font-size: var(--fs-md); font-weight: 700; letter-spacing: .02em;
   text-shadow: 0 1px 12px rgba(4,12,28,.95);
 }
 .ml__side[data-lost='true'] b { color: var(--text-lo); font-weight: 600; }
@@ -562,7 +562,7 @@
 /* 레퍼런스의 스코어는 팀 약어와 같은 스케일이다. 크기로 키우지 않고
    팀 컬러 하나로만 도드라지게 한다. */
 .ml__score {
-  font-family: var(--font-body); font-size: 15px; font-weight: 800;
+  font-family: var(--font-body); font-size: var(--fs-lg); font-weight: 800;
   letter-spacing: .01em; text-align: center;
   color: var(--accent); text-shadow: 0 1px 12px color-mix(in srgb, var(--accent) 35%, transparent);
 }
@@ -571,26 +571,26 @@
   color: color-mix(in srgb, var(--accent) 60%, transparent);
 }
 .ml__vs {
-  text-align: center; font-size: 11.5px; color: var(--text-lo);
+  text-align: center; font-size: var(--fs-sm); color: var(--text-lo);
   letter-spacing: .06em;
 }
 
 .ml__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .ml__comp {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11.5px; color: var(--text-mid); white-space: nowrap;
+  font-size: var(--fs-sm); color: var(--text-mid); white-space: nowrap;
   text-shadow: 0 1px 10px rgba(4,12,28,.9);
 }
 .ml__comp i { width: 9px; height: 9px; border-radius: 2px; background: var(--c); flex: none; }
 .ml__status {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12.5px; font-weight: 600; color: var(--text-hi);
+  font-size: var(--fs-base); font-weight: 600; color: var(--text-hi);
   text-shadow: 0 1px 10px rgba(4,12,28,.9);
 }
 .ml__status[data-open='true'] { color: var(--accent); }
 .ml__ko {
   display: inline-flex; align-items: center; gap: 5px;
-  font-family: var(--font-body); font-size: 14.5px; font-weight: 800; color: var(--accent);
+  font-family: var(--font-body); font-size: var(--fs-lg); font-weight: 800; color: var(--accent);
   text-shadow: 0 1px 12px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .ml__ko svg { opacity: .8; }
@@ -609,19 +609,19 @@
 .gl__row { display: grid; grid-template-columns: 38px 40px auto 1fr; align-items: baseline; gap: 10px; }
 /* 득점 시각은 정보의 뼈대일 뿐이라 회색으로 눕힌다 — 눈은 팀·이름으로 간다.
    (캘린더 호버 카드의 .pop__gt 와 같은 규칙) */
-.gl__m { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-lo); }
-.gl__t { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
-.gl__s { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
-.gl__a { font-size: 12px; color: var(--text-lo); display: inline-flex; align-items: baseline; gap: 5px; }
+.gl__m { font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; color: var(--text-lo); }
+.gl__t { font-size: var(--fs-xs); font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+.gl__s { font-size: var(--fs-md); font-weight: 600; letter-spacing: -.01em; }
+.gl__a { font-size: var(--fs-sm); color: var(--text-lo); display: inline-flex; align-items: baseline; gap: 5px; }
 .gl__a i {
-  font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: .05em;
+  font-style: normal; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .05em;
   color: var(--text-mid); border: 1px solid var(--line-2); border-radius: 3px; padding: 0 3px;
 }
 .gl__tag {
-  font-style: normal; font-size: 9px; margin-left: 6px; padding: 1px 5px; border-radius: 3px;
+  font-style: normal; font-size: var(--fs-micro); margin-left: 6px; padding: 1px 5px; border-radius: 3px;
   border: 1px solid var(--line-2); color: var(--text-lo); vertical-align: 1px;
 }
-.nogoal { font-size: 12.5px; color: var(--text-lo); padding: 2px 0; margin: 0; }
+.nogoal { font-size: var(--fs-base); color: var(--text-lo); padding: 2px 0; margin: 0; }
 
 /* 로딩 스켈레톤 */
 .skel {
@@ -636,8 +636,8 @@
   padding: 44px 24px; text-align: center; color: var(--text-lo);
   display: flex; flex-direction: column; gap: 8px; align-items: center;
 }
-.empty h3 { margin: 0; font-size: 15px; color: var(--text-mid); font-weight: 600; }
-.empty p { margin: 0; font-size: 12.5px; max-width: 44ch; line-height: 1.6; }
+.empty h3 { margin: 0; font-size: var(--fs-lg); color: var(--text-mid); font-weight: 600; }
+.empty p { margin: 0; font-size: var(--fs-base); max-width: 44ch; line-height: 1.6; }
 
 /* 크레스트 폴백 (로고 URL이 없는 국가대표팀 등) */
 .mono {
@@ -664,7 +664,7 @@
 .icsbar { margin-left: auto; display: inline-flex; gap: 6px; flex: none; }
 .icsbar a {
   padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line);
-  font-size: 11.5px; font-weight: 600; color: var(--text-mid); text-decoration: none;
+  font-size: var(--fs-sm); font-weight: 600; color: var(--text-mid); text-decoration: none;
   background: color-mix(in srgb, var(--ink-900) 60%, transparent);
   transition: color .15s, border-color .15s;
 }
@@ -673,3 +673,10 @@
 /* 바텀시트에 하루 경기가 둘 이상이면 경기마다 줄을 그어 나눈다 (Sheet MatchSheet) */
 .sheet__m + .sheet__m { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 
+
+/* 넓은 화면의 팀 일정 목록 (2026-11-12) — 대진(292px)이 왼쪽 끝, 상태가 오른쪽 끝이라 가운데
+   700px 이 비어 시선이 끊겼다. 대진 묶음을 칸 가운데에 세운다. 칸 폭이 고정이라 엠블럼 · 스코어는
+   여전히 줄마다 같은 세로선에 선다. (여러 팀이 섞인 Summary 목록 [data-ours] 는 건드리지 않는다) */
+@media (min-width: 900px) {
+  .ml__match:not([data-ours]) { justify-content: center; }
+}
