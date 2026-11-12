@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node ../scripts/build-ics.mjs public/data dist/cal",
     "lint": "oxlint",
     "preview": "vite preview",
+    "data:pull": "cd .. && bash scripts/data-branch.sh pull",
     "snapshot": "node ../scripts/snapshot.mjs public/data",
     "snapshot:fast": "node ../scripts/snapshot.mjs public/data --only=fast",
     "test": "vitest run",

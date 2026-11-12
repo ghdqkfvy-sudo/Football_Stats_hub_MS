@@ -1950,3 +1950,22 @@ ESPN 표기(South Korea · Iran · United States)와 별칭으로 맞춘다. 못
   첫 JS 516KB → 333KB(gzip 158 → 103KB).
 - **배경 사진**: 맨유 · 토트넘 · 뉴캐슬 JPEG 를 품질 62 · 프로그레시브로 다시 저장(330~400KB → 200~245KB).
   WebP 로 바꾸지 않은 이유: "jpg 파일만 덮어쓰면 된다" 는 교체 방식(assets/BACKGROUND-IMAGES.md)을 지키려고.
+
+### 남은 개선 묶음 ③ — 수집 데이터는 `data` 브랜치로 (2026-11-12)
+
+수집 봇이 20분마다 `web/public/data` 를 **main 에** 커밋해, main 의 최근 이력이 전부 `chore(data)` 였다.
+코드 변경이 묻히고, 코드를 올릴 때마다 봇 커밋과 리베이스해야 했고, 저장소는 계속 커졌다.
+
+- 수집(빠른 · 느린 · 라이브)은 이제 **`data` 브랜치**에 올린다(`scripts/data-branch.sh`). main 에는 사람이 올린 커밋만 남는다.
+- 배포 · CI 는 빌드 전에 `data-branch.sh pull` 로 data 브랜치의 파일을 `web/public/data` 위에 덮는다.
+- main 의 `web/public/data` 는 **씨앗 사본**으로 남는다 — data 브랜치가 없을 때(포크 · 첫 실행)와 로컬 개발의 기본값.
+  더 갱신되지는 않는다. 로컬에서 지금 데이터를 보려면:
+
+      git fetch origin data
+      git restore --source=FETCH_HEAD --worktree -- web/public/data     (또는 web 에서 npm run data:pull)
+
+  되돌리려면 `git checkout -- web/public/data`.
+- 동시에 도는 수집끼리 서로의 파일을 되돌리지 않도록, 작업 폴더 전체가 아니라 **이번에 바뀐 파일만** 최신 data 위에
+  얹어 올린다. 푸시가 밀리면 최신에서 다시 얹는다(리베이스가 없으니 충돌 마커가 생길 길이 없다 — 그래도 마커 검사는 남겼다).
+- data 이력이 200개를 넘으면 한 커밋으로 접는다(느린 수집이 한 시간마다 확인) — 저장소가 끝없이 커지지 않는다.
+- 되돌리는 법: 이 묶음의 PR 을 되돌리면 수집이 다시 main 에 커밋한다(main 의 사본이 그대로 있어 바로 동작한다).
