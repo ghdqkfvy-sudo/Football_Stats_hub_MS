@@ -120,12 +120,12 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
     }
     const cap = setTimeout(() => { if (alive) setLoading(false); }, 2500);
     return () => { alive = false; clearTimeout(cap); };
-  }, []);
+  }, [mine, kclubs]);
 
   /** 팀 탭이 있는 일곱 팀 — 팀 비교는 여기만 */
   const teamFeeds = useMemo<TeamFeed[]>(
     () => mine.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId })),
-    [feeds],
+    [feeds, mine],
   );
   /**
    * + 코리안리거 소속팀 — 주간 일정에는 세 클럽 경기가 다 나오고, 다음 경기에서는
@@ -134,7 +134,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
    */
   const allFeeds = useMemo<TeamFeed[]>(
     () => [...teamFeeds, ...kclubs.map((t) => ({ id: t.id, matches: feeds[t.id] ?? [], espnId: t.espnTeamId }))],
-    [teamFeeds, feeds],
+    [teamFeeds, feeds, kclubs],
   );
 
   const targetOf = (id: string) => getTarget(id as TargetId);
@@ -144,7 +144,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
   /* ── 매치데이 히어로 ──────────────────────────────── */
   const board = useMemo(
     () => nextUpBoardShared(teamFeeds, allFeeds.filter((f) => f.id === 'korea' || kclubs.some((c) => c.id === f.id)), 'korea'),
-    [teamFeeds, allFeeds],
+    [teamFeeds, allFeeds, kclubs],
   );
 
   /*
@@ -287,12 +287,12 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
     const out: Record<string, string> = {};
     for (const t of [...mine, ...kclubs]) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
     return out;
-  }, []);
+  }, [mine, kclubs]);
   const clubColors = useMemo(() => {
     const out: Record<string, string> = {};
     for (const t of mine) if (t.kind === 'club') out[t.espnTeamId] = summaryColor(t);
     return out;
-  }, []);
+  }, [mine]);
 
   /*
    * 선수 순위는 경기별 선수 기록(__stats)에서 만든다. 순위표 경량 파일
@@ -330,7 +330,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
       });
     }
     return () => { alive = false; };
-  }, []);
+  }, [mine]);
 
   /* ── 팀 비교 ─────────────────────────────────────────
      리그 순위·승점·전적(그 팀 리그 표) + 챔스 단계·전적 + 최근 5경기(모든 대회).
@@ -355,7 +355,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
         ? euroStage(mine.filter((m) => m.competition === euro), t.espnTeamId, cupRounds[t.id]?.[euro] ?? [], euroRank)
         : null,
     };
-  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds]);
+  }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds, mine]);
 
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
