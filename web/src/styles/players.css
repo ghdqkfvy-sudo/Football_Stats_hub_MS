@@ -1018,3 +1018,19 @@
 .pdet--card .form { margin: 0 0 10px; }
 .pdet--card .form__plot { height: 104px; }
 .pcard__g[data-hot] { background: rgba(255,255,255,.07); box-shadow: 0 0 0 1px var(--line-2); border-radius: var(--r-md); }
+
+/* 선수 상세 — 경기 거르기 칩 (대회 · 홈/원정 · 선발/교체). 닫기 · 비교 · 링크 단추 왼쪽 줄 */
+.pdet--wide .pdet__main { padding-top: 0; }
+.pdet__filters { display: flex; flex-wrap: wrap; gap: 6px 10px; min-height: 30px; margin: 0 190px 12px 0; }
+.pdet__main > .pdet__h:first-child, .pdet__main > .pdet__none:first-child { margin-top: 36px; }
+.pdet__fgrp { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r-pill); }
+.pdet__fgrp button {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: 600; color: var(--text-lo); white-space: nowrap; transition: background .15s, color .15s;
+}
+.pdet__fgrp button:hover { color: var(--text-mid); }
+.pdet__fgrp button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
+@media (max-width: 900px) { .pdet__filters { margin-right: 0; } .pdet__main > .pdet__h:first-child { margin-top: 0; } }
+/* 폰 시트 — 넓은 화면과 같은 시즌 요약(SeasonHero) */
+.pdet--card .pdet__hero { margin: 12px 0 8px; }
+.pdet--card .pdet__hero b { font-size: var(--fs-d6); }

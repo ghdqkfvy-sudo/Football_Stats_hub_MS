@@ -131,3 +131,20 @@
   .pcmp__foot { justify-content: stretch; }
   .pcmp__foot .pcmp__btn { flex: 1; }
 }
+
+/* ── 링크 보내기 (components/ShareLink) ── */
+.sharel {
+  padding: 5px 11px; border-radius: var(--r-pill); white-space: nowrap;
+  font-size: var(--fs-sm); font-weight: 700; color: var(--text-hi);
+  background: rgba(255, 255, 255, .07); border: 1px solid var(--line-2);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.sharel:hover { background: rgba(255, 255, 255, .12); }
+.sharel[data-done='copied'] { color: var(--win); border-color: color-mix(in srgb, var(--win) 55%, transparent); }
+.sharel[data-done='failed'] { color: var(--loss); }
+/* 선수 상세 — 비교 단추 왼쪽 */
+.pdet__share { position: absolute; top: 13px; right: 124px; }
+/* 폰 시트 — 닫기 단추 왼쪽 (비교 단추는 카드 안에 따로 있다) */
+.pdet__share--m { top: 22px; right: 56px; z-index: 2; min-height: 28px; }
+/* 일정 히어로 — 카드 바로 아래 오른쪽. 카드 안에 얹으면 카운트다운 상자와 겹친다 */
+.hero__share { display: block; margin: 8px 0 0 auto; }

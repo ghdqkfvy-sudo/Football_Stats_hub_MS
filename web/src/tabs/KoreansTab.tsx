@@ -8,6 +8,7 @@ import { StatCard, type CompLine, type NationalLine, type RecentLine } from '../
 import crestKor from '../assets/crest-kor.png';
 import { Swap } from '../components/Swap';
 import { lastMatchTag } from '../lib/form';
+import { WeeklyReport } from '../components/WeeklyReport';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
@@ -221,6 +222,9 @@ export function KoreansTab() {
             </div>
           ))}
         </div>
+
+        {/* 주간 리포트 — 카드를 하나씩 펼치지 않아도 "이번 주 누가 잘했나" 가 보인다 */}
+        <WeeklyReport players={all} />
 
         <div className="kr__bar">
         <nav className="kr__filters" aria-label="리그 필터">

@@ -290,11 +290,11 @@
   transition: border-color .15s, background .15s, color .15s;
 }
 .prefs__team span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prefs__team .chipcrest { opacity: .45; transition: opacity .15s; }
+.prefs__team > :first-child { width: 22px; height: 22px; flex: none; object-fit: contain; opacity: .45; transition: opacity .15s; }
 .prefs__team i { width: 30px; height: 18px; border-radius: var(--r-pill); background: rgba(255,255,255,.12); position: relative; transition: background .15s; }
 .prefs__team i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-lo); transition: transform .15s, background .15s; }
 .prefs__team[aria-checked='true'] { color: var(--text-hi); border-color: var(--line-2); background: rgba(255,255,255,.05); }
-.prefs__team[aria-checked='true'] .chipcrest { opacity: 1; }
+.prefs__team[aria-checked='true'] > :first-child { opacity: 1; }
 .prefs__team[aria-checked='true'] i { background: var(--win); }
 .prefs__team[aria-checked='true'] i::after { transform: translateX(12px); background: #fff; }
 .prefs__start {

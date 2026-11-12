@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PlayerSeason } from '../lib/squad';
 import { usePalette } from '../lib/palette';
+import { mobileName } from '../config/targets';
 import { kstShortDate } from '../lib/kst';
 import { useIsMobile } from '../lib/useMedia';
 import { useClosing } from '../lib/motion';
@@ -15,6 +16,7 @@ import { seasonRatingTitle } from '../lib/rating';
 import { fmtRating, ratingTier } from '../lib/rating';
 import { byMonth, ourScore, per90, recentDelta, seasonAvg, startShare, teamRanks } from '../lib/playerForm';
 import { FormChart } from './FormChart';
+import { ShareLink } from './ShareLink';
 import { BenchLine, Cards, GameRow, PlayerSummary, PosTag } from './PlayerCardParts';
 
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
@@ -29,9 +31,11 @@ const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' }
  *    없으므로(탭하면 이 시트만 뜬다) 넓은 화면의 카드에서 보던 그대로 보여 준다.
  *    경기 목록만 최근 3경기 → 시즌 전 경기.
  */
-export function PlayerDetail({ p, onClose, onCompare, players }: {
+export function PlayerDetail({ p, onClose, onCompare, players, shareHref }: {
   p: PlayerSeason | null;
   onClose: () => void;
+  /** 이 선수 상세를 바로 여는 주소 — 있으면 "링크" 단추가 생긴다 */
+  shareHref?: string;
   /** 같은 팀 선수 전부 — 있으면 "득점 팀 1위" 같은 팀 내 순위를 적는다 */
   players?: PlayerSeason[];
   /** "이 선수와 비교" — 길게 누르기를 모르는 사람 · 마우스용 입구 */
@@ -73,7 +77,8 @@ export function PlayerDetail({ p, onClose, onCompare, players }: {
           {onCompare && !mobile && (
             <button className="pdet__cmp" onClick={() => onCompare(p)} title="다른 선수와 시즌 기록 비교">⇄ 비교</button>
           )}
-          {mobile ? <CardBody p={p} onCompare={onCompare} /> : <TableBody key={p.id} p={p} players={players} />}
+          {shareHref && <ShareLink href={shareHref} title={`${p.name} — MS Stats Hub`} className={mobile ? 'pdet__share pdet__share--m' : 'pdet__share'} />}
+          {mobile ? <CardBody p={p} onCompare={onCompare} players={players} /> : <TableBody key={p.id} p={p} players={players} />}
         </div>
       )}
     </div>
@@ -81,13 +86,14 @@ export function PlayerDetail({ p, onClose, onCompare, players }: {
 }
 
 /** 폰 — 호버 카드와 같은 두 상자 */
-function CardBody({ p, onCompare }: { p: PlayerSeason; onCompare?: (p: PlayerSeason) => void }) {
+function CardBody({ p, onCompare, players }: { p: PlayerSeason; onCompare?: (p: PlayerSeason) => void; players?: PlayerSeason[] }) {
   const [hot, setHot] = useState<string | null>(null);
   const charted = p.recent.filter((g) => typeof g.rating === 'number').length >= 3;
   return (
     <div className="pdet__body">
       <div className="pcard__main">
-        <PlayerSummary p={p} />
+        {/* 숫자 칸은 넓은 화면 상세와 같은 요약으로 — 공격 포인트 · 시즌 평점만 크게 */}
+        <PlayerSummary p={p} hero={<SeasonHero p={p} players={players} />} />
         {onCompare && <button className="pdet__cmpm" onClick={() => onCompare(p)}>⇄ 다른 선수와 비교</button>}
       </div>
       <BenchLine p={p} />
@@ -105,10 +111,57 @@ function CardBody({ p, onCompare }: { p: PlayerSeason; onCompare?: (p: PlayerSea
   );
 }
 
+/**
+ * 시즌 요약 — 크게 보이는 숫자는 공격 포인트 · 시즌 평점 둘뿐, 나머지는 작게.
+ * 넓은 화면 상세의 왼쪽 단과 폰 시트가 같은 것을 쓴다.
+ */
+function SeasonHero({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }) {
+  const p90 = per90(p.points, p.minutes);
+  const share = startShare(p);
+  const trend = recentDelta(p);
+  const ranks = players ? teamRanks(p, players) : [];
+  return (
+    <>
+    {/* 크게 보이는 숫자는 둘뿐 — 공격 포인트와 시즌 평점. 여섯 칸이 같은 크기면 어디를 볼지 모른다 */}
+    <div className="pdet__hero num">
+      <div data-k="ap" data-on={p.points > 0 || undefined}>
+        <b>{p.points}</b>
+        <span>공격 포인트</span>
+        <em>{p.goals}골 · {p.assists}도움</em>
+      </div>
+      <div data-k="rtg" data-tier={p.rating != null ? ratingTier(p.rating) : undefined} title={p.rating != null ? seasonRatingTitle(p) : undefined}>
+        <b>{p.rating != null ? fmtRating(p.rating) : '–'}</b>
+        <span>시즌 평점</span>
+        {trend
+          ? <em data-d={trend.delta > 0 ? 'up' : trend.delta < 0 ? 'down' : undefined} title={`최근 5경기 평균 ${trend.recent.toFixed(2)}`}>
+              최근 5경기 {trend.delta > 0 ? '▲' : trend.delta < 0 ? '▼' : '='} {Math.abs(trend.delta).toFixed(1)}
+            </em>
+          : <em>FotMob</em>}
+      </div>
+    </div>
+
+    <div className="pdet__mini num">
+      <div><b>{p.apps}</b><span>출전</span></div>
+      <div><b>{p.starts}</b><span>선발{share != null ? ` ${share}%` : ''}</span></div>
+      <div><b>{p.minutes}</b><span>{p.realMinutes ? '분' : '분(리그)'}</span></div>
+      <div title="90분당 공격 포인트(골 + 도움)"><b>{p90 != null ? p90.toFixed(2) : '–'}</b><span>90분당 공격P</span></div>
+    </div>
+
+    {ranks.length > 0 && (
+      <div className="pdet__ranks">
+        {ranks.map((r) => (
+          <span key={r.key} data-first={r.rank === 1 || undefined}>{r.label} <b className="num">팀 {r.rank}위</b></span>
+        ))}
+      </div>
+    )}
+    </>
+  );
+}
+
 /** 넓은 화면 — 왼쪽 요약 · 오른쪽 폼 차트 + 경기 목록 */
 function TableBody({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }) {
   const palette = usePalette();
-  const games = p.recent;
+  const all = p.recent;
   /* 차트 막대 ↔ 목록 줄 — 한쪽에 올리면 다른 쪽도 켜진다 */
   const [hot, setHot] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -117,12 +170,19 @@ function TableBody({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }
     if (id) listRef.current?.querySelector(`[data-mid="${id}"]`)?.scrollIntoView({ block: 'nearest' });
   };
 
+  /* 거르기 — 대회 · 홈/원정 · 선발/교체. 차트와 목록이 함께 걸러진다. 고를 것이 없는 묶음은 그리지 않는다 */
+  const [fComp, setFComp] = useState<string | null>(null);
+  const [fSide, setFSide] = useState<'홈' | '원정' | null>(null);
+  const [fStart, setFStart] = useState<boolean | null>(null);
+  const comps = [...new Set(all.map((g) => g.competition))];
+  const mixSide = new Set(all.map((g) => g.homeAway)).size > 1;
+  const mixStart = new Set(all.map((g) => g.started)).size > 1;
+  const games = all.filter((g) => (fComp == null || g.competition === fComp)
+    && (fSide == null || g.homeAway === fSide) && (fStart == null || g.started === fStart));
+  const filtered = games.length !== all.length;
+
   const avg = seasonAvg(p);
   const charted = games.filter((g) => typeof g.rating === 'number').length >= 3;
-  const p90 = per90(p.points, p.minutes);
-  const share = startShare(p);
-  const trend = recentDelta(p);
-  const ranks = players ? teamRanks(p, players) : [];
 
   return (
     <div className="pdet__cols">
@@ -141,38 +201,7 @@ function TableBody({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }
         <InjuryLine inj={p.inj} />
         <DisciplineLines d={p.disc} />
 
-        {/* 크게 보이는 숫자는 둘뿐 — 공격 포인트와 시즌 평점. 여섯 칸이 같은 크기면 어디를 볼지 모른다 */}
-        <div className="pdet__hero num">
-          <div data-k="ap" data-on={p.points > 0 || undefined}>
-            <b>{p.points}</b>
-            <span>공격 포인트</span>
-            <em>{p.goals}골 · {p.assists}도움</em>
-          </div>
-          <div data-k="rtg" data-tier={p.rating != null ? ratingTier(p.rating) : undefined} title={p.rating != null ? seasonRatingTitle(p) : undefined}>
-            <b>{p.rating != null ? fmtRating(p.rating) : '–'}</b>
-            <span>시즌 평점</span>
-            {trend
-              ? <em data-d={trend.delta > 0 ? 'up' : trend.delta < 0 ? 'down' : undefined} title={`최근 5경기 평균 ${trend.recent.toFixed(2)}`}>
-                  최근 5경기 {trend.delta > 0 ? '▲' : trend.delta < 0 ? '▼' : '='} {Math.abs(trend.delta).toFixed(1)}
-                </em>
-              : <em>FotMob</em>}
-          </div>
-        </div>
-
-        <div className="pdet__mini num">
-          <div><b>{p.apps}</b><span>출전</span></div>
-          <div><b>{p.starts}</b><span>선발{share != null ? ` ${share}%` : ''}</span></div>
-          <div><b>{p.minutes}</b><span>{p.realMinutes ? '분' : '분(리그)'}</span></div>
-          <div title="90분당 공격 포인트(골 + 도움)"><b>{p90 != null ? p90.toFixed(2) : '–'}</b><span>90분당 공격P</span></div>
-        </div>
-
-        {ranks.length > 0 && (
-          <div className="pdet__ranks">
-            {ranks.map((r) => (
-              <span key={r.key} data-first={r.rank === 1 || undefined}>{r.label} <b className="num">팀 {r.rank}위</b></span>
-            ))}
-          </div>
-        )}
+        <SeasonHero p={p} players={players} />
 
         <div className="pcard__cards">
           <span>카드</span>
@@ -201,8 +230,37 @@ function TableBody({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }
       </aside>
 
       <div className="pdet__main">
-        {games.length === 0 ? (
+        {all.length > 0 && (comps.length > 1 || mixSide || mixStart) && (
+          <div className="pdet__filters" role="group" aria-label="경기 거르기">
+            {comps.length > 1 && (
+              <span className="pdet__fgrp">
+                <button aria-pressed={fComp == null} onClick={() => setFComp(null)}>전체</button>
+                {comps.map((c) => (
+                  <button key={c} aria-pressed={fComp === c} onClick={() => setFComp(fComp === c ? null : c)}>
+                    <CompCrest k={c} size={13} />{mobileName(c)}
+                  </button>
+                ))}
+              </span>
+            )}
+            {mixSide && (
+              <span className="pdet__fgrp">
+                {(['홈', '원정'] as const).map((k) => (
+                  <button key={k} aria-pressed={fSide === k} onClick={() => setFSide(fSide === k ? null : k)}>{k}</button>
+                ))}
+              </span>
+            )}
+            {mixStart && (
+              <span className="pdet__fgrp">
+                <button aria-pressed={fStart === true} onClick={() => setFStart(fStart === true ? null : true)}>선발</button>
+                <button aria-pressed={fStart === false} onClick={() => setFStart(fStart === false ? null : false)}>교체</button>
+              </span>
+            )}
+          </div>
+        )}
+        {all.length === 0 ? (
           <p className="pdet__none">{p.inj && p.apps === 0 ? '부상으로 이번 시즌 출전 기록이 없습니다.' : '경기별 라인업 기록이 아직 없습니다.'}</p>
+        ) : games.length === 0 ? (
+          <p className="pdet__none">이 조건에 맞는 경기가 없습니다.</p>
         ) : (
           <>
             {charted && (
@@ -212,9 +270,9 @@ function TableBody({ p, players }: { p: PlayerSeason; players?: PlayerSeason[] }
               </>
             )}
 
-            <BenchLine p={p} />
+            {!filtered && <BenchLine p={p} />}
 
-            <div className="pdet__h pdet__h--list"><span>경기 기록 · {games.length}경기 · 최신순</span></div>
+            <div className="pdet__h pdet__h--list"><span>경기 기록 · {games.length}경기{filtered ? ` (전체 ${all.length})` : ''} · 최신순</span></div>
             <div className="pdet__g pdet__g--head" aria-hidden="true">
               <span>날짜</span><span /><span>상대</span><span>결과</span><span>자리</span><span>출전</span><span>기록</span><span>평점</span>
             </div>

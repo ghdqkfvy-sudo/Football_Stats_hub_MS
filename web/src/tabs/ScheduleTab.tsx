@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ShareLink } from '../components/ShareLink';
+import { shareUrl } from '../lib/route';
 import type { LiveMatch } from '../types/feedTypes';
 import { useFifaRank } from '../lib/fifa';
 import type { Match, StandingTable } from '../lib/types';
@@ -256,6 +258,12 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
             notNext={!!next && heroMatch.id !== next.id}
             today={live && live.espnId === heroMatch.id ? { phase: live.phase, clock: live.clock, hasLineup: live.home.starters.length > 0 } : null}
             onToday={onToday}
+          />
+          {/* 지금 히어로에 뜬 경기의 링크 — 받은 사람은 이 팀 일정에서 이 경기가 뜬 채로 연다 */}
+          <ShareLink
+            className="hero__share"
+            href={shareUrl(target.id, 'm', heroMatch.id)}
+            title={`${heroMatch.home.shortName} vs ${heroMatch.away.shortName} — MS Stats Hub`}
           />
         </div>
       )}

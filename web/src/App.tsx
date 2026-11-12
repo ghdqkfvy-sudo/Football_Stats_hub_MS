@@ -162,7 +162,15 @@ export default function App() {
    * 일정 탭에서 바로 띄울 경기 — Summary 의 매치데이 히어로를 누르면 그 팀 일정 탭으로
    * 넘어가 **그 경기**가 히어로·캘린더에 선택된 채로 열린다. 일정 탭이 받아 쓰면 지운다.
    */
-  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(null);
+  const [focusMatch, setFocusMatch] = useState<{ team: TargetId; id: string } | null>(
+    /* 경기 링크(#/chelsea/schedule/m/123)로 열었으면 그 경기부터 */
+    () => (START.sub?.kind === 'm' && START.targetId ? { team: START.targetId as TargetId, id: START.sub.id } : null),
+  );
+  /** 선수 링크(#/chelsea/players/p/678)로 열었을 때 바로 띄울 선수 — 선수 탭이 받아 쓰면 지운다 */
+  const [focusPlayer, setFocusPlayer] = useState<{ team: TargetId; id: string } | null>(
+    () => (START.sub?.kind === 'p' && START.targetId ? { team: START.targetId as TargetId, id: START.sub.id } : null),
+  );
+  const clearFocusPlayer = useCallback(() => setFocusPlayer(null), []);
   const clearFocusMatch = useCallback(() => setFocusMatch(null), []);
 
   /** 소속팀 탭에서 고른 클럽 — Summary 에서 그 클럽 경기를 누르면 그 클럽으로 열린다 */
@@ -246,6 +254,9 @@ export default function App() {
         setTargetId(r.targetId as TargetId);
         setView('team');
         if (r.tab) setTab(r.tab as TabId);
+        /* 앱을 켜 둔 채 경기 · 선수 링크를 붙여 넣었을 때 */
+        if (r.sub?.kind === 'm') setFocusMatch({ team: r.targetId as TargetId, id: r.sub.id });
+        if (r.sub?.kind === 'p') setFocusPlayer({ team: r.targetId as TargetId, id: r.sub.id });
       } else {
         setView('summary');
       }
@@ -632,7 +643,15 @@ export default function App() {
             <LiveMatchView live={live} match={matches.find((m) => m.id === live.espnId)} teamId={target.espnTeamId} matches={matches} />
           )}
           {!summary && tab === 'standings' && <StandingsTab target={target} teamMatches={matches} />}
-          {!summary && tab === 'players' && <PlayersTab target={target} matches={matches} matchesLoading={loading} />}
+          {!summary && tab === 'players' && (
+            <PlayersTab
+              target={target}
+              matches={matches}
+              matchesLoading={loading}
+              openPlayerId={focusPlayer?.team === target.id ? focusPlayer.id : null}
+              onOpened={clearFocusPlayer}
+            />
+          )}
           {!summary && tab === 'koreans' && <KoreansTab />}
           {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} onToday={(id) => { setTodayPick(id); goTab('today'); }} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
