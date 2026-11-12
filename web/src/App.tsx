@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './styles/global.css';
 /* 좁은 화면 전용 덮어쓰기 — global.css 뒤에 와야 이긴다 */
 import './styles/mobile.css';
@@ -12,13 +12,6 @@ import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
 import { invalidateFeeds } from './lib/feed';
 import { isStale, mergeMatches, pollDelay } from './lib/refresh';
 import { ScheduleTab } from './tabs/ScheduleTab';
-import { StandingsTab } from './tabs/StandingsTab';
-import { PlayersTab } from './tabs/PlayersTab';
-import { KoreansTab } from './tabs/KoreansTab';
-import { KoreanClubsTab } from './tabs/KoreanClubsTab';
-import { KoreaTodayTab } from './tabs/KoreaTodayTab';
-import { NewsTab } from './tabs/NewsTab';
-import { FutureTab } from './tabs/FutureTab';
 import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
 import { ChipCrest, Crest, CrestGlowScope } from './components/Crest';
@@ -29,12 +22,24 @@ import { futureFor } from './data/future';
 import { formatRoute, parseRoute, rememberRoute, startHash } from './lib/route';
 import { MiniBar } from './components/MiniBar';
 import { BgArt } from './components/BgArt';
-import { RefreshSheet } from './components/RefreshSheet';
 import { useLongPress } from './lib/motion';
 import { useIsMobile } from './lib/useMedia';
 import { isTodayLive, showToday, useLive, useLives, withLiveScore } from './lib/live';
-import { LiveMatchView } from './components/LiveMatch';
 import bgSummary from './assets/bg-summary.webp';
+
+/*
+ * 첫 화면에 필요 없는 탭은 **열 때** 받는다(2026-11-12). 전부 한 파일(516KB)이라 Summary 만 봐도
+ * 선수 탭 · 라이브 · 뉴스 코드까지 내려받았다. Summary 와 일정 탭(가장 자주 여는 두 화면)만 처음부터 싣는다.
+ */
+const StandingsTab = lazy(() => import('./tabs/StandingsTab').then((m) => ({ default: m.StandingsTab })));
+const PlayersTab = lazy(() => import('./tabs/PlayersTab').then((m) => ({ default: m.PlayersTab })));
+const KoreansTab = lazy(() => import('./tabs/KoreansTab').then((m) => ({ default: m.KoreansTab })));
+const KoreanClubsTab = lazy(() => import('./tabs/KoreanClubsTab').then((m) => ({ default: m.KoreanClubsTab })));
+const KoreaTodayTab = lazy(() => import('./tabs/KoreaTodayTab').then((m) => ({ default: m.KoreaTodayTab })));
+const NewsTab = lazy(() => import('./tabs/NewsTab').then((m) => ({ default: m.NewsTab })));
+const FutureTab = lazy(() => import('./tabs/FutureTab').then((m) => ({ default: m.FutureTab })));
+const LiveMatchView = lazy(() => import('./components/LiveMatch').then((m) => ({ default: m.LiveMatchView })));
+const RefreshSheet = lazy(() => import('./components/RefreshSheet').then((m) => ({ default: m.RefreshSheet })));
 
 type TabId = 'schedule' | 'today' | 'standings' | 'players' | 'future' | 'news' | 'koreans' | 'clubs';
 
@@ -95,7 +100,8 @@ export default function App() {
   /* 숨은 "지금 갱신" — 갱신 시각 배지를 길게 누르면 열린다 */
   const [refreshOpen, setRefreshOpen] = useState(false);
   const closeRefresh = useCallback(() => setRefreshOpen(false), []);
-  const refreshPress = useLongPress(() => setRefreshOpen(true));
+  const [refreshSeen, setRefreshSeen] = useState(false);
+  const refreshPress = useLongPress(() => { setRefreshSeen(true); setRefreshOpen(true); });
 
   const [view, setView] = useState<'summary' | 'team'>(() =>
     (TARGETS.some((t) => t.id === START.targetId) ? 'team' : 'summary'));
@@ -623,6 +629,8 @@ export default function App() {
         >
           {/* key 가 ErrorBoundary 와 같아 탭·팀이 바뀔 때만 새로 그려진다 → 전환이 한 번 돈다 */}
           <div className="view" data-dir={motion}>
+          {/* 탭 코드를 받는 동안 — 보통 한 번 깜빡일 새도 없지만, 느린 회선에서는 뼈대가 보인다 */}
+          <Suspense fallback={<div className="page"><div className="skel" style={{ height: 44 }} /><div className="skel" style={{ height: 420 }} /></div>}>
           {summary && <SummaryTab onOpenTeam={openTeam} />}
           {!summary && tab === 'schedule' && (
             <ScheduleTab
@@ -656,10 +664,12 @@ export default function App() {
           {!summary && tab === 'clubs' && <KoreanClubsTab pick={clubPick} onPick={setClubPick} onToday={(id) => { setTodayPick(id); goTab('today'); }} />}
           {!summary && tab === 'news' && <NewsTab target={target} />}
           {!summary && tab === 'future' && <FutureTab target={target} />}
+          </Suspense>
           </div>
         </ErrorBoundary>
       </main>
-      <RefreshSheet open={refreshOpen} onClose={closeRefresh} />
+      {/* 숨은 갱신 시트 — 한 번이라도 연 뒤에만 코드를 받는다 */}
+      {refreshSeen && <Suspense fallback={null}><RefreshSheet open={refreshOpen} onClose={closeRefresh} /></Suspense>}
     </div>
     </CrestGlowScope.Provider>
     </PaletteProvider>
