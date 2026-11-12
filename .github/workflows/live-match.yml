@@ -49,6 +49,7 @@ jobs:
         run: |
           git config user.name  "stats-bot"
           git config user.email "stats-bot@users.noreply.github.com"
+          scripts/data-branch.sh pull
           FILE="web/public/data/live-${SLUG}.json"
           ko=$(date -u -d "$KICKOFF" +%s)
           stop=$((ko + 180*60))           # 킥오프 3시간 뒤에는 무조건 끝낸다(연장 · 승부차기 포함)
@@ -63,17 +64,11 @@ jobs:
           fi
 
           publish() {
-            git add "$FILE"
-            if git diff --staged --quiet; then return 0; fi
-            git commit -q -m "chore(live): ${SLUG} $(date -u +'%H:%MZ')"
-            for i in 1 2 3 4; do
-              if git push -q; then
-                gh workflow run deploy-pages.yml --ref main || true
-                return 0
-              fi
-              git fetch -q origin main
-              git rebase -q -X theirs origin/main || { git rebase --abort || true; git reset -q --hard origin/main; return 0; }
-            done
+            # 이 팀 라이브 파일만 data 브랜치에 올린다(scripts/data-branch.sh — 바뀐 파일만 얹는다)
+            local rc=0
+            scripts/data-branch.sh push "chore(live): ${SLUG} $(date -u +'%H:%MZ')" "$FILE" || rc=$?
+            if [ "$rc" = 0 ]; then gh workflow run deploy-pages.yml --ref main || true; fi
+            return 0
           }
 
           while :; do

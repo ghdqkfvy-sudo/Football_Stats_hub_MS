@@ -81,6 +81,9 @@ jobs:
       - name: 브라우저 설치 (chromium)
         working-directory: web
         run: npx playwright install --with-deps chromium
+      # 화면 스모크는 **지금 데이터**로 본다 — 수집 데이터는 data 브랜치에 있다(main 의 사본은 씨앗일 뿐)
+      - name: 데이터 브랜치 받기
+        run: scripts/data-branch.sh pull
       - name: 빌드
         working-directory: web
         run: npm run build
@@ -106,6 +109,7 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-lists.mjs
+      - run: scripts/data-branch.sh pull
       # 데이터 커밋으로는 이 워크플로가 돌지 않지만(paths-ignore), 소스가
       # 바뀔 때마다 한 번씩은 보는 편이 아무도 안 보는 것보다 낫다.
       - run: node scripts/check-data.mjs web/public/data
