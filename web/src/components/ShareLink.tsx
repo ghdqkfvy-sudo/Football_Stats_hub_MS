@@ -38,7 +38,7 @@ export function ShareLink({ href, title, className }: { href: string; title: str
  * 주소 복사 — 클립보드 API 가 없거나 막힌 곳(카카오톡 · 인스타 같은 앱 안 브라우저, http)에서는
  * 보이지 않는 입력칸을 골라 복사하는 옛 방식으로 한 번 더 해 본다.
  */
-export async function copyText(text: string): Promise<boolean> {
+async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
   } catch { /* 아래 방식으로 */ }
