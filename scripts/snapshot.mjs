@@ -38,6 +38,7 @@ import {
 } from './lib/photos.mjs';
 import { mergeH2H, seriesGames } from './lib/h2h.mjs';
 import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs';
+import { slimFeed } from './lib/slim.mjs';
 import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
 import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
@@ -224,7 +225,8 @@ async function get(url, tries = 3) {
 async function save(name, data) {
   const dest = join(OUT, name);
   const tmp = `${dest}.tmp`;
-  await writeFile(tmp, JSON.stringify(data), 'utf8');
+  /* 일정 · 리그 파일은 앱이 안 읽는 링크 · 배당 · 중계 덩어리를 떼고 쓴다 (lib/slim.mjs — 파일이 3분의 1로 준다) */
+  await writeFile(tmp, JSON.stringify(slimFeed(data)), 'utf8');
   await rename(tmp, dest);
   console.log(`  ✓ ${name}`);
 }
