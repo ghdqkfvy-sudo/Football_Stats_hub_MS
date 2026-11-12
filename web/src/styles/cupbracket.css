@@ -13,7 +13,7 @@
 }
 .cbr__arr:disabled { opacity: .3; cursor: default; }
 .cbr__rb {
-  padding: 7px 14px; border-radius: 9px; font-size: var(--fs-base); font-weight: 600; color: var(--text-lo);
+  padding: 7px 14px; border-radius: var(--r-md); font-size: var(--fs-base); font-weight: 600; color: var(--text-lo);
   white-space: nowrap; cursor: pointer; background: none;
 }
 .cbr__rb[data-on] { color: var(--text-hi); background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -26,7 +26,7 @@
 .cbr__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .cbr__tie {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 5px 12px;
-  padding: 10px 14px 10px 16px; border-radius: 12px;
+  padding: 10px 14px 10px 16px; border-radius: var(--r-lg);
   border: 1px solid var(--line); background: rgba(255,255,255,.025);
 }
 .cbr__tie[data-ours] {
@@ -37,7 +37,7 @@
 /* 왼쪽 팀 컬러 띠 — 곧은 막대(둥근 모서리를 따라 휘지 않게) */
 .cbr__tie[data-ours]::before {
   content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 3px;
-  border-radius: 0 3px 3px 0; background: var(--tc);
+  border-radius: 0 var(--r-xs) var(--r-xs) 0; background: var(--tc);
 }
 .cbr__row { grid-column: 1; display: flex; align-items: center; gap: 9px; min-width: 0; font-size: var(--fs-md); }
 .cbr__row b { font-weight: 600; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -46,7 +46,7 @@
 .cbr__row[data-lost] > img, .cbr__row[data-lost] > .mono { opacity: .5; }
 /* H · A — 홈은 밝게, 원정은 테두리만 */
 .cbr__ha {
-  flex: none; display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 4px;
+  flex: none; display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: var(--r-xs);
   font-style: normal; font-family: var(--font-display); font-size: var(--fs-xs); font-weight: 700; line-height: 1;
   letter-spacing: 0; color: var(--text-lo); box-shadow: inset 0 0 0 1px var(--line-2);
 }
@@ -54,9 +54,9 @@
 .cbr__row[data-lost] .cbr__ha, .cbr__mt[data-lost] .cbr__ha { opacity: .5; }
 .cbr__thr {
   flex: none; font-style: normal; font-family: var(--font-display); font-size: var(--fs-xs); font-weight: 800;
-  letter-spacing: .12em; color: #06150C; background: var(--win); padding: 2px 6px; border-radius: 4px;
+  letter-spacing: .12em; color: #06150C; background: var(--win); padding: 2px 6px; border-radius: var(--r-xs);
 }
-.cbr__sc { grid-column: 2; text-align: right; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-hi); line-height: 1.1; }
+.cbr__sc { grid-column: 2; text-align: right; font-family: var(--font-display); font-size: var(--fs-d1); font-weight: 700; color: var(--text-hi); line-height: 1.1; }
 .cbr__sc[data-lost] { color: var(--text-lo); }
 .cbr__ko {
   grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
@@ -74,7 +74,7 @@
 }
 .cbr__live {
   display: inline-flex; align-items: center; gap: 5px; font-style: normal; color: #fff;
-  background: var(--loss); padding: 1px 7px; border-radius: 999px;
+  background: var(--loss); padding: 1px 7px; border-radius: var(--r-pill);
 }
 .cbr__live i { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s ease-in-out infinite; }
 
@@ -86,7 +86,7 @@
   text-align: center; margin-bottom: 12px;
 }
 .cbr__colb { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 12px; }
-.cbr__m { position: relative; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03); }
+.cbr__m { position: relative; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(255,255,255,.03); }
 .cbr__m[data-empty] { display: grid; place-items: center; min-height: 74px; border-style: dashed; font-size: var(--fs-sm); color: var(--text-lo); }
 .cbr__m[data-ours] {
   border-color: color-mix(in srgb, var(--tc) 60%, transparent);
@@ -100,7 +100,7 @@
 .cbr__mt[data-lost] b, .cbr__mt[data-lost] > i.num { color: var(--text-lo); font-weight: 500; }
 .cbr__when {
   position: absolute; right: 8px; top: -9px; font-family: var(--font-display); font-size: var(--fs-xs); letter-spacing: .06em;
-  color: var(--text-mid); background: #0B1630; padding: 0 5px; border-radius: 4px;
+  color: var(--text-mid); background: #0B1630; padding: 0 5px; border-radius: var(--r-xs);
 }
 /* 칸 사이 잇는 선 */
 .cbr__col:not(:last-child) .cbr__m::after { content: ''; position: absolute; right: -18px; top: 50%; width: 18px; height: 1px; background: var(--line-2); }
@@ -109,7 +109,7 @@
 .cbr__cup {
   display: inline-flex; align-items: center; gap: 8px;
   font-family: var(--font-display); font-size: var(--fs-md); font-weight: 800; letter-spacing: .14em; color: #2A1C00;
-  background: linear-gradient(135deg, #FFE27A, #F2B705 55%, #C98A00); padding: 7px 14px; border-radius: 9px;
+  background: linear-gradient(135deg, #FFE27A, #F2B705 55%, #C98A00); padding: 7px 14px; border-radius: var(--r-md);
   box-shadow: 0 4px 18px rgba(242, 183, 5, .4);
 }
 .cbr__cup b { letter-spacing: .02em; }
@@ -117,7 +117,7 @@
 
 .cbr__key { margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 14px; font-size: var(--fs-xs); color: var(--text-lo); }
 .cbr__key span::before {
-  content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px;
+  content: ''; display: inline-block; width: 10px; height: 10px; border-radius: var(--r-xs); margin-right: 5px; vertical-align: -1px;
 }
 .cbr__key [data-k='ours']::before { background: linear-gradient(135deg, #4F8BFF, #FF4D5E); }
 .cbr__key [data-k='thr']::before { background: var(--win); }

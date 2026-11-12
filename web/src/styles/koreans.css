@@ -9,14 +9,14 @@
   backdrop-filter: blur(14px) saturate(1.1);
 }
 .kr__tile b {
-  display: block; font-family: var(--font-display); font-size: 30px; font-weight: 700;
+  display: block; font-family: var(--font-display); font-size: var(--fs-d5); font-weight: 700;
   color: var(--accent); line-height: 1;
 }
 .kr__tile span { display: block; font-size: var(--fs-xs); color: var(--text-lo); margin-top: 5px; }
 
 .kr__filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .kr__filters button {
-  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line);
+  padding: 7px 14px; border-radius: var(--r-pill); border: 1px solid var(--line);
   background: color-mix(in srgb, var(--ink-900) 72%, transparent);
   font-size: var(--fs-sm); font-weight: 500; color: var(--text-lo);
   transition: color .16s, border-color .16s, background .16s;
@@ -31,12 +31,12 @@
 .kr__bar .kr__filters { margin-bottom: 0; flex: 1 1 auto; min-width: 0; }
 .kr__sort {
   display: inline-flex; align-items: center; gap: 3px; flex: none; margin-left: auto;
-  border: 1px solid var(--line); border-radius: 999px; padding: 3px;
+  border: 1px solid var(--line); border-radius: var(--r-pill); padding: 3px;
   background: color-mix(in srgb, var(--ink-900) 72%, transparent);
 }
 .kr__sort > span { font-size: var(--fs-xs); letter-spacing: .08em; color: var(--text-lo); padding: 0 6px 0 8px; }
 .kr__sort button {
-  padding: 5px 11px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-lo);
+  padding: 5px 11px; border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 600; color: var(--text-lo);
   transition: background .15s, color .15s;
 }
 .kr__sort button:hover { color: var(--text-mid); }
@@ -46,7 +46,7 @@
 
 /* 직전 경기에서 골·도움을 올린 선수 — 소속팀·나이 줄 옆 초록 배지 (StatCard hot) */
 .krc__hot {
-  display: inline-block; flex: none; padding: 1px 7px; border-radius: 999px;
+  display: inline-block; flex: none; padding: 1px 7px; border-radius: var(--r-pill);
   font-size: var(--fs-xs); font-weight: 700; color: #4ADE80;
   border: 1px solid rgba(74,222,128,.45); background: rgba(74,222,128,.12);
 }
@@ -57,7 +57,7 @@
 .kr__idle ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .kr__idle li {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+  padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--line);
   background: color-mix(in srgb, var(--ink-900) 72%, transparent);
   font-size: var(--fs-sm); color: var(--text-mid);
 }
@@ -76,7 +76,7 @@
 .krc:hover, .krc:focus-visible { border-color: var(--line-2); transform: translateY(-2px); z-index: 20; }
 .krc::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-  border-radius: 3px 0 0 3px; background: var(--club);
+  border-radius: var(--r-xs) 0 0 var(--r-xs); background: var(--club);
 }
 
 .krc__top { display: flex; align-items: flex-start; gap: 12px; }
@@ -89,7 +89,7 @@
 .krc__id b { display: flex; align-items: center; gap: 7px; font-size: var(--fs-xl); font-weight: 700; letter-spacing: -.01em; }
 .krc__id em {
   font-style: normal; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em;
-  padding: 2px 6px; border-radius: 4px; color: var(--clubfg);
+  padding: 2px 6px; border-radius: var(--r-xs); color: var(--clubfg);
   background: color-mix(in srgb, var(--club) 80%, transparent);
 }
 /* 포지션 배지 — 카드 색(리그/클럽)이 아니라 포지션 색. 선수 스탯 표와 같은 체계 */
@@ -106,14 +106,14 @@
 .krc__cn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .krc__lg {
   display: inline-block; margin-top: 6px; font-size: var(--fs-xs); font-weight: 600; letter-spacing: .03em;
-  padding: 2px 8px; border-radius: 999px; color: var(--text-mid); border: 1px solid var(--line-2);
+  padding: 2px 8px; border-radius: var(--r-pill); color: var(--text-mid); border: 1px solid var(--line-2);
 }
 
 /* 카드 오른쪽 위 배지 (Future 의 조항 종류) */
 .krc__tag {
   flex: none; align-self: flex-start;
   font-size: var(--fs-micro); font-weight: 700; letter-spacing: .05em;
-  padding: 3px 7px; border-radius: 5px; white-space: nowrap;
+  padding: 3px 7px; border-radius: var(--r-xs); white-space: nowrap;
   color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
   background: color-mix(in srgb, var(--c) 14%, transparent);
 }
@@ -144,9 +144,9 @@
 .krc__lg .krcc__logo { width: 14px; height: 14px; }
 .krc__lg .krcc__dot { width: 7px; height: 7px; }
 .krcc__n { color: var(--text-hi); font-weight: 500; }
-.krcc__bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
+.krcc__bar { height: 5px; border-radius: var(--r-xs); background: rgba(255,255,255,.07); overflow: hidden; }
 .krcc__bar b {
-  display: block; height: 100%; border-radius: 3px; min-width: 3px;
+  display: block; height: 100%; border-radius: var(--r-xs); min-width: 3px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--c) 45%, transparent), var(--c));
 }
 .krcc__a { font-size: var(--fs-xs); color: var(--text-lo); white-space: nowrap; }
@@ -158,7 +158,7 @@
   display: inline-flex; align-items: center; gap: 3px;
   font-family: var(--font-display); font-size: var(--fs-base); font-weight: 700;
   color: var(--text-lo); background: rgba(255,255,255,.05);
-  border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 1px 6px;
 }
 .krcc__ga b i, .krc__sum b i {
   font-style: normal; font-family: var(--font-body);
@@ -173,7 +173,7 @@
 }
 .krcc__p {
   text-align: center; font-family: var(--font-display); font-size: var(--fs-md); font-weight: 700;
-  color: var(--on-accent); background: var(--accent); border-radius: 5px; padding: 1px 0;
+  color: var(--on-accent); background: var(--accent); border-radius: var(--r-xs); padding: 1px 0;
 }
 
 .krc__foot {
@@ -190,11 +190,11 @@
 /* A매치 — 클럽 합계 아래 별도 띠. 태극 두 색으로 클럽 기록과 갈라 놓는다 */
 .krc__nat {
   display: grid; grid-template-columns: 16px auto minmax(0,1fr) auto; align-items: center; gap: 8px;
-  margin-top: 10px; padding: 7px 10px; border-radius: 10px;
+  margin-top: 10px; padding: 7px 10px; border-radius: var(--r-md);
   background: linear-gradient(90deg, rgba(205,46,58,.16), rgba(0,71,160,.16));
   border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--text-mid);
 }
-.krc__natc { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
+.krc__natc { width: 16px; height: 16px; object-fit: contain; border-radius: var(--r-xs); }
 .krc__natl { color: var(--text-hi); font-weight: 600; white-space: nowrap; }
 .krc__natl em { font-style: normal; font-weight: 500; color: var(--text-lo); margin-left: 3px; }
 .krc__nata { justify-self: end; font-size: var(--fs-xs); color: var(--text-lo); white-space: nowrap; }
@@ -240,7 +240,7 @@
   display: grid; grid-template-columns: 17px 3px minmax(0,1fr) 44px;
   align-items: center; gap: 8px; padding: 7px 0; font-size: var(--fs-sm); color: var(--text-mid);
 }
-.krr__c { width: 3px; height: 15px; border-radius: 2px; }
+.krr__c { width: 3px; height: 15px; border-radius: var(--r-2xs); }
 /* "vs [상대 엠블럼] 상대팀" — 엠블럼은 줄지 않고 이름만 말줄임 */
 .krr__opp { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
 .krr__opp i { font-style: normal; color: var(--text-lo); flex: none; }
@@ -254,7 +254,7 @@
 }
 .krr__cl {
   flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 1px 6px; border-radius: 4px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: .02em;
+  padding: 1px 6px; border-radius: var(--r-xs); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .02em;
   color: color-mix(in srgb, var(--c) 80%, white);
   background: color-mix(in srgb, var(--c) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
@@ -263,13 +263,13 @@
 .krr__d { flex: none; font-size: var(--fs-xs); color: var(--text-lo); white-space: nowrap; }
 .krr__m { margin-left: auto; font-size: var(--fs-xs); color: var(--accent); text-align: right; white-space: nowrap; }
 .krr__gg, .krr__aa {
-  font-style: normal; margin-left: 5px; padding: 0 4px; border-radius: 3px;
+  font-style: normal; margin-left: 5px; padding: 0 4px; border-radius: var(--r-xs);
   font-size: var(--fs-micro); font-weight: 700;
 }
 .krr__gg { background: color-mix(in srgb, var(--accent) 24%, transparent); color: var(--accent); }
 .krr__aa { background: rgba(255,255,255,.1); color: var(--text-mid); }
 .krr__y {
-  display: inline-block; width: 7px; height: 10px; border-radius: 2px;
+  display: inline-block; width: 7px; height: 10px; border-radius: var(--r-2xs);
   background: #F4C430; margin-left: 6px; vertical-align: -1px;
 }
 

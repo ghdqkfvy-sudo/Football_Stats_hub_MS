@@ -15,13 +15,13 @@
 }
 .comps__b {
   display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-  padding: 9px 15px; border-radius: 10px;
+  padding: 9px 15px; border-radius: var(--r-md);
   border: 1px solid var(--line); background: var(--ink-900);
   font-size: var(--fs-base); font-weight: 500; color: var(--text-lo);
   transition: color .16s, border-color .16s, background .16s;
 }
 .comps__b i {
-  width: 8px; height: 8px; border-radius: 2px; background: var(--c);
+  width: 8px; height: 8px; border-radius: var(--r-2xs); background: var(--c);
   opacity: .55; transition: opacity .16s, box-shadow .16s;
 }
 .comps__b:hover { color: var(--text-mid); border-color: var(--line-2); }
@@ -68,7 +68,7 @@
 /* 진출권 구분 띠 */
 .tbl__line[data-zone='true']::before {
   content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
-  border-radius: 0 3px 3px 0; background: var(--zone);
+  border-radius: 0 var(--r-xs) var(--r-xs) 0; background: var(--zone);
 }
 .tbl__row[data-focus='true'] .tbl__line {
   background: color-mix(in srgb, var(--accent) 9%, transparent);
@@ -230,11 +230,11 @@
    대회 순위표는 숫자를 정확히 비교하는 자리라 막대가 시선을 흐린다. */
 .lb3[data-variant='bar'] .lbc__row { gap: 4px 8px; padding: 9px 14px; }
 .lbc__meter {
-  grid-column: 1 / 4; display: block; height: 7px; border-radius: 999px;
+  grid-column: 1 / 4; display: block; height: 7px; border-radius: var(--r-pill);
   background: rgba(255,255,255,.07); overflow: hidden; margin-top: -2px;
 }
 .lbc__meter i {
-  display: block; height: 100%; border-radius: 999px;
+  display: block; height: 100%; border-radius: var(--r-pill);
   background: linear-gradient(90deg, var(--accent), var(--secondary));
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent),
               0 0 22px color-mix(in srgb, var(--accent) 28%, transparent);
@@ -251,7 +251,7 @@
 .lbc__v {
   /* 게이지 오른쪽에 붙어 세로 가운데 — 막대와 숫자가 한 덩어리로 읽힌다 */
   grid-column: 4; grid-row: 1 / 3; align-self: center; text-align: right;
-  font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1;
+  font-family: var(--font-display); font-size: var(--fs-d1); font-weight: 700; line-height: 1;
   color: var(--accent);
   text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
 }
@@ -287,7 +287,7 @@
   }
   .lb3__tab {
     display: flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 9px 8px; border-radius: 11px; cursor: pointer;
+    padding: 9px 8px; border-radius: var(--r-md); cursor: pointer;
     border: 1px solid var(--line); background: rgba(6, 16, 38, .3);
     color: var(--text-mid); font: inherit; font-size: var(--fs-sm); font-weight: 700;
     letter-spacing: -.01em; white-space: nowrap;
@@ -336,16 +336,16 @@
   padding: 12px 14px 8px;
 }
 .trend__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; margin-bottom: 6px; }
-.trend__seg { display: inline-flex; gap: 3px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.trend__seg { display: inline-flex; gap: 3px; border: 1px solid var(--line); border-radius: var(--r-pill); padding: 3px; }
 .trend__seg button {
-  position: relative; padding: 5px 14px; border-radius: 999px;
+  position: relative; padding: 5px 14px; border-radius: var(--r-pill);
   font-size: var(--fs-sm); font-weight: 600; color: var(--text-lo); transition: background .15s, color .15s;
 }
 .trend__seg button:hover { color: var(--text-mid); }
 .trend__seg button[aria-selected='true'] { background: var(--accent); color: var(--on-accent); }
 .trend__legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); color: var(--text-mid); }
 .trend__legend li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.trend__legend i { width: 16px; height: 0; border-top: 2px solid var(--text-lo); border-radius: 2px; }
+.trend__legend i { width: 16px; height: 0; border-top: 2px solid var(--text-lo); border-radius: var(--r-2xs); }
 .trend__legend i[data-k='focus'] { border-top: 3px solid var(--tc); }
 .trend__legend i[data-k='lead'] { border-top: 2px dashed var(--text-mid); }
 

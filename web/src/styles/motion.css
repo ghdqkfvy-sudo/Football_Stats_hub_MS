@@ -39,7 +39,7 @@ body { overflow-x: clip; }
 .tabs { position: relative; }
 .tabs[data-ink] .tab[aria-selected='true']::after { opacity: 0; }
 .tabs__ink {
-  position: absolute; left: 0; bottom: 0; height: 2.5px; border-radius: 2px 2px 0 0;
+  position: absolute; left: 0; bottom: 0; height: 2.5px; border-radius: var(--r-2xs) var(--r-2xs) 0 0;
   background: var(--accent);
   box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
   pointer-events: none;

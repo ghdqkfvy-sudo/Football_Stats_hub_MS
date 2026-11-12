@@ -10,6 +10,9 @@
  *  · 폰의 뒤로 가기가 **앱을 닫지 않고** 직전 화면으로 돌아간다.
  * 해시만 쓰므로 GitHub Pages 에서 서버 설정 없이 동작한다.
  */
+import { TARGETS } from '../config/targets';
+import { getPrefs, startRoute } from './prefs';
+
 export interface Route {
   targetId: string | null;   // null = Summary
   tab: string | null;
@@ -40,5 +43,8 @@ export function rememberRoute(hash: string): void {
 export function startHash(): string {
   if (typeof location === 'undefined') return '';
   if (location.hash && location.hash !== '#') return location.hash;
+  /* 설정에서 시작 화면을 골랐으면 그쪽(lib/prefs) — "마지막 화면" 이면 아래 규칙 그대로 */
+  const fixed = startRoute(getPrefs(), TARGETS.map((t) => t.id));
+  if (fixed) return fixed;
   try { return localStorage.getItem(LAST_KEY) ?? ''; } catch { return ''; }
 }

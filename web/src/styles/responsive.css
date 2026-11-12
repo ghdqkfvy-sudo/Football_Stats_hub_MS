@@ -1,37 +1,37 @@
 /* ══ 반응형 ════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
-  .hero { padding: 15px 14px 18px; border-radius: 20px; gap: 13px; }
+  .hero { padding: 15px 14px 18px; border-radius: var(--r-xl); gap: 13px; }
   .hero__fx { gap: 8px; }
   .fxt { width: auto; flex: 1 1 0; min-width: 0; gap: 7px; }
-  .fxt__tile { width: 62px; height: 62px; border-radius: 15px; }
+  .fxt__tile { width: 62px; height: 62px; border-radius: var(--r-lg); }
   .fxt__tile img, .fxt__tile .mono { width: 46px !important; height: 46px !important; }
   .fxt__name { font-size: var(--fs-base); }
   .fxt__rec { font-size: var(--fs-xs); padding: 2px 8px; }
-  .fxvs { font-size: 22px; margin-top: 18px; }
-  .when__time b { font-size: 36px; }
+  .fxvs { font-size: var(--fs-d2); margin-top: 18px; }
+  .when__time b { font-size: var(--fs-d6); }
   .hero__cd { padding: 11px 4px 9px; }
   .cdu { min-width: 0; flex: 1 1 0; }
-  .cdu b { font-size: 26px; }
-  .cdu__sep { font-size: 20px; left: -2px; }
+  .cdu b { font-size: var(--fs-d4); }
+  .cdu__sep { font-size: var(--fs-d1); left: -2px; }
 }
 
 @media (max-width: 640px) {
   .shell { padding-inline: 14px; }
-  .hdr__name { font-size: 24px; }
+  .hdr__name { font-size: var(--fs-d3); }
   .hdr__crest { width: 42px; height: 42px; }
   .day { min-height: 62px; padding: 5px 3px 6px; gap: 3px; }
   .cal__pulse { top: 5px; right: 5px; width: 6px; height: 6px; }
   .bar { height: 5px; border-width: 1.25px; }
   .cal__legend { padding: 10px 12px; gap: 6px 12px; }
   .cal__lgnote { margin-left: 0; }
-  .cal__title { font-size: 20px; }
+  .cal__title { font-size: var(--fs-d1); }
   .ml__row { grid-template-columns: 38px 3px minmax(0,1fr); gap: 11px; padding: 11px 12px; }
   .ml__meta {
     grid-column: 3 / -1; flex-direction: row; align-items: center;
     justify-content: space-between; gap: 10px; margin-top: -2px;
   }
-  .ml__date b { font-size: 22px; }
+  .ml__date b { font-size: var(--fs-d2); }
   .ml__match { grid-template-columns: 1fr 46px 1fr; }
   .ml__side { min-width: 0; }
   .ml__side b { font-size: var(--fs-base); }

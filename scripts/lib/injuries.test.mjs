@@ -38,6 +38,8 @@ test('returnKo', () => {
   assert.deepEqual(returnKo('Doubtful'), { ko: '출전 불투명', doubtful: true });
   assert.equal(returnKo('A few days').ko, '며칠 뒤 복귀 예상');
   assert.equal(returnKo('A few weeks').ko, '몇 주 뒤 복귀 예상');
+  assert.equal(returnKo('About 1-2 weeks').ko, '약 1~2주 뒤 복귀 예상');
+  assert.equal(returnKo('About 3 months').ko, '약 3개월 뒤 복귀 예상');
   assert.equal(returnKo('Out for the season').ko, '시즌 아웃');
   assert.equal(returnKo('').ko, '복귀 시점 미정');
   assert.deepEqual(returnKo('Back in training'), { ko: '훈련 복귀', doubtful: false });
@@ -64,6 +66,8 @@ test('isLongTerm: 복귀까지 4주 넘으면 장기', () => {
   assert.equal(isLongTerm('Late October 2026', now), false);
   assert.equal(isLongTerm('A few weeks', now), false);
   assert.equal(isLongTerm('A few months', now), true);
+  assert.equal(isLongTerm('About 1-2 weeks', now), false);
+  assert.equal(isLongTerm('About 6-8 weeks', now), true);
   assert.equal(isLongTerm('Out for the season', now), true);
   assert.equal(isLongTerm('Doubtful', now), false);
   assert.equal(isLongTerm('Early January', now), true);           // 연도 없음 → 다가오는 1월
@@ -131,7 +135,9 @@ test('groupSuspensions: 몇 경기째까지 정지인지 선수별로', () => {
 test('injuryName: 번호는 한국어 표로, 표에 없으면 선수 API 영어 이름, 둘 다 없으면 null', () => {
   assert.equal(injuryName({ id: '42' }), '햄스트링');
   assert.equal(injuryName({ id: 76, name: 'Cruciate ligament injury' }), '십자인대');
-  assert.equal(injuryName({ id: '999', name: 'Groin injury' }), 'Groin injury');
+  assert.equal(injuryName({ id: '999', name: 'Groin injury' }), '사타구니');
+  assert.equal(injuryName({ id: '999', name: 'Muscle injury' }), '근육');
+  assert.equal(injuryName({ id: '999', name: 'Surgery' }), 'Surgery');   // 모르는 이름은 원문 그대로
   assert.equal(injuryName({ id: '999' }), null);
   assert.equal(injuryRecord({ injury: { id: '130', expectedReturn: 'Doubtful' } }).injName, '타박상');
 });
