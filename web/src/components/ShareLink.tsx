@@ -19,13 +19,12 @@ export function ShareLink({ href, title, className }: { href: string; title: str
     /* 공유 시트는 터치 기기에서만 — 데스크톱 브라우저의 공유 창은 주소 복사보다 느리다 */
     const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
     if (touch && typeof navigator.share === 'function') {
-      try { await navigator.share({ title, url: href }); } catch { /* 닫았다 — 아무 일도 아니다 */ }
-      return;
+      try { await navigator.share({ title, url: href }); return; } catch (e) {
+        /* 사용자가 닫았으면(AbortError) 끝. 그 밖의 실패(권한 · 앱 안 브라우저)는 주소 복사로 넘어간다 */
+        if ((e as DOMException)?.name === 'AbortError') return;
+      }
     }
-    try {
-      await navigator.clipboard.writeText(href);
-      flash('copied');
-    } catch { flash('failed'); }
+    flash(await copyText(href) ? 'copied' : 'failed');
   };
 
   return (
@@ -33,4 +32,26 @@ export function ShareLink({ href, title, className }: { href: string; title: str
       {done === 'copied' ? '✓ 복사됨' : done === 'failed' ? '복사 실패' : '🔗 링크'}
     </button>
   );
+}
+
+/**
+ * 주소 복사 — 클립보드 API 가 없거나 막힌 곳(카카오톡 · 인스타 같은 앱 안 브라우저, http)에서는
+ * 보이지 않는 입력칸을 골라 복사하는 옛 방식으로 한 번 더 해 본다.
+ */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true; }
+  } catch { /* 아래 방식으로 */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';   // 16px — iOS 가 확대하지 않게
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch { return false; }
 }

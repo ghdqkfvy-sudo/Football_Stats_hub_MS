@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './ratings.mjs';
+import { finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings , fillSeasonFromMatches } from './ratings.mjs';
 
 test('squadRatings: 평점 있는 선수만, 감독 제외', () => {
   const j = { squad: { squad: [
@@ -53,4 +53,24 @@ test('seasonRating · ratingAt: 주 리그 평점 칸 우선, 없으면 이번 �
   assert.equal(seasonRating({ ...pd, mainLeague: { stats: [{ title: 'Rating', value: 7.31 }] } }, start), 7.31);
   assert.equal(ratingAt('2026-10-17T12:00Z', recentRatings(pd)), 7.2);
   assert.equal(ratingAt('2026-10-10T12:00Z', recentRatings(pd)), null);
+});
+
+test('fillSeasonFromMatches: 시즌 평점이 빈 선수만 경기 평점 평균으로, 표본이 적으면 그대로', () => {
+  const athletes = { a: {}, b: { rating: 7.9 }, c: {}, d: {} };
+  const mr = {
+    e1: { r: { a: 7.0, b: 6.0, c: 8.0 } },
+    e2: { r: { a: 8.0, b: 6.0, c: 6.5 } },
+    e3: { r: { a: 7.55, b: 6.0 } },
+  };
+  assert.equal(fillSeasonFromMatches(athletes, mr), 1);
+  assert.equal(athletes.a.rating, 7.52);      // (7 + 8 + 7.55) / 3
+  assert.equal(athletes.b.rating, 7.9);       // 이미 있으면 건드리지 않는다
+  assert.equal(athletes.c.rating, undefined); // 두 경기뿐
+  assert.equal(athletes.d.rating, undefined); // 기록 없음
+});
+
+test('fillSeasonFromMatches: 경기 평점이 없거나 모양이 낯설어도 터지지 않는다', () => {
+  assert.equal(fillSeasonFromMatches({ a: {} }, undefined), 0);
+  assert.equal(fillSeasonFromMatches({ a: {} }, { e1: null, e2: { r: { a: 'x' } } }), 0);
+  assert.equal(fillSeasonFromMatches(undefined, { e1: { r: { a: 7 } } }), 0);
 });
