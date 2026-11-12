@@ -4,6 +4,7 @@ import { seasonRatingTitle } from '../lib/rating';
 import type { GameState, PlayerSeason, RecentGame } from '../lib/squad';
 import { isBenchRegular, stateDelta } from '../lib/squad';
 import { usePalette } from '../lib/palette';
+import { ourScore } from '../lib/playerForm';
 import { kstShortDate } from '../lib/kst';
 import { Headshot } from './Headshot';
 import { NatFlag } from './NatFlag';
@@ -221,10 +222,10 @@ export function PosTag({ g }: { g: RecentGame }) {
 }
 
 /** 경기 한 줄 — 결과·대회·날짜·상대·스코어·출전 방식·골/도움/카드 */
-export function GameRow({ g }: { g: RecentGame }) {
+export function GameRow({ g, hot }: { g: RecentGame; hot?: boolean }) {
   const palette = usePalette();
   return (
-    <div className="pcard__g">
+    <div className="pcard__g" data-hot={hot || undefined}>
       <i className="fchip" data-r={g.result}>{g.result}</i>
       <span className="pcard__gc">
         <CompCrest k={g.competition} size={13} />
@@ -251,7 +252,8 @@ export function GameRow({ g }: { g: RecentGame }) {
         />
         <b>{g.opponentName}</b>
       </span>
-      <span className="pcard__sc num">{g.scoreline}</span>
+      {/* 우리 팀 기준 — 원정 승리가 "W 0 : 3" 으로 읽히지 않게(상세 창 · 폼 차트와 같은 규칙) */}
+      <span className="pcard__sc num" title={`홈 : 원정 ${g.scoreline}`}>{ourScore(g).replace(':', ' : ')}</span>
 
       <span className="pcard__ga num">
         <PosTag g={g} />

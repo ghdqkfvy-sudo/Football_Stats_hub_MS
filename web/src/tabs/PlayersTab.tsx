@@ -198,7 +198,7 @@ export function PlayersTab({
             onLongPress={startCompare}
             pinnedId={cmpA?.id ?? null}
           />
-          <PlayerDetail p={detail} onClose={closeDetail} onCompare={startCompare} />
+          <PlayerDetail p={detail} onClose={closeDetail} onCompare={startCompare} players={players} />
           <PlayerCompare pair={cmpPair} onClose={closeCompare} onChange={startCompare} />
           <CompareBar a={cmpA} rivals={rivals} onPick={pick} onCancel={cancelCompare} />
         </div>

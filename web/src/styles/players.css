@@ -889,3 +889,132 @@
     background: color-mix(in srgb, var(--ink-900) 82%, transparent);
   }
 }
+
+/* ══ 선수 상세 — 넓은 화면 두 단 (2026-11-12, PlayerDetail TableBody) ═══════════
+   왼쪽: 어떤 시즌인가(핵심 수치 · 팀 내 순위 · 대회별) — 스크롤해도 제자리
+   오른쪽: 어떻게 흘러왔나(경기별 폼 차트 → 경기 목록) */
+@media (min-width: 641px) {
+  .sheet--modal .sheet__panel.pdet--wide { width: min(1040px, 94vw); padding: 22px 24px 18px; }
+}
+.pdet__cols { display: grid; grid-template-columns: 312px minmax(0, 1fr); gap: 24px; align-items: start; }
+.pdet__side { position: sticky; top: 0; min-width: 0; }
+.pdet__main { min-width: 0; padding-right: 2px; }
+.pdet--wide .pdet__top { padding-right: 0; }
+.pdet--wide .pdet__name { font-size: 22px; line-height: 1.15; }
+/* 닫기 · 비교 단추가 오른쪽 위에 떠 있다 — 오른쪽 단 첫 줄이 그 밑으로 들어가지 않게 */
+.pdet--wide .pdet__main { padding-top: 30px; }
+
+.pdet__hero { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 8px; }
+.pdet__hero > div {
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 8px 10px; text-align: center;
+  background: rgba(255,255,255,.02);
+}
+.pdet__hero b { display: block; font-family: var(--font-display); font-size: 42px; font-weight: 700; line-height: 1; color: var(--text-hi); }
+.pdet__hero span { display: block; margin-top: 6px; font-size: var(--fs-xs); color: var(--text-mid); }
+.pdet__hero em { display: block; margin-top: 3px; font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); }
+.pdet__hero em[data-d='up'] { color: var(--win); }
+.pdet__hero em[data-d='down'] { color: var(--loss); }
+/* 공격 포인트 — 빛나는 강조 상자는 이것 하나 (호버 카드 .pcard__ap 와 같은 규칙) */
+.pdet__hero > div[data-k='ap'][data-on] {
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+              rgba(255,255,255,.04);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.pdet__hero > div[data-k='ap'][data-on] b {
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 42px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+/* 시즌 평점 — 숫자를 평점 구간 색으로 (배지 .rtg 와 같은 구간) */
+.pdet__hero > div[data-tier='elite'] b { color: #E879F9; text-shadow: 0 0 18px rgba(217,70,239,.7); }
+.pdet__hero > div[data-tier='top'] b { color: #6C98FF; text-shadow: 0 0 16px rgba(47,107,255,.6); }
+.pdet__hero > div[data-tier='good'] b { color: #3CCB78; }
+.pdet__hero > div[data-tier='mid'] b { color: #F0A050; }
+.pdet__hero > div[data-tier='low'] b { color: #FF6B70; }
+
+.pdet__mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pdet__mini div { border: 1px solid var(--line); border-radius: 10px; padding: 7px 2px 6px; text-align: center; background: rgba(255,255,255,.02); }
+.pdet__mini b { display: block; font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 700; color: var(--text-hi); }
+.pdet__mini span { display: block; margin-top: 1px; font-size: var(--fs-micro); color: var(--text-lo); white-space: nowrap; }
+
+.pdet__ranks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.pdet__ranks span {
+  padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+  font-size: var(--fs-xs); color: var(--text-mid); white-space: nowrap;
+}
+.pdet__ranks b { color: var(--text-hi); font-weight: 700; margin-left: 2px; }
+.pdet__ranks span[data-first] { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.pdet__ranks span[data-first] b { color: var(--accent); }
+.pdet__side .pcard__cards { margin-top: 12px; }
+
+/* 경기 목록 — 머리글 · 달 구분 · 강조 */
+.pdet__h--list { margin-top: 16px; }
+.pdet--wide .pdet__g { grid-template-columns: 62px 16px minmax(0, 1fr) 62px 96px 84px 70px 32px; position: relative; padding: 7px 6px 7px 8px; border-radius: 6px; }
+.pdet__g--head { border-top: 0 !important; padding-block: 0 5px !important; font-size: var(--fs-micro) !important; color: var(--text-lo) !important; letter-spacing: .04em; }
+.pdet__g--head span:nth-child(6), .pdet__g--head span:nth-child(7), .pdet__g--head span:nth-child(8) { text-align: right; }
+.pdet__list ol { list-style: none; margin: 0; padding: 0; }
+.pdet__month {
+  margin: 0; padding: 9px 0 4px; font-family: var(--font-display); font-size: var(--fs-base); font-weight: 600;
+  color: var(--text-mid); letter-spacing: .04em; border-top: 1px solid var(--line-2);
+}
+.pdet__list section:first-child .pdet__month { padding-top: 6px; }
+.pdet__list section ol li:first-child { border-top: 0; }
+/* 골 · 도움이 있는 경기 — 옅은 바탕. 평점이 튄 경기 — 왼쪽 띠 */
+.pdet__g[data-ga] { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.pdet__g[data-ga] .pdet__opp b { color: #fff; }
+.pdet__g[data-edge]::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; }
+.pdet__g[data-edge='hi']::before { background: #2F6BFF; box-shadow: 0 0 8px rgba(47,107,255,.6); }
+.pdet__g[data-edge='lo']::before { background: #E0353B; }
+.pdet__g[data-hot] { background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px var(--line-2); }
+.pdet__min[data-full] { justify-content: flex-end; }
+.pdet__min[data-full] em { color: var(--text-lo); }
+
+@media (max-width: 900px) {
+  .pdet__cols { grid-template-columns: 1fr; gap: 16px; }
+  .pdet__side { position: static; }
+  .pdet--wide .pdet__main { padding-top: 0; }
+}
+
+/* ══ 경기별 폼 차트 (components/FormChart) ════════════════════════════════ */
+.form { margin-bottom: 4px; }
+/* 위 여백 30px — 막대 위에 쌓이는 골·도움 점과, 올렸을 때 뜨는 설명 상자의 자리 */
+.form__plot { position: relative; height: 132px; margin: 30px 0 0 18px; }
+.form__grid { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--line); }
+.form__grid i { position: absolute; left: -18px; top: -7px; font-style: normal; font-family: var(--font-display); font-size: var(--fs-xs); color: var(--text-lo); }
+.form__avg { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed var(--text-mid); opacity: .8; z-index: 2; pointer-events: none; }
+.form__avg i {
+  position: absolute; right: 0; bottom: 3px; padding: 0 5px; border-radius: 4px; font-style: normal;
+  font-size: var(--fs-micro); font-weight: 700; color: var(--text-hi); background: color-mix(in srgb, var(--ink-850) 88%, transparent);
+}
+.form__bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; z-index: 1; }
+.form__col { flex: 1 1 0; min-width: 0; max-width: 38px; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0; cursor: default; }
+.form__bar { position: relative; width: 100%; max-width: 22px; border-radius: 4px 4px 0 0; background: #5B6478; transition: opacity .12s, filter .12s; }
+.form__bar[data-tier='elite'] { background: linear-gradient(180deg, #F43F5E, #C026D3 45%, #6D28D9); box-shadow: 0 0 10px rgba(217,70,239,.55); }
+.form__bar[data-tier='top'] { background: #2F6BFF; }
+.form__bar[data-tier='good'] { background: #1FA855; }
+.form__bar[data-tier='mid'] { background: #E2862A; }
+.form__bar[data-tier='low'] { background: #E0353B; }
+.form__bar[data-tier='none'] { background: rgba(255,255,255,.18); border-radius: 2px; }
+/* 교체 출전 — 같은 색, 빗금으로 흐리게 */
+.form__bar[data-sub] { opacity: .55; background-image: repeating-linear-gradient(135deg, rgba(6,17,39,.55) 0 3px, transparent 3px 6px); }
+.form__col[data-dim] .form__bar { opacity: .38; }
+.form__col[data-hot] .form__bar { opacity: 1; filter: brightness(1.2); box-shadow: 0 0 0 1.5px #fff; }
+.form__ga { position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; }
+.form__ga i, .form__key i[data-k='g'], .form__key i[data-k='a'] { width: 7px; height: 7px; border-radius: 50%; background: #FFD75E; box-shadow: 0 0 0 1.5px var(--ink-850); }
+.form__ga i[data-k='a'], .form__key i[data-k='a'] { background: #7FE3FF; }
+.form__ga b { font-family: var(--font-display); font-size: var(--fs-xs); line-height: 1; color: var(--text-hi); }
+.form__tip {
+  position: absolute; top: -34px; z-index: 4; pointer-events: none; display: flex; align-items: center; gap: 7px;
+  padding: 5px 9px; border: 1px solid var(--line-2); border-radius: 8px; white-space: nowrap;
+  background: color-mix(in srgb, var(--ink-850) 96%, transparent); box-shadow: 0 8px 22px rgba(0,0,0,.45);
+  font-size: var(--fs-xs); color: var(--text-mid);
+}
+.form__tip b { color: var(--text-hi); font-weight: 700; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.form__key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 7px 0 0 18px; padding: 0; list-style: none; font-size: var(--fs-micro); color: var(--text-lo); }
+.form__key li { display: inline-flex; align-items: center; gap: 5px; }
+.form__key i[data-k='sub'] { width: 9px; height: 9px; border-radius: 2px; background: #1FA855; opacity: .55; background-image: repeating-linear-gradient(135deg, rgba(6,17,39,.55) 0 2px, transparent 2px 4px); }
+.form__dir { margin-left: auto; }
+/* 폰 시트 — 목록 위에 같은 차트. 누른 막대의 경기 줄이 켜진다 */
+.pdet--card .form { margin: 0 0 10px; }
+.pdet--card .form__plot { height: 104px; }
+.pcard__g[data-hot] { background: rgba(255,255,255,.07); box-shadow: 0 0 0 1px var(--line-2); border-radius: 8px; }
