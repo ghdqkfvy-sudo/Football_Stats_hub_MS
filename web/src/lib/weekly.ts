@@ -72,6 +72,8 @@ export function buildWeekly(players: KoreanPlayer[], start: string): Weekly {
   const ratedRows = rows.filter((r) => r.rating != null);
   const pool = ratedRows.some((r) => r.minutes >= 60) ? ratedRows.filter((r) => r.minutes >= 60) : ratedRows;
   const best = pool.reduce<WeeklyRow | null>((m, r) => (!m || (r.rating ?? 0) > (m.rating ?? 0) ? r : m), null);
+  /* 주간 최고를 맨 앞으로 — 화면 맨 위 큰 카드의 주인공이다. 나머지 순서는 그대로 */
+  if (best) { rows.splice(rows.indexOf(best), 1); rows.unshift(best); }
   return {
     start, end: addDays(start, 6), rows, idle,
     goals: rows.reduce((a, r) => a + r.goals, 0),
@@ -92,3 +94,21 @@ export function weekLabel(w: Pick<Weekly, 'start' | 'end'>): string {
   const md = (k: string) => `${Number(k.slice(5, 7))}.${Number(k.slice(8, 10))}`;
   return `${md(w.start)} ~ ${md(w.end)}`;
 }
+
+/**
+ * 그 경기 스코어를 **선수 팀 기준**으로 — "2-1".
+ * 피드의 스코어("1 : 2")는 홈 : 원정인데 경기 기록에 홈/원정 표시가 없다. 대신 승패를 안다:
+ * 이겼으면 큰 쪽이 우리, 졌으면 작은 쪽이 우리. 모양이 다르면 빈 문자열.
+ */
+export function ourScoreOf(g: Pick<KoreanGame, 'score' | 'result'>): string {
+  const m = /^\s*(\d+)\s*[:-]\s*(\d+)\s*$/.exec(g.score ?? '');
+  if (!m) return '';
+  const [x, y] = [Number(m[1]), Number(m[2])];
+  const hi = Math.max(x, y);
+  const lo = Math.min(x, y);
+  return g.result === 'W' ? `${hi}-${lo}` : g.result === 'L' ? `${lo}-${hi}` : `${x}-${y}`;
+}
+
+/** 그 주 출전 시간이 "뛴 경기 전부 풀타임" 의 얼마인가(0~1) — 줄마다 그리는 막대 */
+export const minutesShare = (r: Pick<WeeklyRow, 'minutes' | 'games'>): number =>
+  (r.games.length ? Math.min(1, r.minutes / (r.games.length * 90)) : 0);
