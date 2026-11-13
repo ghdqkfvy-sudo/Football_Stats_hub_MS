@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeekly, weekLabel, weeksWithGames } from '../weekly';
+import { buildWeekly, minutesShare, ourScoreOf, weekLabel, weeksWithGames } from '../weekly';
 import type { KoreanGame, KoreanPlayer } from '../../types/feedTypes';
 
 const g = (date: string, over: Partial<KoreanGame> = {}): KoreanGame => ({
@@ -26,6 +26,7 @@ describe('weeksWithGames', () => {
 describe('buildWeekly', () => {
   const w = buildWeekly([son, lee, kim, um], '2026-11-03');
   it('그 주 경기만 모으고, 공격 포인트 → 평점 순', () => {
+    /* 주간 최고(kim)가 맨 앞, 나머지는 공격 포인트 → 평점 순 */
     expect(w.rows.map((r) => r.player.id)).toEqual(['kim', 'um', 'lee']);
     expect(w.rows[2]).toMatchObject({ minutes: 91, rating: 6.3 });   // 11.3 + 11.8 두 경기
     expect(w.goals).toBe(1);
@@ -39,5 +40,24 @@ describe('buildWeekly', () => {
   });
   it('라벨', () => {
     expect(weekLabel(w)).toBe('11.3 ~ 11.9');
+  });
+});
+
+describe('ourScoreOf / minutesShare', () => {
+  it('승패로 우리 득점을 앞에 둔다', () => {
+    expect(ourScoreOf({ score: '1 : 2', result: 'L' })).toBe('1-2');
+    expect(ourScoreOf({ score: '1 : 2', result: 'W' })).toBe('2-1');
+    expect(ourScoreOf({ score: '2 : 2', result: 'D' })).toBe('2-2');
+    expect(ourScoreOf({ score: '', result: 'W' })).toBe('');
+  });
+  it('뛴 경기 전부 풀타임 대비 비율', () => {
+    expect(minutesShare({ minutes: 135, games: [g('a'), g('b')] })).toBe(0.75);
+    expect(minutesShare({ minutes: 0, games: [] })).toBe(0);
+  });
+  it('주간 최고가 공격 포인트 1위가 아니어도 맨 앞에 온다', () => {
+    const scorer = p('s', [g('2026-11-07T12:00Z', { goals: 2, minutes: 90, rating: 7.0 })]);
+    const star = p('t', [g('2026-11-07T12:00Z', { minutes: 90, rating: 8.8 })]);
+    const w = buildWeekly([scorer, star], '2026-11-03');
+    expect(w.rows.map((r) => r.player.id)).toEqual(['t', 's']);
   });
 });
