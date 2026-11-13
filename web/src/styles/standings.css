@@ -387,3 +387,18 @@
   .trend { padding: 11px 10px 6px; }
   .trend__seg button::after { content: ''; position: absolute; inset: -8px 0; }   /* 누르는 영역 44px */
 }
+
+/* 순위 변동 — 직전 라운드 대비 (StandingsTable, lib/trend rankMoves) */
+.tbl__mv { flex: none; margin-left: 2px; font-style: normal; font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0; }
+.tbl__mv[data-d='up'] { color: var(--win); }
+.tbl__mv[data-d='down'] { color: var(--loss); }
+/* 득점 · 실점 미니 막대 — 숫자 아래 가는 선. 득점은 초록, 실점은 빨강 */
+.tbl__line > .tbl__g { position: relative; }
+.tbl__line > .tbl__g::after {
+  content: ''; position: absolute; left: 4px; bottom: -6px; height: 3px; border-radius: 2px;
+  width: calc((100% - 8px) * var(--w, 0%) / 100%);
+}
+.tbl__line > .tbl__g[data-k='gf']::after { background: color-mix(in srgb, var(--win) 75%, transparent); }
+.tbl__line > .tbl__g[data-k='ga']::after { background: color-mix(in srgb, var(--loss) 75%, transparent); }
+/* 폰 — 팀 이름 칸이 좁아 변동 표시가 이름을 잘랐다("Real …"). 이름이 먼저다 */
+@media (max-width: 640px) { .tbl__mv { display: none; } }

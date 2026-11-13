@@ -148,3 +148,19 @@
 .pdet__share--m { top: 22px; right: 56px; z-index: 2; min-height: 28px; }
 /* 일정 히어로 — 카드 바로 아래 오른쪽. 카드 안에 얹으면 카운트다운 상자와 겹친다 */
 .hero__share { display: block; margin: 8px 0 0 auto; }
+
+/* ── 경기별 평점 겹쳐 보기 (components/FormOverlay) — 왼쪽 선수 = 팀 컬러, 오른쪽 = 하늘색(비교 막대와 같다) ── */
+.fov svg { display: block; width: 100%; height: auto; overflow: visible; }
+.fov__grid { stroke: var(--line); stroke-width: 1; }
+.fov__tick { font-family: var(--font-display); font-size: 11px; fill: var(--text-lo); }
+.fov__line { fill: none; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.fov__line[data-s='a'], .fov__dot[data-s='a'] { stroke: var(--accent); }
+.fov__line[data-s='b'], .fov__dot[data-s='b'] { stroke: #7FE3FF; }
+.fov__dot { stroke-width: 0; }
+.fov__dot[data-s='a'] { fill: var(--accent); }
+.fov__dot[data-s='b'] { fill: #7FE3FF; }
+.fov__key { display: flex; justify-content: center; gap: 18px; margin: 4px 0 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--text-mid); }
+.fov__key li { display: inline-flex; align-items: center; gap: 6px; }
+.fov__key i { width: 14px; height: 0; border-top: 3px solid var(--accent); border-radius: 2px; }
+.fov__key li[data-s='b'] i { border-top-color: #7FE3FF; }
+.fov__key b { color: var(--text-hi); font-weight: 700; }

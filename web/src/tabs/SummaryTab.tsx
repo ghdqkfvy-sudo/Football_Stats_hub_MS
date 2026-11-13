@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KOREAN_CLUBS, SUMMARY_OPP, TARGETS, comp, getTarget, mobileName, summaryColor, type Target, type TargetId } from '../config/targets';
 import type { CompetitionKey, Match, StandingTable } from '../lib/types';
 import { usePrefs, visibleTeams } from '../lib/prefs';
+import { buildTrend } from '../lib/trend';
 import { PrefsSheet } from '../components/PrefsSheet';
 import { loadCup, loadLeague, loadLeagueTable, loadSchedule, loadScheduleExtras, type CupRound, type CupRoundData } from '../lib/api';
 import { CupBracket } from '../components/CupBracket';
@@ -357,6 +358,17 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
     };
   }).sort((a, b) => (b.ppg ?? -1) - (a.ppg ?? -1)), [tables, feeds, cupRounds, mine]);
 
+  /* 팀 비교의 순위 추이 미니 선 — 리그마다 한 번만 계산한다(lib/trend) */
+  const sparks = useMemo(() => {
+    const out: Record<string, Map<string, number[]>> = {};
+    for (const [k, v] of Object.entries(tables)) {
+      if (!v?.table) continue;
+      const tr = buildTrend(v.matches, v.table.rows.map((r) => r.team.id));
+      out[k] = new Map([...tr.series].map(([id, pts]) => [id, pts.map((p) => p.rank)]));
+    }
+    return out;
+  }, [tables]);
+
   /* ── 이달의 경기 결과 ─────────────────────────────── */
   const thisMonth = monthKey(new Date());
   /* 코리안리거 소속팀 경기도 넣는다 — 일곱 팀이 앞이라 맨유 vs 아틀레티코 같은 경기는 한 번만(맨유 쪽) */
@@ -542,6 +554,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
             <span role="columnheader" className="num" title="챔스 승·무·패">챔스 전적</span>
             <span role="columnheader" className="num" title="리그 득점·실점">득·실</span>
             <span role="columnheader" title="모든 대회 최근 5경기 — 오른쪽이 최근">최근 5경기</span>
+            <span role="columnheader" className="cmp__spark" title="리그 순위 추이 — 위가 1위, 오른쪽이 최근">순위 추이</span>
           </div>
           {compare.map(({ t, row, season, euroRec, euro, stage }) => (
             <button
@@ -576,6 +589,9 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
               <span className="num" role="cell">{row ? `${row.gf}/${row.ga}` : '–'}</span>
               <span className="cmp__form" role="cell">
                 {season.form.map((f, i) => <i key={i} className="fchip" data-r={f}>{f}</i>)}
+              </span>
+              <span className="cmp__spark" role="cell">
+                <RankSpark ranks={t.league ? sparks[t.league]?.get(t.espnTeamId) : undefined} teams={t.league ? tables[t.league]?.table?.rows.length ?? 20 : 20} />
               </span>
             </button>
           ))}
@@ -629,7 +645,7 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
               <span className="sec__note">득점 · 도움 · 공격 포인트</span>
             </div>
             {leaders.length ? (
-              <LeaderBoard rows={leaders} teamColors={clubColors} />
+              <LeaderBoard rows={leaders} teamColors={clubColors} variant="bar" />
             ) : needFull ? (
               <div className="skel" style={{ height: 320 }} />
             ) : (
@@ -695,6 +711,23 @@ function SummaryBody({ onOpenTeam, mine, kclubs, hidden, onPrefs }: {
         ))}
       </p>
     </div>
+  );
+}
+
+/** 리그 순위 추이 미니 선 — 위가 1위. 끝점에 점 하나. 팀 컬러(--team)로 그린다 */
+function RankSpark({ ranks, teams }: { ranks?: number[]; teams: number }) {
+  if (!ranks || ranks.length < 2) return <i className="cmp__nospark">–</i>;
+  const W = 92;
+  const H = 24;
+  const x = (i: number) => 3 + (i / (ranks.length - 1)) * (W - 9);
+  const y = (r: number) => 3 + ((r - 1) / Math.max(1, teams - 1)) * (H - 6);
+  const d = ranks.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(r).toFixed(1)}`).join('');
+  const last = ranks.length - 1;
+  return (
+    <svg className="cmp__sparksvg" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`순위 추이 — ${ranks[0]}위에서 ${ranks[last]}위`}>
+      <path d={d} />
+      <circle cx={x(last)} cy={y(ranks[last])} r={2.6} />
+    </svg>
   );
 }
 

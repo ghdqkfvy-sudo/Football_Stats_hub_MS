@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShareLink } from '../components/ShareLink';
+import { SeasonChart } from '../components/SeasonChart';
 import { shareUrl } from '../lib/route';
 import type { LiveMatch } from '../types/feedTypes';
 import { useFifaRank } from '../lib/fifa';
@@ -186,6 +187,7 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
    * 펼쳐져 위의 히어로와 따로 놀았다.
    */
   const heroRef = useRef<HTMLDivElement>(null);
+  const seasonOn = useMemo(() => matches.filter((m) => m.status === 'finished').length >= 3, [matches]);
   const focusMatch = (m: Match) => {
     setPinned(true);
     const [y, mo] = monthKey(m.kickoffUtc).split('-').map(Number);
@@ -275,6 +277,17 @@ export function ScheduleTab({ target, matches, loading, onGoalsLoaded, focusMatc
           h2h={extras.preview.h2h}
           h2hScope={extras.preview.h2hScope}
         />
+      )}
+
+      {/* 시즌 흐름 — 캘린더 · 월별 목록은 한 달씩만 보여 준다. 끝난 경기 전부를 한 줄로 */}
+      {seasonOn && (
+        <section>
+          <div className="sec__head">
+            <h2 className="sec__title">시즌 흐름</h2>
+            <span className="sec__note">끝난 경기 전부 · 막대를 누르면 위 히어로가 그 경기로 바뀝니다</span>
+          </div>
+          <SeasonChart matches={matches} teamId={target.espnTeamId} selectedId={heroMatch?.id} onPick={focusMatch} />
+        </section>
       )}
 
       <section>

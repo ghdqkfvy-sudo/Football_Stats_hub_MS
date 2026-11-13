@@ -11,6 +11,7 @@ import { PlayerTable } from '../components/PlayerTable';
 import { LeaderBoard } from '../components/LeaderBoard';
 import { PlayerDetail } from '../components/PlayerDetail';
 import { InjuryList } from '../components/InjuryList';
+import { UsageChart } from '../components/UsageChart';
 import { shareUrl } from '../lib/route';
 import { SuspensionList } from '../components/SuspensionList';
 import { CompareBar, PlayerCompare } from '../components/PlayerCompare';
@@ -222,6 +223,15 @@ export function PlayersTab({
           <PlayerCompare pair={cmpPair} onClose={closeCompare} onChange={startCompare} />
           <CompareBar a={cmpA} rivals={rivals} onPick={pick} onCancel={cancelCompare} />
         </div>
+      </section>
+
+      {/* 스쿼드 활용도 — 표의 출전 · 선발 · 분을 막대로. 누가 주전이고 누가 로테이션인가 */}
+      <section>
+        <div className="sec__head">
+          <h2 className="sec__title">스쿼드 활용도</h2>
+          <span className="sec__note">포지션별 출전 시간 · {covered}경기 기준 · 누르면 선수 상세</span>
+        </div>
+        <UsageChart players={players} covered={covered} onOpen={pick} />
       </section>
 
       <SuspensionList players={players} onOpen={pick} />

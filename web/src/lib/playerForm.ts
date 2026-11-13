@@ -85,3 +85,17 @@ export function byMonth(games: RecentGame[]): { month: number; games: RecentGame
   }
   return out;
 }
+
+/**
+ * 두 선수의 경기별 평점을 **최근 경기 쪽을 맞춰** 나란히 — 비교 창의 겹쳐 보기.
+ * 둘은 뛴 경기가 다르므로 날짜가 아니라 "몇 경기 전" 으로 맞춘다(맨 오른쪽 = 가장 최근 출전).
+ * 평점이 없는 경기는 null(선이 끊긴다). n 경기까지만.
+ */
+export function alignRatings(a: RecentGame[], b: RecentGame[], n = 12): { a: (number | null)[]; b: (number | null)[]; len: number } {
+  const take = (g: RecentGame[]) => g.slice(0, n).map((x) => (typeof x.rating === 'number' ? x.rating : null)).reverse();
+  const ra = take(a);
+  const rb = take(b);
+  const len = Math.max(ra.length, rb.length);
+  const pad = (r: (number | null)[]) => [...Array(len - r.length).fill(null), ...r];
+  return { a: pad(ra), b: pad(rb), len };
+}

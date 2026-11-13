@@ -237,6 +237,8 @@ export function StandingsTab({
             </div>
             <LeaderBoard
               rows={leaders}
+              /* 팀 탭의 순위와 같은 막대 — 1위 대비 얼마나 넣었나가 숫자를 읽기 전에 보인다 */
+              variant="bar"
               /* 순위표와 같은 규칙 — 우리 팀 선수 줄을 팀 컬러로 세운다.
                  대회 전체 순위에서 "우리 선수가 몇 위인가" 를 먼저 찾게 한다. */
               teamColors={{ [target.espnTeamId]: markOf(target) }}

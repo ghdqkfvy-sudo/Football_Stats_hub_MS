@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Match, StandingTable } from '../lib/types';
 import { kstShortDate } from '../lib/kst';
 import { resultOf, teamResults, zoneRuns } from '../lib/league';
+import { buildTrend, rankMoves } from '../lib/trend';
 import { Crest } from './Crest';
 import { useIsMobile } from '../lib/useMedia';
 
@@ -172,6 +173,13 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
    * (컵 우승팀 자리처럼 진짜로 하나만 있는 경우)는 그대로 남긴다.
    */
   const { zones, legend } = zoneRuns(table.zones);
+  /* 직전 라운드 대비 순위 변동(▲2) — 순위 추이와 같은 계산(lib/trend). 경기 기록이 없으면 비어 있다 */
+  const moves = useMemo(
+    () => rankMoves(buildTrend(matches, table.rows.map((r) => r.team.id))),
+    [matches, table],
+  );
+  /* 득점 · 실점 미니 막대의 기준 — 표에서 가장 큰 값 */
+  const maxG = Math.max(1, ...table.rows.map((r) => Math.max(r.gf, r.ga)));
 
   const zoneOf = (rank: number) => zones[rank];
 
@@ -253,13 +261,19 @@ export function StandingsTable({ table, matches, focusTeamId, focusTeams, focusC
                 />
                 <b className="tbl__full">{r.team.name}</b>
                 <b className="tbl__short">{r.team.shortName}</b>
+                {moves.has(r.team.id) && (
+                  <i className="tbl__mv num" data-d={moves.get(r.team.id)! > 0 ? 'up' : 'down'} title={`직전 라운드보다 ${Math.abs(moves.get(r.team.id)!)}계단 ${moves.get(r.team.id)! > 0 ? '올랐다' : '내려갔다'}`}>
+                    {moves.get(r.team.id)! > 0 ? '▲' : '▼'}{Math.abs(moves.get(r.team.id)!)}
+                  </i>
+                )}
               </span>
               <span className="num">{r.played}</span>
               <span className="num">{r.win}</span>
               <span className="num">{r.draw}</span>
               <span className="num">{r.loss}</span>
-              <span className="num tbl__g">{r.gf}</span>
-              <span className="num tbl__g">{r.ga}</span>
+              {/* 숫자 아래 가는 막대 — 공격형(득점 막대가 길다) · 수비형(실점 막대가 짧다)이 열을 훑으면 보인다 */}
+              <span className="num tbl__g" data-k="gf" style={{ ['--w' as string]: `${(r.gf / maxG) * 100}%` }}>{r.gf}</span>
+              <span className="num tbl__g" data-k="ga" style={{ ['--w' as string]: `${(r.ga / maxG) * 100}%` }}>{r.ga}</span>
               <span className="num tbl__gd" data-sign={r.gd > 0 ? 'p' : r.gd < 0 ? 'n' : 'z'}>
                 {r.gd > 0 ? `+${r.gd}` : r.gd}
               </span>
