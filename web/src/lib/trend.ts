@@ -103,3 +103,17 @@ export function axisTicks(max: number, step: number, min = 1): number[] {
   out.push(max);
   return out;
 }
+
+/**
+ * 직전 라운드 대비 순위 변동 — 양수면 올라갔다(순위표의 ▲2).
+ * 한 경기만 치른 팀은 견줄 것이 없어 넣지 않는다.
+ */
+export function rankMoves(trend: TrendData): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const [id, pts] of trend.series) {
+    if (pts.length < 2) continue;
+    const d = pts[pts.length - 2].rank - pts[pts.length - 1].rank;
+    if (d !== 0) out.set(id, d);
+  }
+  return out;
+}

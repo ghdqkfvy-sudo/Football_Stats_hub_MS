@@ -773,3 +773,14 @@ i.ml__res:empty { width: 17px; height: 17px; }
 @media (min-width: 721px) and (max-width: 1080px) {
   .mdh__rest > :nth-child(odd):last-child { grid-column: span 2; }
 }
+
+/* 팀 비교 — 리그 순위 추이 미니 선(위가 1위). 넓은 화면(1081px~)에서만 칸이 생긴다.
+   ⚠️ 폰 · 태블릿의 칸 배치(위 미디어 쿼리)를 덮지 않도록 min-width 안에만 적는다 */
+.cmp__spark { display: none; }
+.cmp__sparksvg path { fill: none; stroke: var(--team); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.cmp__sparksvg circle { fill: var(--team); }
+.cmp__nospark { font-style: normal; color: var(--text-lo); }
+@media (min-width: 1081px) {
+  .cmp__head, .cmp__row { grid-template-columns: minmax(130px, 1.3fr) 76px 52px 76px 150px 76px 60px minmax(110px, 1fr) 96px; }
+  .cmp__spark { display: flex; align-items: center; justify-content: flex-end; }
+}

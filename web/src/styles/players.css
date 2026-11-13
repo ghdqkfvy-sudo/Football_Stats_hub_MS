@@ -1034,3 +1034,39 @@
 /* 폰 시트 — 넓은 화면과 같은 시즌 요약(SeasonHero) */
 .pdet--card .pdet__hero { margin: 12px 0 8px; }
 .pdet--card .pdet__hero b { font-size: var(--fs-d6); }
+
+/* ══ 스쿼드 활용도 (components/UsageChart) ══════════════════════════════ */
+.usage {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 6px 26px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px 10px;
+  background: color-mix(in srgb, var(--ink-900) 82%, transparent);
+}
+.usage__grp h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 6px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-mid); }
+.usage__grp h3 span { color: var(--text-lo); font-weight: 500; }
+.usage__grp ol { list-style: none; margin: 0 0 10px; padding: 0; }
+.usage__row {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; align-items: center; gap: 9px;
+  width: 100%; padding: 4px 4px; border-radius: var(--r-sm); text-align: left; transition: background .12s;
+}
+.usage__row:hover { background: rgba(255,255,255,.05); }
+.usage__name { font-size: var(--fs-sm); font-weight: 600; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage__track { display: flex; height: 10px; border-radius: var(--r-xs); background: rgba(255,255,255,.06); overflow: hidden; }
+.usage__track i, .usage__key i { display: block; height: 100%; }
+.usage__track i[data-k='start'], .usage__key i[data-k='start'] { background: var(--accent); }
+.usage__track i[data-k='sub'], .usage__key i[data-k='sub'] {
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
+  background-image: repeating-linear-gradient(135deg, rgba(6,17,39,.5) 0 3px, transparent 3px 6px);
+}
+.usage__min { font-family: var(--font-display); font-size: var(--fs-md); color: var(--text-mid); text-align: right; }
+.usage__key { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: var(--fs-micro); color: var(--text-lo); }
+.usage__key span { display: inline-flex; align-items: center; gap: 6px; }
+.usage__key i { width: 16px; height: 8px; border-radius: var(--r-2xs); }
+@media (max-width: 640px) {
+  .usage { padding: 12px 10px 8px; }
+  .usage__row { grid-template-columns: 84px minmax(0, 1fr) 42px; min-height: 30px; }
+}
+
+.usage__more {
+  grid-column: 1 / -1; padding: 9px; border-top: 1px solid var(--line);
+  font-size: var(--fs-sm); font-weight: 600; color: var(--text-mid); text-align: center;
+}

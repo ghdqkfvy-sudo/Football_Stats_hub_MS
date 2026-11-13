@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { FormOverlay } from './FormOverlay';
 import type { PlayerSeason } from '../lib/squad';
 import { compareByComp, compareRows, type CompareRow } from '../lib/playerCompare';
 import { useIsMobile } from '../lib/useMedia';
@@ -142,6 +143,8 @@ export function PlayerCompare({ pair, onClose, onChange }: {
             </div>
           )}
 
+          <FormBlock a={pair[0]} b={pair[1]} />
+
           <div className="pcmp__sec">
             <span className="eyebrow">최근 5경기 출전 시간</span>
             <div className="pcmp__recents"><Recent p={pair[0]} /><Recent p={pair[1]} /></div>
@@ -195,6 +198,18 @@ export function CompareBar({ a, rivals, onPick, onCancel }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** 경기별 평점 겹쳐 보기 — 그릴 것이 없으면(평점 있는 경기가 모자라면) 제목째 그리지 않는다 */
+function FormBlock({ a, b }: { a: PlayerSeason; b: PlayerSeason }) {
+  const chart = FormOverlay({ a, b });
+  if (!chart) return null;
+  return (
+    <div className="pcmp__sec">
+      <span className="eyebrow">경기별 평점 · 최근 12경기까지</span>
+      {chart}
     </div>
   );
 }
