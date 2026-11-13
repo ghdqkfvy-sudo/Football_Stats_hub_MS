@@ -451,3 +451,17 @@ button.lm__wbtn:hover, button.lm__wbtn:focus-visible { color: var(--text-hi); ba
 .lm__keymvp i { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: var(--r-xs); font-style: normal; font-weight: 800; color: #3A2600; background: linear-gradient(180deg, #FFE98A, #F2B705); }
 .lm__keymvp svg { width: 10px; height: 8px; }
 .lm__keymvp path, .lm__keymvp rect { fill: #3A2600; stroke: none; }
+
+/* 라인업이 아직 없는 킥오프 전 — 대기 화면(LiveMatchView) */
+.lm__nolu {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  margin-top: 14px; padding: 26px 18px; border: 1px dashed var(--line-2); border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--ink-900) 70%, transparent);
+}
+.lm__nolu b { font-size: var(--fs-xl); font-weight: 800; color: var(--text-hi); }
+.lm__nolu b::before {
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%;
+  background: var(--draw); animation: pulse 1.6s ease-in-out infinite; vertical-align: 1px;
+}
+.lm__nolu p { margin: 0; font-size: var(--fs-base); color: var(--text-mid); max-width: 460px; }
+.lm__nolu small { font-size: var(--fs-xs); color: var(--text-lo); }

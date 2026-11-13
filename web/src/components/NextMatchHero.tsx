@@ -187,7 +187,8 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
   /* 킥오프가 지나면 카운트다운(00:00:00)을 걷어낸다 — 오늘의 경기 버튼이 그 자리를 맡는다 */
   const started = live || today?.phase === 'live' || now >= Date.parse(match.kickoffUtc);
   const cd = done || started ? null : countdown(match.kickoffUtc, now);
-  const showToday = !!onToday && !!today && (today.phase !== 'pre' || today.hasLineup);
+  /* 킥오프 전이면 라인업이 없어도 — 경기 날 2시간 전부터 "오늘의 경기" 가 열린다(대기 화면이 있다) */
+  const showToday = !!onToday && !!today;
   const tagText = done ? '경기 결과' : live ? '진행 중' : notNext ? '예정 경기' : '다음 경기';
 
   return (
@@ -250,7 +251,7 @@ export function NextMatchHero({ match, focusTeamId, standingOf, fifaOf, goalsLoa
           <i aria-hidden="true" />
           {today!.phase === 'live' ? <>LIVE {today!.clock && <span className="num">{today!.clock}</span>} · 오늘의 경기 보기</>
             : today!.phase === 'done' ? '오늘의 경기 · 라인업 · 평점 다시 보기'
-              : '라인업 발표 · 오늘의 경기 보기'}
+              : today!.hasLineup ? '라인업 발표 · 오늘의 경기 보기' : '라인업 발표 대기 · 오늘의 경기 보기'}
         </button>
       )}
 

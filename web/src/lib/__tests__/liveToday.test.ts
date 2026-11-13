@@ -14,8 +14,9 @@ describe('대한민국 › 오늘의 경기', () => {
     ]);
     expect(got.map((x) => x.slug)).toEqual(['c', 'e', 'b', 'd', 'a']);
   });
-  it('킥오프 전인데 라인업이 없으면 빼고, 경기 날이 아니면 뺀다', () => {
-    expect(showToday(l('a', 'pre', '2026-10-20T16:00Z', 0), NOW)).toBe(false);
+  it('킥오프 전이면 라인업이 없어도 보인다(대기 화면) — 경기 날이 아니면 뺀다', () => {
+    expect(showToday(l('a', 'pre', '2026-10-20T16:00Z', 0), NOW)).toBe(true);
+    expect(showToday(l('a', 'pre', '2026-10-20T20:00Z', 0), NOW)).toBe(false);   // 킥오프 2시간 전부터
     expect(showToday(l('a', 'pre', '2026-10-20T16:00Z'), NOW)).toBe(true);
     expect(showToday(l('a', 'done', '2026-10-19T12:00Z'), NOW)).toBe(false);
     expect(showToday(null, NOW)).toBe(false);

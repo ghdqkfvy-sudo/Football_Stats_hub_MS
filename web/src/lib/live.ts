@@ -124,11 +124,14 @@ export function teamColor(live: LiveMatch, k: 'home' | 'away', espnId?: string):
 }
 
 /**
- * 오늘의 경기로 보여 줄 것 — 경기 날(isTodayLive)이고, 킥오프 전이면 라인업이 나온 것만
- * (예상 라인업도 없으면 그릴 게 없다). 대한민국 › 오늘의 경기 · 소속팀 링크가 같은 기준을 쓴다.
+ * 오늘의 경기로 보여 줄 것 — 경기 날(isTodayLive)이면 킥오프 전이어도 보여 준다.
+ * 예전에는 킥오프 전이면 라인업이 나온 것만 보였는데(2026-10-20), 대표팀은 FotMob 에 예상 라인업이 안 올라오는 일이 많아
+ * 공식 라인업(킥오프 한 시간 전쯤)이 나올 때까지 탭이 아예 없었다 — 사용자는 "라이브가 안 뜬다" 로 읽었다(2026-11-13 대한민국 vs 사우디).
+ * 이제 탭은 경기 날 2시간 전부터 열리고, 라인업이 없으면 대기 화면이 그 자리를 채운다(LiveMatchView).
+ * 대한민국 › 오늘의 경기 · 소속팀 링크가 같은 기준을 쓴다.
  */
 export function showToday(l: LiveMatch | null | undefined, now = Date.now()): l is LiveMatch {
-  return !!l && isTodayLive(l, now) && !(l.phase === 'pre' && !l.home.starters.length);
+  return !!l && isTodayLive(l, now);
 }
 
 /**

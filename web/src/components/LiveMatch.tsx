@@ -117,6 +117,20 @@ export function LiveMatchView({ live, match, teamId, matches }: { live: LiveMatc
   const wide = !useIsMobile();
   const crest = (k: 'home' | 'away', size: number) => <TeamCrest live={live} match={match} k={k} size={size} />;
 
+  /* 라인업이 아직 하나도 없다(공식 · 예상 모두) — 빈 경기장 대신 대기 화면. 파일이 갱신되면(킥오프 전 2분마다) 저절로 채워진다 */
+  if (live.phase === 'pre' && !live.home.starters.length && !live.away.starters.length) {
+    return (
+      <div className="lm">
+        <LiveHead live={live} crest={crest} venue={live.venue ?? match?.venue} />
+        <div className="lm__nolu" role="status">
+          <b>라인업 발표 대기 중</b>
+          <p>공식 라인업은 보통 킥오프 한 시간 전쯤 나옵니다. 나오면 이 화면이 자동으로 채워집니다.</p>
+          <small>킥오프 전에는 2분마다 확인합니다 · 경기가 시작되면 스코어와 평점이 1분마다 갱신됩니다</small>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="lm">
       <LiveHead live={live} crest={crest} venue={live.venue ?? match?.venue} />
