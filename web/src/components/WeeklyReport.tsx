@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { KoreanGame, KoreanPlayer } from '../types/feedTypes';
-import { buildWeekly, ourScoreOf, shortTeam, weekLabel, weeksWithGames, type Weekly, type WeeklyRow } from '../lib/weekly';
+import { buildWeekly, ourScoreOf, weekLabel, weeksWithGames, type Weekly, type WeeklyRow } from '../lib/weekly';
 import { fmtRating, ratingTier } from '../lib/rating';
 import { kstShortDate } from '../lib/kst';
 import { CREST } from '../config/targets';
-import { RatingBadge } from './RatingBadge';
 import { Headshot } from './Headshot';
 import { Crest } from './Crest';
 
@@ -18,6 +17,8 @@ import { Crest } from './Crest';
  * 2026-11-15 다듬기 — 머리를 주간 배너로(큰 주간 범위 + 한 줄 요약), 상위 세 명 메달,
  * 넓은 화면 목록은 2열 카드(한 줄에 경기 칩 하나뿐이라 줄 가운데가 비었다).
  * 폰 — 2 · 3번은 나란히 끼우지 않고 전폭 가로 카드, 목록 한 줄은 두 줄 높이(이름 · 평점 / 경기 · 출전 막대).
+ * 2026-11-16 — 메달을 리본 달린 진짜 메달 모양(SVG)으로, 평점은 배지 한 모양에 크기 셋(대 · 중 · 소),
+ * 팀 이름은 말줄임 없이(길면 줄을 넘긴다). 크기 체계는 styles/koreans.css 머리말.
  * ‹ › 로 지난 주를 넘겨 보고, "이미지 저장" 으로 같은 구성을 그림 한 장으로 받는다(폰은 공유 시트).
  */
 export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
@@ -68,7 +69,7 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
 
         {/* 주간 최고 + 그다음 두 명 */}
         <div className="wk__podium" data-n={podium.length}>
-          {podium.map((r, i) => <PodiumCard key={r.player.id} r={r} mvp={i === 0 && r === w.best} rank={i + 1} />)}
+          {podium.map((r, i) => <PodiumCard key={r.player.id} r={r} mvp={i === 0 && r === w.best} rank={(i + 1) as 1 | 2 | 3} />)}
         </div>
 
         {rest.length > 0 && (
@@ -81,10 +82,10 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
                 data-ga={r.goals + r.assists > 0 || undefined}
               >
                 <span className="wk__no num">{i + 4}</span>
-                <Face p={r.player} size={30} />
+                <Face p={r.player} size={32} />
                 <span className="wk__who">
                   <b>{r.player.nameKo}</b>
-                  <small><ClubMark p={r.player} /><span className="wk__club">{r.player.club}</span></small>
+                  <ClubLine p={r.player} />
                 </span>
                 <span className="wk__games">
                   {r.games.map((g) => <GameChip key={g.eventId ?? g.date} g={g} />)}
@@ -94,7 +95,7 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
                   {r.goals > 0 && <em className="pcard__gg">{r.goals}G</em>}
                   {r.assists > 0 && <em className="pcard__aa">{r.assists}A</em>}
                 </span>
-                <span className="wk__rtg">{r.rating != null ? <RatingBadge v={r.rating} /> : <i className="wk__nr">–</i>}</span>
+                <RatingTile v={r.rating} size="s" />
               </li>
             ))}
           </ol>
@@ -112,26 +113,19 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
   );
 }
 
-/** 맨 위 카드 — 주간 최고는 크게, 2 · 3번은 작게 */
-function PodiumCard({ r, mvp, rank }: { r: WeeklyRow; mvp: boolean; rank: number }) {
-  const tier = r.rating != null ? ratingTier(r.rating) : undefined;
+/** 맨 위 카드 — [메달] [사진] [이름 · 소속] [평점] / 경기 / 출전 막대. 주간 최고는 크게 */
+function PodiumCard({ r, mvp, rank }: { r: WeeklyRow; mvp: boolean; rank: 1 | 2 | 3 }) {
+  const big = rank === 1;
   return (
-    <article className="wk__pod" data-mvp={mvp || undefined} data-tier={tier}>
-      {mvp && <span className="wk__podtag">★ 주간 최고</span>}
-      <div className="wk__podtop">
-        <span className="wk__facebox">
-          <Face p={r.player} size={mvp ? 64 : 44} />
-          <i className="wk__medal num" data-rank={rank} aria-label={`${rank}위`}>{rank}</i>
-        </span>
-        <div className="wk__podid">
-          <b>{r.player.nameKo}</b>
-          <small><ClubMark p={r.player} /><span className="wk__club">{r.player.club}</span></small>
-        </div>
-        <div className="wk__podrt num" data-tier={tier}>
-          <b>{r.rating != null ? fmtRating(r.rating) : '–'}</b>
-          <span>평점</span>
-        </div>
+    <article className="wk__pod" data-rank={rank} data-mvp={mvp || undefined}>
+      <Medal rank={rank} size={big ? 30 : 24} />
+      <Face p={r.player} size={big ? 64 : 44} />
+      <div className="wk__podid">
+        <span className="wk__podlbl">{mvp ? '주간 최고' : `${rank}위`}</span>
+        <b>{r.player.nameKo}</b>
+        <ClubLine p={r.player} />
       </div>
+      <RatingTile v={r.rating} size={big ? 'l' : 'm'} caption />
       <div className="wk__podgames">
         {r.games.map((g) => <GameChip key={g.eventId ?? g.date} g={g} />)}
       </div>
@@ -145,6 +139,60 @@ function PodiumCard({ r, mvp, rank }: { r: WeeklyRow; mvp: boolean; rank: number
     </article>
   );
 }
+
+/* 메달 금속 색 — [빛 · 바탕 · 그늘 · 숫자] */
+const MEDAL: Record<1 | 2 | 3, [string, string, string, string]> = {
+  1: ['#FFF4B8', '#F2C440', '#A97A0C', '#4A3300'],
+  2: ['#FFFFFF', '#D5DDE8', '#8693A6', '#283444'],
+  3: ['#FFDCC0', '#D38E5C', '#86461E', '#3A1A06'],
+};
+
+/** 메달 — 태극 두 색 리본(V) + 금속 원판(빛이 왼쪽 위에서) + 안쪽 테 + 순위 숫자 */
+function Medal({ rank, size }: { rank: 1 | 2 | 3; size: number }) {
+  const [hi, mid, lo, ink] = MEDAL[rank];
+  const gid = `wkm${useId().replace(/:/g, '')}`;
+  return (
+    <svg className="wk__medal" width={size} height={(size * 46) / 32} viewBox="0 0 32 46" role="img" aria-label={`${rank}위 메달`}>
+      <defs>
+        <radialGradient id={gid} cx="34%" cy="30%" r="78%">
+          <stop offset="0" stopColor={hi} />
+          <stop offset=".5" stopColor={mid} />
+          <stop offset="1" stopColor={lo} />
+        </radialGradient>
+      </defs>
+      <path d="M5 0h8.5l6.5 21h-8.5z" fill="#CD2E3A" />
+      <path d="M27 0h-8.5L12 21h8.5z" fill="#0047A0" />
+      <path d="M27 0h-8.5L12 21h8.5z" fill="#fff" opacity=".12" />
+      <rect x="10.5" y="17" width="11" height="5" rx="1.5" fill={lo} />
+      <circle cx="16" cy="31" r="14" fill={lo} />
+      <circle cx="16" cy="31" r="12.8" fill={`url(#${gid})`} />
+      <circle cx="16" cy="31" r="9.6" fill="none" stroke={lo} strokeOpacity=".6" strokeWidth="1" />
+      <text x="16" y="31" dy=".36em" textAnchor="middle" fontSize="13.5" fontWeight="800" fill={ink}
+        fontFamily="'Barlow Condensed', 'Archivo', sans-serif">{rank}</text>
+    </svg>
+  );
+}
+
+/** 평점 배지 — 모양 하나(평점 구간 색 바탕 + 흰 숫자), 크기만 셋: l 주간 최고 · m 2 · 3위 · s 목록 */
+function RatingTile({ v, size, caption = false }: { v: number | null; size: 'l' | 'm' | 's'; caption?: boolean }) {
+  return (
+    <span
+      className="wk__rb"
+      data-size={size}
+      data-tier={v != null ? ratingTier(v) : undefined}
+      data-none={v == null || undefined}
+      title={v != null ? `FotMob 평점 ${fmtRating(v)}` : '평점 없음'}
+    >
+      <b className="num">{v != null ? fmtRating(v) : '–'}</b>
+      {caption && <small>평점</small>}
+    </span>
+  );
+}
+
+/** 소속팀 — 엠블럼 + 이름. 말줄임 없이 줄을 넘긴다 */
+const ClubLine = ({ p }: { p: KoreanPlayer }) => (
+  <span className="wk__clubl"><ClubMark p={p} /><span className="wk__club">{p.club}</span></span>
+);
 
 const Face = ({ p, size }: { p: KoreanPlayer; size: number }) => (
   <Headshot id={p.id} src={p.photo} kind={p.photoKind} sofa={p.sofascoreId} label={p.nameKo.slice(0, 1)} size={size} className="wk__face" />
@@ -163,8 +211,8 @@ function GameChip({ g }: { g: KoreanGame }) {
     <span className="wk__g" title={`${g.date ? kstShortDate(g.date) : ''} · ${g.started ? '선발' : '교체'} ${g.minutes ?? 0}분`}>
       <i className="fchip" data-r={g.result}>{g.result}</i>
       {sc && <b className="num">{sc}</b>}
-      {/* 폰은 짧은 이름(Ajax · Bayern) — 한 줄에 두 경기가 들어가게 */}
-      <em><span className="m-full">{g.opponent || '—'}</span><span className="m-short">{shortTeam(g.opponent) || '—'}</span></em>
+      {/* 팀 이름은 줄이지 않는다 — 길면 줄을 넘긴다 */}
+      <em>{g.opponent || '—'}</em>
     </span>
   );
 }
@@ -198,7 +246,8 @@ async function exportImage(w: Weekly): Promise<void> {
   const rest = w.rows.slice(3);
   const HEAD = 250;
   const MVP_H = podium.length ? 250 : 0;
-  const SIDE_H = podium.length > 1 ? 150 : 0;
+  /* 2 · 3번 카드는 경기가 둘이면 칩이 두 줄이 된다 */
+  const SIDE_H = podium.length > 1 ? (podium.slice(1).some((r) => r.games.length > 1) ? 182 : 150) : 0;
   const ROW = 84;
   const listTop = HEAD + MVP_H + (SIDE_H ? SIDE_H + 18 : 0) + (podium.length ? 34 : 0);
   const H = listTop + rest.length * ROW + (w.idle.length ? 70 : 20) + 70;
@@ -251,17 +300,22 @@ async function exportImage(w: Weekly): Promise<void> {
     const bw = Math.min(wd - sw, ((r.minutes - start) / full) * wd);
     if (bw > 0) { x.fillStyle = 'rgba(255,107,120,.42)'; roundRect(x, px + sw, py, Math.max(8, bw), 12, 6); x.fill(); }
   };
+  /* 경기 칩 — 폭이 모자라면 다음 줄로(예전에는 두 번째 경기를 버렸다) */
   const games = (px: number, py: number, maxW: number, r: WeeklyRow, size: number) => {
     let gx = px;
+    let gy = py;
     for (const g of r.games) {
       const sc = ourScoreOf(g);
       x.font = font(size, 600);
-      const label = `${sc ? `${sc} ` : ''}${clip(x, g.opponent || '—', r.games.length === 1 ? maxW - 60 : 170)}`;
+      const label = `${sc ? `${sc} ` : ''}${g.opponent || '—'}`;
+      /* 자르지 않는다 — 길면 이 경기 글자만 줄인다(최소 14) */
+      let fs = size;
+      while (fs > 14 && x.measureText(label).width > (r.games.length === 1 ? maxW - 40 : 230)) { fs -= 1; x.font = font(fs, 600); }
       const need = size + 12 + x.measureText(label).width + 22;
-      if (gx + need > px + maxW && gx > px) break;
-      x.fillStyle = RES[g.result] ?? INK.lo; roundRect(x, gx, py - size + 2, size + 4, size + 4, 5); x.fill();
-      x.fillStyle = '#061127'; x.font = font(size - 4, 800); x.textAlign = 'center'; x.fillText(g.result, gx + (size + 4) / 2, py + 1); x.textAlign = 'left';
-      x.fillStyle = INK.mid; x.font = font(size, 600); x.fillText(label, gx + size + 12, py + 2);
+      if (gx + need > px + maxW && gx > px) { gx = px; gy += size + 12; }
+      x.fillStyle = RES[g.result] ?? INK.lo; roundRect(x, gx, gy - size + 2, size + 4, size + 4, 5); x.fill();
+      x.fillStyle = '#061127'; x.font = font(size - 4, 800); x.textAlign = 'center'; x.fillText(g.result, gx + (size + 4) / 2, gy + 1); x.textAlign = 'left';
+      x.fillStyle = INK.mid; x.font = font(fs, 600); x.fillText(label, gx + size + 12, gy + 2);
       gx += need;
     }
   };
@@ -274,47 +328,88 @@ async function exportImage(w: Weekly): Promise<void> {
   };
   const tierOf = (r: WeeklyRow) => (r.rating != null ? TIER[ratingTier(r.rating)] : INK.lo);
 
-  /* 주간 최고 — 큰 카드 */
+  /* 팀 이름 — 자르지 않는다. 폭을 넘으면 글자를 줄이고(최소 min), 그래도 넘치면 두 줄로 */
+  const fitText = (text: string, px: number, py: number, maxW: number, size: number, weight: number, color: string, min = 15) => {
+    let fs = size;
+    x.font = font(fs, weight);
+    while (fs > min && x.measureText(text).width > maxW) { fs -= 1; x.font = font(fs, weight); }
+    x.fillStyle = color;
+    if (x.measureText(text).width <= maxW) { x.fillText(text, px, py); return; }
+    const words = text.split(' ');
+    let line = '';
+    let k = 0;
+    for (; k < words.length; k++) {
+      const t = line ? `${line} ${words[k]}` : words[k];
+      if (x.measureText(t).width > maxW && line) break;
+      line = t;
+    }
+    x.fillText(line, px, py - fs * 0.55);
+    x.fillText(words.slice(k).join(' '), px, py + fs * 0.6);
+  };
+
+  /* 메달 — 화면의 SVG 메달과 같은 모양(32 × 46 좌표를 그대로 키운다) */
+  const medal = (left: number, top: number, wd: number, rank: 1 | 2 | 3) => {
+    const [hi, mid, lo, ink] = MEDAL[rank];
+    x.save(); x.translate(left, top); x.scale(wd / 32, wd / 32);
+    x.fillStyle = '#CD2E3A'; x.beginPath(); x.moveTo(5, 0); x.lineTo(13.5, 0); x.lineTo(20, 21); x.lineTo(11.5, 21); x.closePath(); x.fill();
+    x.fillStyle = '#0047A0'; x.beginPath(); x.moveTo(27, 0); x.lineTo(18.5, 0); x.lineTo(12, 21); x.lineTo(20.5, 21); x.closePath(); x.fill();
+    x.fillStyle = lo; roundRect(x, 10.5, 17, 11, 5, 1.5); x.fill();
+    x.beginPath(); x.arc(16, 31, 14, 0, Math.PI * 2); x.fillStyle = lo; x.fill();
+    const g = x.createRadialGradient(11, 27, 1, 16, 31, 15);
+    g.addColorStop(0, hi); g.addColorStop(0.5, mid); g.addColorStop(1, lo);
+    x.beginPath(); x.arc(16, 31, 12.8, 0, Math.PI * 2); x.fillStyle = g; x.fill();
+    x.beginPath(); x.arc(16, 31, 9.6, 0, Math.PI * 2); x.lineWidth = 1; x.strokeStyle = lo; x.globalAlpha = 0.6; x.stroke(); x.globalAlpha = 1;
+    x.fillStyle = ink; x.font = font(14, 800, true); x.textAlign = 'center'; x.fillText(String(rank), 16, 36); x.textAlign = 'left';
+    x.restore();
+  };
+
+  /* 평점 배지 — 화면과 같은 모양 하나, 크기만 다르게. right · top 기준 */
+  const tile = (right: number, top: number, wd: number, ht: number, fs: number, r: WeeklyRow, caption: boolean) => {
+    const v = r.rating;
+    x.fillStyle = v != null ? tierOf(r) : 'rgba(255,255,255,.08)';
+    roundRect(x, right - wd, top, wd, ht, ht * 0.26); x.fill();
+    x.fillStyle = v != null ? '#fff' : INK.lo; x.font = font(fs, 700, true); x.textAlign = 'center';
+    x.fillText(v != null ? fmtRating(v) : '–', right - wd / 2, top + ht / 2 + fs * 0.36);
+    if (caption) { x.fillStyle = INK.lo; x.font = font(18, 600); x.fillText('평점', right - wd / 2, top + ht + 24); }
+    x.textAlign = 'left';
+  };
+
+  /* 주간 최고 — 큰 카드(금 테두리) */
   if (podium[0]) {
     const r = podium[0];
     const y0 = HEAD;
-    const col = tierOf(r);
     const card = x.createLinearGradient(40, y0, W - 40, y0 + MVP_H - 20);
-    card.addColorStop(0, 'rgba(255,107,120,.20)'); card.addColorStop(1, 'rgba(255,255,255,.03)');
+    card.addColorStop(0, 'rgba(245,197,66,.16)'); card.addColorStop(1, 'rgba(255,255,255,.03)');
     x.fillStyle = card; roundRect(x, 40, y0, W - 80, MVP_H - 20, 26); x.fill();
-    x.lineWidth = 2; x.strokeStyle = 'rgba(255,107,120,.55)'; roundRect(x, 40, y0, W - 80, MVP_H - 20, 26); x.stroke();
-    x.fillStyle = '#FF6B78'; x.font = font(22, 800); x.fillText(r === w.best ? '★ 주간 최고' : '1', 76, y0 + 46);
-    face(134, y0 + 132, 56, r.player.nameKo, col);
-    x.fillStyle = INK.hi; x.font = font(52, 800); x.fillText(r.player.nameKo, 216, y0 + 124);
-    x.fillStyle = INK.mid; x.font = font(26, 500); x.fillText(clip(x, r.player.club, 420), 216, y0 + 164);
-    games(216, y0 + 204, 500, r, 22);
-    /* 큰 평점 */
-    x.textAlign = 'right';
-    x.fillStyle = r.rating != null ? lighten(col) : INK.lo; x.font = font(112, 700, true);
-    x.fillText(r.rating != null ? fmtRating(r.rating) : '–', W - 80, y0 + 138);
-    x.fillStyle = INK.mid; x.font = font(22, 600); x.fillText('평점', W - 82, y0 + 170);
-    x.textAlign = 'left';
-    minBar(W - 300, y0 + 192, 150, r);
-    x.fillStyle = INK.mid; x.font = font(22, 600, true); x.fillText(`${r.minutes}'`, W - 140, y0 + 205);
-    ga(W - 320, y0 + 205, r, 26);
+    x.lineWidth = 2; x.strokeStyle = 'rgba(245,197,66,.6)'; roundRect(x, 40, y0, W - 80, MVP_H - 20, 26); x.stroke();
+    medal(66, y0 + 26, 46, 1);
+    face(178, y0 + 96, 52, r.player.nameKo, tierOf(r));
+    x.fillStyle = '#F5C542'; x.font = font(20, 800); x.fillText(r === w.best ? '주간 최고' : '1위', 252, y0 + 58);
+    x.fillStyle = INK.hi; x.font = font(48, 800); x.fillText(r.player.nameKo, 252, y0 + 108);
+    fitText(r.player.club, 252, y0 + 144, W - 252 - 250, 24, 500, INK.mid);
+    tile(W - 72, y0 + 40, 132, 96, 60, r, true);
+    games(76, y0 + 196, 560, r, 22);
+    minBar(W - 330, y0 + 184, 180, r);
+    x.fillStyle = INK.mid; x.font = font(22, 600, true); x.fillText(`${r.minutes}'`, W - 140, y0 + 197);
+    ga(W - 350, y0 + 197, r, 26);
   }
 
-  /* 2 · 3번 — 나란히 */
+  /* 2 · 3번 — 나란히(은 · 동 테두리) */
   podium.slice(1).forEach((r, i) => {
+    const rank = (i + 2) as 2 | 3;
     const bw = (W - 80 - 18) / 2;
     const px = 40 + i * (bw + 18);
     const y0 = HEAD + MVP_H;
-    const col = tierOf(r);
     x.fillStyle = 'rgba(255,255,255,.045)'; roundRect(x, px, y0, bw, SIDE_H, 20); x.fill();
-    x.lineWidth = 1.5; x.strokeStyle = INK.line; roundRect(x, px, y0, bw, SIDE_H, 20); x.stroke();
-    x.fillStyle = col; roundRect(x, px, y0 + 18, 6, SIDE_H - 36, 3); x.fill();
-    face(px + 62, y0 + 58, 34, r.player.nameKo, col);
-    x.fillStyle = INK.hi; x.font = font(32, 800); x.fillText(r.player.nameKo, px + 112, y0 + 54);
-    x.fillStyle = INK.lo; x.font = font(20, 500); x.fillText(clip(x, r.player.club, bw - 250), px + 112, y0 + 84);
-    x.textAlign = 'right'; x.fillStyle = r.rating != null ? lighten(col) : INK.lo; x.font = font(58, 700, true);
-    x.fillText(r.rating != null ? fmtRating(r.rating) : '–', px + bw - 24, y0 + 70); x.textAlign = 'left';
-    games(px + 28, y0 + 124, bw - 190, r, 19);
-    ga(px + bw - 24, y0 + 126, r, 22);
+    x.lineWidth = 1.5; x.strokeStyle = rank === 2 ? 'rgba(200,211,226,.4)' : 'rgba(208,139,91,.45)'; roundRect(x, px, y0, bw, SIDE_H, 20); x.stroke();
+    medal(px + 20, y0 + 16, 32, rank);
+    face(px + 96, y0 + 56, 30, r.player.nameKo, tierOf(r));
+    x.fillStyle = INK.lo; x.font = font(16, 800); x.fillText(`${rank}위`, px + 138, y0 + 34);
+    x.fillStyle = INK.hi; x.font = font(30, 800); x.fillText(r.player.nameKo, px + 138, y0 + 66);
+    fitText(r.player.club, px + 138, y0 + 94, bw - 138 - 110, 19, 500, INK.lo);
+    tile(px + bw - 22, y0 + 22, 82, 58, 36, r, false);
+    games(px + 24, y0 + 132, bw - 150, r, 18);
+    ga(px + bw - 22, y0 + 134, r, 22);
   });
 
   /* 나머지 — 띠 · 막대 · 평점 */
@@ -326,15 +421,12 @@ async function exportImage(w: Weekly): Promise<void> {
     x.fillStyle = INK.line; x.fillRect(56, y + ROW - 8, W - 112, 1);
     x.fillStyle = INK.lo; x.font = font(24, 600, true); x.textAlign = 'right'; x.fillText(String(i + 4), 92, y + 46); x.textAlign = 'left';
     x.fillStyle = INK.hi; x.font = font(30, 800); x.fillText(r.player.nameKo, 112, y + 36);
-    x.fillStyle = INK.lo; x.font = font(19, 500); x.fillText(clip(x, r.player.club, 220), 112, y + 62);
-    games(350, y + 44, 330, r, 19);
+    fitText(r.player.club, 112, y + 62, 228, 19, 500, INK.lo, 14);
+    games(350, r.games.length > 1 ? y + 30 : y + 44, 330, r, 19);
     minBar(700, y + 30, 110, r);
     x.fillStyle = INK.lo; x.font = font(20, 600, true); x.fillText(`${r.minutes}'`, 820, y + 43);
     ga(930, y + 46, r, 22);
-    if (r.rating != null) {
-      x.fillStyle = col; roundRect(x, 950, y + 18, 78, 38, 8); x.fill();
-      x.fillStyle = '#fff'; x.font = font(24, 800); x.textAlign = 'center'; x.fillText(fmtRating(r.rating), 989, y + 45); x.textAlign = 'left';
-    } else { x.fillStyle = INK.lo; x.font = font(24, 600); x.textAlign = 'center'; x.fillText('–', 989, y + 45); x.textAlign = 'left'; }
+    tile(1028, y + 18, 78, 38, 24, r, false);
   });
 
   const fy = listTop + rest.length * ROW;
@@ -360,13 +452,6 @@ async function exportImage(w: Weekly): Promise<void> {
   const a = document.createElement('a');
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
-/** 배지 색을 큰 숫자에 쓸 만큼 밝게 — 어두운 바탕 위 100px 숫자는 배지 색 그대로면 가라앉는다 */
-function lighten(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  const mix = (v: number) => Math.round(v + (255 - v) * 0.38);
-  return `rgb(${mix((n >> 16) & 255)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
 }
 
 function roundRect(x: CanvasRenderingContext2D, px: number, py: number, w: number, h: number, r: number) {

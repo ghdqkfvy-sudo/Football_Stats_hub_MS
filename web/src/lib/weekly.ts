@@ -114,17 +114,3 @@ export const minutesShare = (r: Pick<WeeklyRow, 'minutes' | 'games'>): number =>
   (r.games.length ? Math.min(1, r.minutes / (r.games.length * 90)) : 0);
 
 
-/* 팀 이름 앞에 붙는 법인 · 형식 약어 — 폰의 짧은 이름에서 뗀다 */
-const PREFIX = new Set(['fc', 'afc', 'sc', 'tsg', 'rb', 'as', 'ac', 'cd', 'c.d.', 'sd', 'ud', 'sv', 'vfb', 'vfl', 'kv', 'kvc', 'krc', 'royal', 'club', 'real', '1.', 'bsc', 'ssc', 'us', 'sl', 'cf', 'ca', 'rcd', 'rc']);
-
-/**
- * 폰에서 쓰는 짧은 팀 이름 — 앞의 약어(FC · TSG · C.D. …)를 떼고 첫 낱말. "Ajax Amsterdam" → "Ajax",
- * "TSG Hoffenheim" → "Hoffenheim", "C.D. Nacional" → "Nacional". 낱말이 하나뿐이면 그대로.
- */
-export function shortTeam(name: string): string {
-  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  const rest = words.filter((w, i) => !(i < words.length - 1 && PREFIX.has(w.toLowerCase())));
-  /* "St Mirren" · "St. Pauli" · "Le Havre" — 두 글자 이하 · 마침표로 끝나는 앞말은 다음 낱말과 붙인다 */
-  if (rest.length > 1 && (rest[0].length <= 2 || rest[0].endsWith('.'))) return `${rest[0]} ${rest[1]}`;
-  return rest[0] ?? name ?? '';
-}
