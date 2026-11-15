@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { KoreanGame, KoreanPlayer } from '../types/feedTypes';
-import { buildWeekly, ourScoreOf, weekLabel, weeksWithGames, type Weekly, type WeeklyRow } from '../lib/weekly';
+import { buildWeekly, ourScoreOf, shortTeam, weekLabel, weeksWithGames, type Weekly, type WeeklyRow } from '../lib/weekly';
 import { fmtRating, ratingTier } from '../lib/rating';
 import { kstShortDate } from '../lib/kst';
 import { CREST } from '../config/targets';
@@ -15,6 +15,9 @@ import { Crest } from './Crest';
  *  · 맨 위 — 주간 최고(큰 카드) + 그다음 두 명. 사진 · 큰 평점 · 그 주 경기
  *  · 아래 목록 — 줄 왼쪽 띠 = 평점 구간 색, 출전 시간은 숫자 대신 막대(진한 = 선발, 빗금 = 교체)
  *  · 요약은 큰 숫자 타일
+ * 2026-11-15 다듬기 — 머리를 주간 배너로(큰 주간 범위 + 한 줄 요약), 상위 세 명 메달,
+ * 넓은 화면 목록은 2열 카드(한 줄에 경기 칩 하나뿐이라 줄 가운데가 비었다).
+ * 폰 — 2 · 3번은 나란히 끼우지 않고 전폭 가로 카드, 목록 한 줄은 두 줄 높이(이름 · 평점 / 경기 · 출전 막대).
  * ‹ › 로 지난 주를 넘겨 보고, "이미지 저장" 으로 같은 구성을 그림 한 장으로 받는다(폰은 공유 시트).
  */
 export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
@@ -44,21 +47,24 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
         <span className="sec__note">한 주(화~월 · 한국시간) 소속팀 경기 — 주간 최고 · 공격 포인트 · 평점 순</span>
       </div>
       <div className="wk__card">
-        <div className="wk__bar">
-          <div className="wk__nav">
-            <button onClick={() => setAt(at + 1)} disabled={at >= weeks.length - 1} aria-label="지난 주">‹</button>
-            <b className="num">{weekLabel(w)}</b>
-            <button onClick={() => setAt(at - 1)} disabled={at <= 0} aria-label="다음 주">›</button>
+        <header className="wk__hero">
+          <div className="wk__heroL">
+            <span className="wk__eyebrow">WEEKLY REPORT · 해외파</span>
+            <div className="wk__nav">
+              <button onClick={() => setAt(at + 1)} disabled={at >= weeks.length - 1} aria-label="지난 주">‹</button>
+              <b className="num">{weekLabel(w)}</b>
+              <button onClick={() => setAt(at - 1)} disabled={at <= 0} aria-label="다음 주">›</button>
+            </div>
+            {/* 0 은 흐리게 — 큰 숫자 타일 넷이 같은 무게로 "0 골" 을 크게 보여 줬다 */}
+            <div className="wk__pills num">
+              <span><b>{w.rows.length}</b>명 출전</span>
+              <span data-zero={w.goals === 0 || undefined} data-k="g"><b>{w.goals}</b>골</span>
+              <span data-zero={w.assists === 0 || undefined} data-k="a"><b>{w.assists}</b>도움</span>
+              <span><b>{w.minutes}</b>분</span>
+            </div>
           </div>
-          <button className="wk__save" onClick={save} disabled={busy}>{busy ? '만드는 중…' : '⬇ 이미지 저장'}</button>
-        </div>
-
-        <div className="wk__tiles num">
-          <div><b>{w.rows.length}</b><span>출전</span></div>
-          <div data-on={w.goals > 0 || undefined}><b>{w.goals}</b><span>골</span></div>
-          <div data-on={w.assists > 0 || undefined}><b>{w.assists}</b><span>도움</span></div>
-          <div><b>{w.minutes}</b><span>출전 시간(분)</span></div>
-        </div>
+          <button className="wk__save" onClick={save} disabled={busy}>{busy ? '만드는 중…' : <>⬇ <span className="m-full">이미지 </span>저장</>}</button>
+        </header>
 
         {/* 주간 최고 + 그다음 두 명 */}
         <div className="wk__podium" data-n={podium.length}>
@@ -66,7 +72,7 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
         </div>
 
         {rest.length > 0 && (
-          <ol className="wk__list">
+          <ol className="wk__list" start={4}>
             {shown.map((r, i) => (
               <li
                 key={r.player.id}
@@ -78,7 +84,7 @@ export function WeeklyReport({ players }: { players: KoreanPlayer[] }) {
                 <Face p={r.player} size={30} />
                 <span className="wk__who">
                   <b>{r.player.nameKo}</b>
-                  <small><ClubMark p={r.player} />{r.player.club}</small>
+                  <small><ClubMark p={r.player} /><span className="wk__club">{r.player.club}</span></small>
                 </span>
                 <span className="wk__games">
                   {r.games.map((g) => <GameChip key={g.eventId ?? g.date} g={g} />)}
@@ -111,12 +117,15 @@ function PodiumCard({ r, mvp, rank }: { r: WeeklyRow; mvp: boolean; rank: number
   const tier = r.rating != null ? ratingTier(r.rating) : undefined;
   return (
     <article className="wk__pod" data-mvp={mvp || undefined} data-tier={tier}>
-      <span className="wk__podtag">{mvp ? '★ 주간 최고' : `${rank}`}</span>
+      {mvp && <span className="wk__podtag">★ 주간 최고</span>}
       <div className="wk__podtop">
-        <Face p={r.player} size={mvp ? 64 : 44} />
+        <span className="wk__facebox">
+          <Face p={r.player} size={mvp ? 64 : 44} />
+          <i className="wk__medal num" data-rank={rank} aria-label={`${rank}위`}>{rank}</i>
+        </span>
         <div className="wk__podid">
           <b>{r.player.nameKo}</b>
-          <small><ClubMark p={r.player} />{r.player.club}</small>
+          <small><ClubMark p={r.player} /><span className="wk__club">{r.player.club}</span></small>
         </div>
         <div className="wk__podrt num" data-tier={tier}>
           <b>{r.rating != null ? fmtRating(r.rating) : '–'}</b>
@@ -154,7 +163,8 @@ function GameChip({ g }: { g: KoreanGame }) {
     <span className="wk__g" title={`${g.date ? kstShortDate(g.date) : ''} · ${g.started ? '선발' : '교체'} ${g.minutes ?? 0}분`}>
       <i className="fchip" data-r={g.result}>{g.result}</i>
       {sc && <b className="num">{sc}</b>}
-      <em>{g.opponent || '—'}</em>
+      {/* 폰은 짧은 이름(Ajax · Bayern) — 한 줄에 두 경기가 들어가게 */}
+      <em><span className="m-full">{g.opponent || '—'}</span><span className="m-short">{shortTeam(g.opponent) || '—'}</span></em>
     </span>
   );
 }
