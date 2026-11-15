@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeekly, minutesShare, ourScoreOf, weekLabel, weeksWithGames } from '../weekly';
+import { buildWeekly, minutesShare, ourScoreOf, shortTeam, weekLabel, weeksWithGames } from '../weekly';
 import type { KoreanGame, KoreanPlayer } from '../../types/feedTypes';
 
 const g = (date: string, over: Partial<KoreanGame> = {}): KoreanGame => ({
@@ -59,5 +59,20 @@ describe('ourScoreOf / minutesShare', () => {
     const star = p('t', [g('2026-11-07T12:00Z', { minutes: 90, rating: 8.8 })]);
     const w = buildWeekly([scorer, star], '2026-11-03');
     expect(w.rows.map((r) => r.player.id)).toEqual(['t', 's']);
+  });
+});
+
+
+describe('shortTeam', () => {
+  it('앞의 약어를 떼고 첫 낱말', () => {
+    expect(['Ajax Amsterdam', 'TSG Hoffenheim', 'C.D. Nacional', 'Bayern Munich', '1. FC Union Berlin', 'Celtic', 'Royal Charleroi SC', 'Real Madrid'].map(shortTeam))
+      .toEqual(['Ajax', 'Hoffenheim', 'Nacional', 'Bayern', 'Union', 'Celtic', 'Charleroi', 'Madrid']);
+  });
+  it('두 글자 이하 · 마침표로 끝나는 앞말은 다음 낱말과 붙인다', () => {
+    expect(['St Mirren', 'St. Pauli', 'Le Havre', 'PSV Eindhoven'].map(shortTeam)).toEqual(['St Mirren', 'St. Pauli', 'Le Havre', 'PSV']);
+  });
+  it('약어만 있거나 비어 있으면 그대로', () => {
+    expect(shortTeam('FC')).toBe('FC');
+    expect(shortTeam('')).toBe('');
   });
 });
