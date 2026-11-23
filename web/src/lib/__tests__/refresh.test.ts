@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FEED_POLL_MS, LIVE_POLL_MS, inMatchWindow, mergeMatches, pollDelay , isStale } from '../refresh';
+import { FEED_POLL_MS, IDLE_REFRESH_MS, LIVE_POLL_MS, STALE_RETRY_MS, idleRefreshMs, inMatchWindow, mergeMatches, pollDelay, isStale } from '../refresh';
 import type { Match } from '../types';
 
 const team = (id: string) => ({ id, name: id, shortName: id, abbr: id, logo: '' });
@@ -59,5 +59,13 @@ describe('isStale', () => {
   it('실시간 · 시각 없음은 지연이 아니다', () => {
     expect(isStale('live', '2026-11-12T01:00:00Z', now)).toBe(false);
     expect(isStale('feed', '', now)).toBe(false);
+  });
+});
+
+describe('idleRefreshMs', () => {
+  it('평소 10분, 갱신 지연이면 3분', () => {
+    expect(idleRefreshMs(false)).toBe(IDLE_REFRESH_MS);
+    expect(idleRefreshMs(true)).toBe(STALE_RETRY_MS);
+    expect(STALE_RETRY_MS).toBeLessThan(IDLE_REFRESH_MS);
   });
 });

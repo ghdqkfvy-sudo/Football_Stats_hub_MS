@@ -10,7 +10,7 @@ import { KOREAN_CLUBS, OUR_TEAM_IDS, TARGETS, getTarget, isKoreanClub, subtitleP
 import type { Match } from './lib/types';
 import { HAS_PROXY, loadSchedule, type Source } from './lib/api';
 import { invalidateFeeds } from './lib/feed';
-import { isStale, mergeMatches, pollDelay } from './lib/refresh';
+import { idleRefreshMs, isStale, mergeMatches, pollDelay } from './lib/refresh';
 import { ScheduleTab } from './tabs/ScheduleTab';
 import { PaletteProvider } from './lib/palette';
 import { seasonOptions } from './lib/kst';
@@ -346,9 +346,32 @@ export default function App() {
     const onVis = () => {
       if (!document.hidden && Date.now() - lastLoad.current > 60_000) refresh();
     };
+    /* 폰 홈 화면 앱(PWA)은 깨어날 때 visibilitychange 없이 pageshow · focus 만 오기도 한다.
+       네트워크가 늦게 붙으면 첫 요청이 실패하므로 online 에서도 다시 받는다. */
     document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    window.addEventListener('pageshow', onVis);
+    window.addEventListener('focus', onVis);
+    window.addEventListener('online', onVis);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pageshow', onVis);
+      window.removeEventListener('focus', onVis);
+      window.removeEventListener('online', onVis);
+    };
   }, [refresh]);
+
+  /*
+   * 경기 시간대가 아니어도 켜 둔 화면이 낡지 않게 (2026-11-23).
+   * 예전에는 경기 시간대 밖에서는 다시 받지 않아, 앱을 열어 둔 채 두면
+   * 배지가 "14시간 전" 까지 올라갔다(서버 피드는 20분마다 새것인데도).
+   * 1분마다 도는 시계(nowTick)에 맞춰 — 마지막으로 받은 지 10분이 지났거나,
+   * 배지가 "갱신 지연" 이면 3분마다 다시 받는다(실패해도 다음 틱에 또 시도).
+   */
+  useEffect(() => {
+    if (document.hidden) return;
+    const since = nowTick - lastLoad.current;
+    if (since > idleRefreshMs(stale)) refresh();
+  }, [nowTick, stale, refresh]);
 
   const onGoalsLoaded = useCallback((id: string, goals: Match['goals']) => {
     setSched((s) => ({ ...s, matches: s.matches.map((m) => (m.id === id ? { ...m, goals, goalsLoaded: true } : m)) }));
