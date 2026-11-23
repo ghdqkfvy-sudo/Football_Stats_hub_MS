@@ -82,7 +82,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-35';
+const CODE_VERSION = 'snap-36';
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2020,23 +2020,60 @@ async function fifaRanking() {
   };
 }
 
+/**
+ * 팀 일정 — 지난 경기 + 앞으로의 경기, id 로 겹침을 없애 날짜순.
+ *
+ * ⚠️ ESPN 의 대회 통합(all) 일정이 어떤 팀은 **앞으로의 경기만** 준다(2026-11-15 무렵부터
+ * 바이에른: 30경기 전부 예정, 끝난 경기 0). 그러면 결과 · 라인업 · 선수 스탯이 통째로
+ * 멈춘다(스쿼드는 "라인업 0경기 — 기존 파일 유지"). 끝난 경기가 하나도 없으면
+ * 그 팀이 나가는 대회마다 대회별 일정을 따로 받아 채운다.
+ */
+async function teamSchedule(t) {
+  const base = `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${t.id}/schedule`;
+  const [past, future] = await Promise.all([get(base), get(`${base}?fixture=true`)]);
+  const srcs = [past, future];
+  const completed = (ev) => ev?.competitions?.[0]?.status?.type?.completed === true;
+  if (!(past?.events ?? []).some(completed)) {
+    const leagues = new Set([t.league]);
+    /* 대회별 응답에는 경기마다 league(이름)가 없을 수 있다 — 통합 일정의 같은 대회 값을 옮겨 단다 */
+    const leagueObj = new Map();
+    for (const src of srcs) {
+      for (const ev of src?.events ?? []) {
+        const lg = ev?.league?.slug ?? ev?.season?.slug;
+        if (lg && lg !== 'club.friendly' && lg !== 'all') leagues.add(lg);
+        if (ev?.league?.slug && !leagueObj.has(ev.league.slug)) leagueObj.set(ev.league.slug, ev.league);
+      }
+    }
+    const per = await Promise.all(
+      [...leagues].map(async (lg) => {
+        const j = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/teams/${t.id}/schedule`);
+        for (const ev of j?.events ?? []) if (!ev.league?.slug) ev.league = { ...(leagueObj.get(lg) ?? {}), ...(ev.league ?? {}), slug: lg };
+        return j;
+      }),
+    );
+    const got = per.reduce((n, j) => n + (j?.events ?? []).filter(completed).length, 0);
+    console.log(`  ${t.slug}: 통합 일정에 끝난 경기 없음 → 대회별 일정 ${[...leagues].join(' · ')} 에서 ${got}경기`);
+    srcs.push(...per);
+  }
+
+  const seen = new Set();
+  const events = [];
+  for (const src of srcs) {
+    for (const ev of src?.events ?? []) {
+      const id = String(ev?.id ?? '');
+      if (id && !seen.has(id)) { seen.add(id); events.push(ev); }
+    }
+  }
+  events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return events;
+}
+
 async function main() {
   await mkdir(OUT, { recursive: true });
   console.log(`스냅샷 시작 → ${OUT}`);
 
   if (wants('fast')) for (const t of TEAMS) {
-    const base = `${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${t.id}/schedule`;
-    const [past, future] = await Promise.all([get(base), get(`${base}?fixture=true`)]);
-
-    const seen = new Set();
-    const events = [];
-    for (const src of [past, future]) {
-      for (const ev of src?.events ?? []) {
-        const id = String(ev?.id ?? '');
-        if (id && !seen.has(id)) { seen.add(id); events.push(ev); }
-      }
-    }
-    events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const events = await teamSchedule(t);
 
     if (events.length) {
       const prevMap = await prevGoalsMap(`schedule-${t.slug}.json`);
@@ -2248,7 +2285,7 @@ async function main() {
      athleteId 와 함께 들어 있다. 이름 매칭 없이 시즌 집계를 만들 수 있는
      유일한 경로다(예전에 이름으로 맞추다 도움이 통째로 0 이 됐다). */
   if (wants('slow')) for (const t of await teamsByPhotoNeed(TEAMS)) {
-    const sched = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/all/teams/${t.id}/schedule`);
+    const sched = { events: await teamSchedule(t) };
     /* 최근 16경기만 모은다. 단 **클럽 친선경기는 제외**한다 —
        프리시즌 친선전은 포메이션·라인업을 실험하는 자리라 그대로 섞이면
        "가장 많이 쓴 포메이션" 이 왜곡된다(첼시가 4-4-2/3-4-3 친선전 때문에
