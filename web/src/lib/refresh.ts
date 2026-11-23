@@ -57,3 +57,12 @@ export function isStale(source: string, fetchedAt: string, now: number = Date.no
   const t = Date.parse(fetchedAt);
   return Number.isFinite(t) && now - t > STALE_MS;
 }
+
+/** 경기 시간대 밖에서 켜 둔 화면을 다시 받는 간격 — 피드는 20분마다 새로 뜬다 */
+export const IDLE_REFRESH_MS = 10 * 60_000;
+/** 배지가 "갱신 지연" 일 때는 더 자주 — 깨어난 직후 요청이 실패한 경우를 빨리 메운다 */
+export const STALE_RETRY_MS = 3 * 60_000;
+
+export function idleRefreshMs(stale: boolean): number {
+  return stale ? STALE_RETRY_MS : IDLE_REFRESH_MS;
+}
