@@ -263,15 +263,16 @@ export function buildSquad(
          출전 0 으로 목록 맨 아래에 남고, 베스트 11 후보에서는 빠진다. */
       if (mins === 0) continue;
 
-      /* 라인업이 선수별 골·도움을 들고 있으면 그걸 쓴다(ESPN 집계 원본).
-         없을 때만 예전처럼 득점 이벤트의 이름을 맞춰 본다 — 표기가 달라
-         도움이 통째로 비는 일이 있어 어디까지나 폴백이다. */
-      const g = lu.hasStats
-        ? (eg ?? 0)
-        : m.goals.filter((x) => x.teamId === teamId && !x.ownGoal && x.scorer === info.name).length;
-      const a = lu.hasStats
-        ? (ea ?? 0)
-        : m.goals.filter((x) => x.teamId === teamId && x.assist === info.name).length;
+      /* 골·도움 — 라인업(ESPN 박스스코어)과 득점 이벤트(core /plays) 중 **큰 쪽**.
+         어느 한쪽만 믿으면 빠진다(2026-11-24 전 팀 점검):
+          · 국가대표 A매치는 라인업에 선수별 골·도움이 0 으로 온다(손흥민 11-14 골 등 20건 넘게)
+          · 반대로 득점 이벤트에 도움이 빠진 경기도 있다(바이에른 10-28, 맨유 11-08)
+         이벤트는 선수 id 로 맞추고, id 가 없을 때만 이름으로 맞춘다. */
+      const mineEv = m.goals.filter((x) => x.teamId === teamId);
+      const gEv = mineEv.filter((x) => !x.ownGoal && (x.scorerId ? x.scorerId === id : x.scorer === info.name)).length;
+      const aEv = mineEv.filter((x) => (x.assistId ? x.assistId === id : !!x.assist && x.assist === info.name)).length;
+      const g = lu.hasStats ? Math.max(eg ?? 0, gEv) : gEv;
+      const a = lu.hasStats ? Math.max(ea ?? 0, aEv) : aEv;
 
       p.apps++;
       if (starter) p.starts++;

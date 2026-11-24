@@ -423,3 +423,26 @@ describe('buildSquad — 평점', () => {
   });
 
 });
+
+describe('buildSquad — 골·도움은 라인업과 득점 이벤트 중 큰 쪽', () => {
+  const ev = (scorerId: string, assistId?: string) => ({
+    minute: 10, clock: "10'", teamId: '363', scorer: 'x', scorerId, assistId, assist: assistId ? 'y' : undefined, ownGoal: false, penalty: false,
+  });
+  const athletes = { a: info('A', 'F'), b: info('B', 'M') };
+
+  it('라인업이 0 인데 이벤트에 골이 있으면 이벤트 값 (A매치)', () => {
+    const m = match('1', { goals: [ev('a', 'b')] });
+    const lu = lineup([['a', 9, true, null, null, 0, 0], ['b', 8, true, null, null, 0, 0]] as LineupEntry[]);
+    const { players } = buildSquad([m], { 1: lu }, athletes, '363');
+    const p = (id: string) => players.find((x) => x.id === id)!;
+    expect([p('a').goals, p('b').assists]).toEqual([1, 1]);
+  });
+
+  it('이벤트에 도움이 빠져도 라인업 값은 그대로 (두 번 세지 않는다)', () => {
+    const m = match('2', { goals: [ev('a')] });
+    const lu = lineup([['a', 9, true, null, null, 1, 0], ['b', 8, true, null, null, 0, 1]] as LineupEntry[]);
+    const { players } = buildSquad([m], { 2: lu }, athletes, '363');
+    const p = (id: string) => players.find((x) => x.id === id)!;
+    expect([p('a').goals, p('b').assists]).toEqual([1, 1]);
+  });
+});
