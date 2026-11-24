@@ -82,7 +82,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-37';
+const CODE_VERSION = 'snap-38';
 /* 스쿼드(선수 시즌 기록)에 쓰는 경기 수 — 시즌 전체. 예전 16경기는 시즌 초 경기가 잘려
    그 경기의 골·도움이 시즌 기록에서 빠졌다(비니시우스 8-26 소시에다드전 골, 2026-11-24) */
 const SQUAD_MATCHES = 40;
@@ -2298,7 +2298,8 @@ async function main() {
       .filter((e) => e?.competitions?.[0]?.status?.type?.completed)
       .filter((e) => (e?.league?.slug ?? e?.season?.slug) !== 'club.friendly')
       .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-      .slice(0, SQUAD_MATCHES);
+      /* 국가대표는 "시즌" 이 없다 — 창을 넓히면 2년 전 A매치까지 들어와 선수 기록의 기간이 바뀐다. 예전대로 최근 16경기 */
+      .slice(0, t.national ? 16 : SQUAD_MATCHES);
 
     const lineups = {};
     const athletes = {};
