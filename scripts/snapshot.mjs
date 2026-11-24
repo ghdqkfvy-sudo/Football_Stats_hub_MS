@@ -82,7 +82,10 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-36';
+const CODE_VERSION = 'snap-37';
+/* 스쿼드(선수 시즌 기록)에 쓰는 경기 수 — 시즌 전체. 예전 16경기는 시즌 초 경기가 잘려
+   그 경기의 골·도움이 시즌 기록에서 빠졌다(비니시우스 8-26 소시에다드전 골, 2026-11-24) */
+const SQUAD_MATCHES = 40;
 
 const SITE = 'https://site.api.espn.com';
 const SITE_WEB = 'https://site.web.api.espn.com';
@@ -2286,7 +2289,7 @@ async function main() {
      유일한 경로다(예전에 이름으로 맞추다 도움이 통째로 0 이 됐다). */
   if (wants('slow')) for (const t of await teamsByPhotoNeed(TEAMS)) {
     const sched = { events: await teamSchedule(t) };
-    /* 최근 16경기만 모은다. 단 **클럽 친선경기는 제외**한다 —
+    /* 시즌 경기를 모은다(SQUAD_MATCHES). 단 **클럽 친선경기는 제외**한다 —
        프리시즌 친선전은 포메이션·라인업을 실험하는 자리라 그대로 섞이면
        "가장 많이 쓴 포메이션" 이 왜곡된다(첼시가 4-4-2/3-4-3 친선전 때문에
        실제 주 포메이션이 아닌 값으로 잡혔다). 국가대표 친선전은 실제
@@ -2295,16 +2298,36 @@ async function main() {
       .filter((e) => e?.competitions?.[0]?.status?.type?.completed)
       .filter((e) => (e?.league?.slug ?? e?.season?.slug) !== 'club.friendly')
       .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-      .slice(0, 16);
+      .slice(0, SQUAD_MATCHES);
 
     const lineups = {};
     const athletes = {};
+    /* 끝난 경기의 라인업은 바뀌지 않는다 — 지난 파일에 온전히(스탯·교체 시각) 있으면 그대로 쓰고
+       새 경기만 받는다. 그래서 창을 시즌 전체로 넓혀도 회차마다 받는 양은 거의 그대로다. */
+    let prevSquad = null;
+    try { prevSquad = JSON.parse(await readFile(join(OUT, `squad-${t.slug}.json`), 'utf8')); } catch { /* 첫 수집 */ }
+    let reused = 0;
     let subPlayed = 0;      // 교체로 실제 뛴 선수 수
     let subKnown = 0;       // 그중 "누구 대신" 을 찾은 수
     /* 경기 16건이 서로 무관하다 — 한 건씩 기다리면 팀마다 16번의 왕복이
        그대로 시간이 된다(팀이 늘어날수록 선형으로 늘어난다). */
     await pool(done, 4, async (ev) => {
       const lg = ev?.league?.slug ?? ev?.season?.slug ?? t.league;
+      const old = prevSquad?.lineups?.[String(ev.id)];
+      if (old?.hasStats && old?.hasMinutes && old.teamId === t.id && Array.isArray(old.entries) && old.entries.length) {
+        lineups[String(ev.id)] = old;
+        for (const x of old.entries) {
+          const a = prevSquad.athletes?.[x[0]];
+          if (a && !athletes[x[0]]) athletes[x[0]] = { name: a.name, jersey: a.jersey, pos: a.pos };
+        }
+        for (const x of old.entries) {
+          if (x[2] || (x[3] == null && !x[10])) continue;
+          subPlayed++;
+          if (x[10]) subKnown++;
+        }
+        reused++;
+        return;
+      }
       const sum = await get(`${SITE_WEB}/apis/site/v2/sports/soccer/${lg}/summary?event=${ev.id}`);
       const mine = (sum?.rosters ?? []).find((r) => String(r?.team?.id ?? '') === t.id);
       if (!mine?.roster?.length) return;
@@ -2509,7 +2532,7 @@ async function main() {
         fetchedAt: new Date().toISOString(),
       });
       console.log(
-        `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기 · 선수 ${Object.keys(athletes).length}명` +
+        `    ${t.slug}: 라인업 ${Object.keys(lineups).length}경기(지난 파일 재사용 ${reused}) · 선수 ${Object.keys(athletes).length}명` +
           ` (출전시간 ${gotMinutes}명 · 사진 SportsDB ${fromTsdb} + ESPN ${fromEspn} + 위키 ${fromWiki})` +
           ` · 교체 기록 ${subKnown}/${subPlayed}` +
           (tsdbLimit.broken ? ' · ⚠ SportsDB 한도 — 다음 회차에 이어 채움' : ''),
