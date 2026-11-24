@@ -41,6 +41,7 @@ import { fixSubMinutes, redCardMinutes, substitutionsFrom } from './lib/subs.mjs
 import { slimFeed } from './lib/slim.mjs';
 import { CUP_LEAGUES, assignRounds, cupEvent, daysToFetch } from './lib/cups.mjs';
 import { footballerIds, mergeIdMaps, needsLookup, pickSofascore, searchNames } from './lib/sofascore.mjs';
+import { lineupShape } from './lib/fmshape.mjs';
 import { fillSeasonFromMatches, finishedFixtures, lineupRatings, pairFixture, pickSearchPlayer, ratingAt, recentRatings, searchTerms, seasonRating, squadRatings } from './lib/ratings.mjs';
 import { INJURY_KO, groupSuspensions, injuredMembers, injuryList, injuryRecord, matchInfo, matchInjured, nextMatchId, squadSize, suspendedFrom, upcomingMatchIds } from './lib/injuries.mjs';
 import { nationalFor, nationalLineup } from './lib/national.mjs';
@@ -82,7 +83,7 @@ const SEASON = seasonYear();
  * 만들어졌는지" 를 배포된 사이트에서 바로 확인할 수 있다. 기능을 바꿀 때마다
  * 올린다 — 코드는 올라갔는데 데이터가 아직 옛날 것인 상황을 구분하기 위함이다.
  */
-const CODE_VERSION = 'snap-38';
+const CODE_VERSION = 'snap-39';
 /* 스쿼드(선수 시즌 기록)에 쓰는 경기 수 — 시즌 전체. 예전 16경기는 시즌 초 경기가 잘려
    그 경기의 골·도움이 시즌 기록에서 빠졌다(비니시우스 8-26 소시에다드전 골, 2026-11-24) */
 const SQUAD_MATCHES = 40;
@@ -665,7 +666,28 @@ async function prevInjuries(slug) {
  * @returns { [espnEventId]: { fm, r: { [espnAthleteId]: rating } } }
  */
 const RATING_FETCH_MAX = 8;
-const RATING_VER = 2;
+/* v3 — 평점과 함께 FotMob 포메이션(f) · 선발 자리 약어(p: ESPN 선수 id → 약어)도 남긴다(2026-11-25).
+   이전 기록은 회차마다 RATING_FETCH_MAX 경기씩 다시 받는다(팀당 두세 회차면 다 채워진다) */
+const RATING_VER = 3;
+/** ESPN 라인업의 포메이션이 FotMob 과 다르면 FotMob 포메이션 · 선발 자리 약어로 바꾼다. 바꾼 경기 목록을 돌려준다 */
+function applyFotmobShape(lineups, matchRatings) {
+  const fixed = [];
+  for (const [key, lu] of Object.entries(lineups)) {
+    const fm = matchRatings?.[key];
+    if (!fm?.f || !fm?.p) continue;
+    const espn = lu.espnFormation ?? lu.formation;
+    if (!espn || espn === fm.f) continue;
+    const starters = lu.entries.filter((x) => x[2]);
+    if (starters.filter((x) => fm.p[x[0]]).length < 10) continue;   // 선발을 거의 다 맞춘 경기만
+    if (!lu.espnFormation) lu.espnFormation = espn;
+    lu.formation = fm.f;
+    for (const x of starters) if (fm.p[x[0]]) x[7] = fm.p[x[0]];
+    lu.shapeSrc = 'fotmob';
+    fixed.push(`${key} ${espn}→${fm.f}`);
+  }
+  return fixed;
+}
+
 async function fotmobMatchRatings(fm, teamJson, done, athletes, prev = {}) {
   const fixtures = finishedFixtures(teamJson);
   const out = {};
@@ -679,11 +701,19 @@ async function fotmobMatchRatings(fm, teamJson, done, athletes, prev = {}) {
     if (!fid) continue;
     fetched++;
     try {
-      const rows = lineupRatings(await fotmobJson(`matchDetails?matchId=${fid}`), fm);
+      const md = await fotmobJson(`matchDetails?matchId=${fid}`);
+      const rows = lineupRatings(md, fm);
       if (rows.length) {
         const r = {};
         for (const [id, m] of matchInjured(rows, athletes)) r[id] = m.rating;
         out[key] = { v: RATING_VER, fm: fid, r };
+        /* 포메이션 · 자리 — 선발 11명 중 10명 이상을 ESPN 선수와 맞췄을 때만 남긴다 */
+        const shape = lineupShape(md, fm);
+        if (shape) {
+          const pos = {};
+          for (const [id, m] of matchInjured(shape.players, athletes)) pos[id] = m.abbr;
+          if (Object.keys(pos).length >= 10) Object.assign(out[key], { f: shape.formation, p: pos });
+        }
       }
     } catch (e) {
       note(`FotMob 평점(${fid})`, `${String(e).split('\n')[0]} — 다음 회차에 다시`);
@@ -2525,6 +2555,10 @@ async function main() {
         const filled = fillSeasonFromMatches(athletes, matchRatings);
         if (filled) console.log(`    평점: 시즌 평점이 빈 ${filled}명을 경기별 평점 평균으로 채움`);
       }
+      /* 포메이션 · 자리 — ESPN 과 FotMob 의 포메이션이 다르면 FotMob 을 쓴다(오늘의 경기 탭과 같은 값).
+         ESPN 원래 값은 espnFormation 에 남긴다 — 다음 회차에 지난 파일을 재사용해도 같은 판단을 한다 */
+      const fixed = applyFotmobShape(lineups, matchRatings);
+      if (fixed.length) console.log(`    포메이션: ESPN 과 달라 FotMob 으로 바꾼 경기 ${fixed.length} — ${fixed.join(' · ')}`);
       await save(`squad-${t.slug}.json`, {
         team: t.id, lineups, athletes,
         ...(injuries ? { injuries } : {}),
