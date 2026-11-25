@@ -289,7 +289,8 @@
   }
   .mdr__mid { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .mdr__vs { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .mdr__vs i { font-style: normal; font-size: var(--fs-xs); color: var(--text-lo); }
+  /* vs — 흐린 회색이면 우리 팀 · 상대 사이 구분이 안 읽혔다(11-25) — 한 단계 밝고 굵게 */
+  .mdr__vs i { font-style: normal; font-size: var(--fs-xs); font-weight: 700; color: var(--text-mid); }
   .mdr__vs b {
     font-size: var(--fs-lg); font-weight: 700; color: var(--opp); letter-spacing: -.01em;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
