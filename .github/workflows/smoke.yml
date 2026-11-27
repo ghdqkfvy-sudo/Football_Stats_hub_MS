@@ -23,6 +23,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # 배포된 사이트의 데이터가 몇 분 전 것인지 — 수집·배포는 성공인데 사이트 데이터가 낡는 경우를 잡는다
+      # (화면 스모크는 화면이 그려지는지만 본다). 90분 넘게 낡았으면 실패 → 저장소 주인에게 메일
+      - name: 배포된 데이터 신선도
+        run: |
+          base=https://ghdqkfvy-sudo.github.io/Football_Stats_hub_MS/data
+          for f in meta.json schedule-tottenham.json koreans.json; do
+            at=$(curl -fsS -H 'Cache-Control: no-cache' "$base/$f?t=$(date +%s)" | grep -oE '"(generatedAt|fetchedAt)":"[^"]+"' | tail -1 | cut -d'"' -f4)
+            age=$(( ( $(date -u +%s) - $(date -u -d "$at" +%s) ) / 60 ))
+            echo "$f  $at  (${age}분 전)"
+            echo "- $f: $at (${age}분 전)" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$age" -gt 90 ]; then echo "::error::$f 가 ${age}분 전 데이터"; stale=1; fi
+          done
+          [ -z "$stale" ]
       - uses: actions/setup-node@v4
         with:
           node-version: 22
