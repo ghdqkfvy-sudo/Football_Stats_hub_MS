@@ -702,6 +702,42 @@
 .ssn__sum b[data-r='D'] { color: var(--draw); }
 .ssn__sum b[data-r='L'] { color: var(--loss); }
 .ssn__gd { color: var(--text-lo); }
+/* 지금 이어지는 흐름(2026-11-28) — 승무패 줄 끝의 알약 + 그래프 오른쪽 끝의 같은 색 띠.
+   연승 · 무패는 초록, 연패는 빨강, 무승은 주황(무승부 색). 무패 · 무승은 "아직 이어지는 중" 이라 테두리만 */
+.ssn__streak {
+  --k: var(--win);
+  display: inline-flex; align-items: center; align-self: center;
+  padding: 2px 9px 2px 7px; border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: 700; color: var(--k); white-space: nowrap;
+  background: color-mix(in srgb, var(--k) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k) 45%, transparent);
+}
+.ssn__streak[data-k='loss'] { --k: var(--loss); }
+.ssn__streak[data-k='winless'] { --k: var(--draw); }
+.ssn__streak:is([data-k='unbeaten'], [data-k='winless']) { background: transparent; }
+.ssn__streak b { font-family: var(--font-display); font-size: var(--fs-md); line-height: 1; margin-right: 1px; }
+.ssn__streak svg { width: 12px; height: 12px; margin-right: 4px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ssn__col[data-streak] {
+  --k: var(--win);
+}
+.ssn__col[data-streak='loss'] { --k: var(--loss); }
+.ssn__col[data-streak='winless'] { --k: var(--draw); }
+/* 띠 — 막대 사이 간격(2px)까지 덮어 한 덩어리로. 첫 막대는 왼쪽, 마지막 막대(늘 맨 오른쪽)는 오른쪽 모서리 */
+.ssn__col[data-streak]::after {
+  content: ''; position: absolute; z-index: 0; pointer-events: none;
+  inset: -6px -1px -2px -1px;
+  background: color-mix(in srgb, var(--k) 10%, transparent);
+  border-block: 1px solid color-mix(in srgb, var(--k) 30%, transparent);
+}
+.ssn__col[data-streak-start]::after { border-left: 1px solid color-mix(in srgb, var(--k) 30%, transparent); border-radius: var(--r-sm) 0 0 var(--r-sm); left: 0; }
+.ssn__col[data-streak]:last-child::after { border-right: 1px solid color-mix(in srgb, var(--k) 30%, transparent); border-radius: 0 var(--r-sm) var(--r-sm) 0; right: 0; }
+.ssn__col[data-streak-start]:last-child::after { border-radius: var(--r-sm); }
+/* 무패 · 무승 — 아직 이어지는 중이라 칠하지 않고 점선 테두리만 */
+.ssn__col:is([data-streak='unbeaten'], [data-streak='winless'])::after { background: transparent; border-block-style: dashed; }
+.ssn__col:is([data-streak='unbeaten'], [data-streak='winless'])[data-streak-start]::after { border-left-style: dashed; }
+.ssn__col:is([data-streak='unbeaten'], [data-streak='winless']):last-child::after { border-right-style: dashed; }
+.ssn__col[data-streak] > * { position: relative; z-index: 1; }
+.ssn__col[data-streak] > :is(u, .ssn__nub) { position: absolute; }
 .ssn__plot { position: relative; height: 132px; margin-top: 34px; }
 .ssn__mid { position: absolute; left: 0; right: 0; top: calc(50% - 5px); height: 0; border-top: 1px solid var(--line-2); }
 .ssn__cols { position: absolute; inset: 0; display: flex; gap: 2px; }

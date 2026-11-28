@@ -69,6 +69,7 @@ function applyMatches(acc: Map<string, Acc>, matches: Match[], seedOnly: boolean
   const sorted = [...matches].sort((a, b) => a.kickoffUtc.localeCompare(b.kickoffUtc));
   for (const m of sorted) {
     if (m.status !== 'finished' || m.homeScore === undefined || m.awayScore === undefined) continue;
+    if (m.competition === 'club.friendly') continue;   // 친선경기는 순위 · 전적에 넣지 않는다
     // 시드에 없는 팀은 넣지 않는다(다른 대회 경기가 섞이는 것을 막는다)
     if (seedOnly && (!acc.has(m.home.id) || !acc.has(m.away.id))) continue;
     const h = acc.get(m.home.id) ?? blank(m.home);

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Match } from '../lib/types';
-import { barLength, seasonBars, tally } from '../lib/seasonBars';
+import { barLength, currentStreak, seasonBars, streakLabel, tally } from '../lib/seasonBars';
 import { usePalette } from '../lib/palette';
 import { mobileName } from '../config/targets';
 import { kstShortDate } from '../lib/kst';
@@ -26,6 +26,8 @@ export function SeasonChart({ matches, teamId, selectedId, onPick }: {
   if (all.length < 3) return null;
 
   const t = tally(bars);
+  /* 지금 이어지는 흐름 — 고른 대회 안에서 센다(대회를 고르면 그 대회만의 연승 · 연패) */
+  const streak = currentStreak(bars);
   const at = hot ? bars.findIndex((b) => b.id === hot) : -1;
   const h = at >= 0 ? bars[at] : undefined;
   const tipX = bars.length > 1 ? (at / (bars.length - 1)) * 100 : 50;
@@ -49,13 +51,23 @@ export function SeasonChart({ matches, teamId, selectedId, onPick }: {
           <span><b data-r="D">{t.d}</b>무</span>
           <span><b data-r="L">{t.l}</b>패</span>
           <span className="ssn__gd">{t.gf}득점 · {t.ga}실점</span>
+          {streak && (
+            <span className="ssn__streak" data-k={streak.kind} title={`최근 ${streak.n}경기 — 그래프 오른쪽 끝 표시 구간`}>
+              <svg viewBox="0 0 12 12" aria-hidden="true">
+                {streak.kind === 'win' || streak.kind === 'unbeaten'
+                  ? <path d="M1.5 9.5 5 6l2 2 3.5-4.5M7.5 3.5h3v3" />
+                  : <path d="M1.5 2.5 5 6l2-2 3.5 4.5M7.5 8.5h3v-3" />}
+              </svg>
+              <b>{streak.n}</b>{streakLabel(streak).replace(String(streak.n), '')}
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="ssn__plot" role="img" aria-label={`시즌 ${bars.length}경기 — ${t.w}승 ${t.d}무 ${t.l}패`}>
+      <div className="ssn__plot" role="img" aria-label={`시즌 ${bars.length}경기 — ${t.w}승 ${t.d}무 ${t.l}패${streak ? ` · ${streakLabel(streak)}` : ''}`}>
         <span className="ssn__mid" />
         <div className="ssn__cols">
-          {bars.map((b) => (
+          {bars.map((b, i) => (
             <button
               key={b.id}
               type="button"
@@ -64,6 +76,9 @@ export function SeasonChart({ matches, teamId, selectedId, onPick }: {
               data-hot={b.id === hot || undefined}
               data-sel={b.id === selectedId || undefined}
               data-dim={(hot && b.id !== hot) || undefined}
+              /* 지금 이어지는 흐름에 든 막대(맨 오른쪽 n 개) — 뒤에 같은 색 띠를 깐다 */
+              data-streak={streak && i >= bars.length - streak.n ? streak.kind : undefined}
+              data-streak-start={(streak && i === bars.length - streak.n) || undefined}
               aria-label={`${kstShortDate(b.kickoffUtc)} ${b.opponent.shortName} ${b.gf}-${b.ga}`}
               onPointerEnter={() => setHot(b.id)}
               onFocus={() => setHot(b.id)}

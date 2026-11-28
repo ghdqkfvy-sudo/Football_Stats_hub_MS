@@ -44,6 +44,7 @@ export function buildTrend(matches: Match[], teamIds?: Iterable<string>): TrendD
 
   const done = matches
     .filter((m) => m.status === 'finished' && m.homeScore !== undefined && m.awayScore !== undefined)
+    .filter((m) => m.competition !== 'club.friendly')   // 친선경기는 순위 추이에 넣지 않는다
     /* 시드(순위표)에 없는 팀이 낀 경기는 다른 대회 경기다 — 순위표와 같은 규칙 */
     .filter((m) => !allow || (allow.has(m.home.id) && allow.has(m.away.id)))
     .sort((a, b) => a.kickoffUtc.localeCompare(b.kickoffUtc));
