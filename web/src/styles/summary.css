@@ -351,7 +351,7 @@ button.mdh__card:hover, button.mdh__card:focus-visible {
   .wcal__pulse::after { animation: none; opacity: .5; }
 }
 
-.wcal__head { display: flex; align-items: center; gap: 0; }
+.wcal__head { display: flex; align-items: baseline; gap: 0; }   /* 요일(작은 글자) · 날짜(큰 숫자) 바닥선 맞춤 */
 .wcal__dow { font-size: var(--fs-xs); color: var(--text-lo); }
 .wcal__cell[data-weekend] .wcal__dow { color: #FF8DA1; }
 .wcal__date { font-family: var(--font-display); font-size: var(--fs-md); color: var(--text-mid); }

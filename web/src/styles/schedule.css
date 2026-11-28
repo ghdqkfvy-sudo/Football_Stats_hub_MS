@@ -695,7 +695,8 @@
 }
 .ssn__comps button:hover { color: var(--text-mid); }
 .ssn__comps button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
-.ssn__sum { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-sm); color: var(--text-mid); }
+/* 큰 숫자(승·무·패)와 작은 득실 글자를 글자 바닥선에 맞춘다 — 위쪽 정렬이면 득실이 5px 떠 보였다(11-28) */
+.ssn__sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: var(--fs-sm); color: var(--text-mid); }
 .ssn__sum b { font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 700; margin-right: 2px; }
 .ssn__sum b[data-r='W'] { color: var(--win); }
 .ssn__sum b[data-r='D'] { color: var(--draw); }
